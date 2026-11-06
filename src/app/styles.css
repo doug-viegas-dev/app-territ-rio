@@ -334,3 +334,11 @@ html, body, #root { min-height: 100%; }
 .auth-erro { padding: 14px; border-radius: var(--raio); background: var(--superficie); box-shadow: inset 0 0 0 1.5px var(--cor-erro); }
 .auth-email { padding: 16px; border-radius: 16px; background: var(--cor-secundaria); overflow-wrap: anywhere; }
 .auth-email strong { display: block; }
+
+/* ---------- tela do cartão: quadra sem contador, mapa ampliado ---------- */
+.linha-quadra.simples { grid-template-columns: 1fr 24px; min-height: 64px; }
+.linha-quadra.simples .ic.chev { grid-row: auto; grid-column: 2; }
+.mapa { padding: 0; border: 0; }
+.imagem-cheia { position: fixed; inset: 0; z-index: 20; background: #0E121B; overflow: auto; touch-action: pan-x pan-y pinch-zoom; display: flex; align-items: center; }
+.imagem-cheia img { display: block; width: 100%; height: auto; margin: auto; }
+.imagem-cheia-fechar { position: fixed; top: 8px; right: 8px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 24px; background: var(--cor-fundo-escuro); color: #F6F7FA; z-index: 21; }
