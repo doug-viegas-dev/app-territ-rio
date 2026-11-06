@@ -25,19 +25,29 @@ function CicloDoCartao() {
   </>
 }
 
+const ABAS = [
+  { id: 'membros', rotulo: 'Membros' },
+  { id: 'cartoes', rotulo: 'Cartões' },
+  { id: 'ciclo', rotulo: 'Ciclo' },
+] as const
+type AbaId = typeof ABAS[number]['id']
+
 export default function AdminPage() {
+  const [aba, setAba] = useState<AbaId>('membros')
   return <>
     <Topo titulo="Administração" />
     <div className="rolagem com-nav">
-      <div className="segmento" style={{ marginBottom: 6 }}>
-        <a className="ativo" href="#membros">Membros</a>
-        <a href="#cartoes">Cartões</a>
-        <a href="#ciclo">Ciclo</a>
+      <div className="segmento" style={{ marginBottom: 6 }} role="tablist" aria-label="Seções da administração">
+        {ABAS.map((a) => <button key={a.id} type="button" role="tab" id={`aba-${a.id}`} aria-selected={aba === a.id} aria-controls="painel-admin" className={aba === a.id ? 'ativo' : ''} onClick={() => setAba(a.id)}>{a.rotulo}</button>)}
       </div>
-      <MembrosAdmin />
-      <CartaoForm />
-      <QuadrasAdmin />
-      <CicloDoCartao />
+      <div role="tabpanel" id="painel-admin" aria-labelledby={`aba-${aba}`}>
+        {aba === 'membros' && <MembrosAdmin />}
+        {aba === 'cartoes' && <>
+          <CartaoForm />
+          <QuadrasAdmin />
+        </>}
+        {aba === 'ciclo' && <CicloDoCartao />}
+      </div>
     </div>
   </>
 }
