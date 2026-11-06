@@ -11,16 +11,18 @@ type Props = {
   voltarRotulo?: string
   sub?: ReactNode
   progresso?: { resolvidas: number; total: number }
+  naoEnviado?: boolean
 }
 
-export function Conexao() {
+export function Conexao({ naoEnviado = false }: { naoEnviado?: boolean }) {
   const online = useOnline()
+  if (naoEnviado) return <span className="sync"><Icone nome="aviso" />Não enviado</span>
   return online
     ? <span className="sync"><Icone nome="nuvem-ok" /><span className="so-leitor">Sincronizado</span></span>
     : <span className="sync"><Icone nome="offline" />Sem internet</span>
 }
 
-export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, progresso }: Props) {
+export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, progresso, naoEnviado }: Props) {
   const online = useOnline()
   return <>
     <header className={progresso || sub ? 'topo' : 'topo simples'}>
@@ -28,7 +30,7 @@ export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, prog
         {voltarPara && <Link className="voltar" to={voltarPara} aria-label={voltarRotulo ?? 'Voltar'}><Icone nome="voltar" className="ic ic-28" /></Link>}
         {logo && <svg width="36" height="36" viewBox="0 0 192 192" aria-hidden="true" style={{ flex: 'none' }}><use href="#i-logo" /></svg>}
         <h1>{titulo}</h1>
-        <Conexao />
+        <Conexao naoEnviado={naoEnviado} />
       </div>
       {sub && <p className="topo-sub">{sub}</p>}
       {progresso && <Progresso resolvidas={progresso.resolvidas} total={progresso.total} />}

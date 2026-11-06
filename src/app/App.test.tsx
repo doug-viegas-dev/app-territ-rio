@@ -10,6 +10,7 @@ vi.mock('@/firebase/auth', () => ({
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/cards', () => ({ observarCartoes: vi.fn(), observarCartao: vi.fn(), abrirCartaoManual: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
+vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), registrarVisita: vi.fn() }))
 vi.mock('@/firebase/storage', () => ({ urlDaImagem: vi.fn() }))
 
 test('mostra o nome do aplicativo', () => {
