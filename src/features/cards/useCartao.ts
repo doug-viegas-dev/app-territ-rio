@@ -12,6 +12,6 @@ export function useCartao(id: string): Cartao | null | undefined {
 
 export function useQuadras(cartaoId: string): Quadra[] {
   const [quadras, setQuadras] = useState<Quadra[]>([])
-  useEffect(() => observarQuadras(cartaoId, setQuadras), [cartaoId])
+  useEffect(() => (cartaoId ? observarQuadras(cartaoId, setQuadras) : undefined), [cartaoId])
   return quadras
 }

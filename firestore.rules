@@ -19,7 +19,7 @@ service cloud.firestore {
     }
 
     match /members/{email} {
-      allow read: if ehMembro() && request.auth.token.email == email;
+      allow read: if ehMembro() && (request.auth.token.email == email || ehAdmin());
       allow create, update, delete: if ehAdmin();
     }
 

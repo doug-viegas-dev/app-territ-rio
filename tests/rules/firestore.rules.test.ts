@@ -110,4 +110,11 @@ describe('regras Firestore', () => {
     await assertSucceeds(setDoc(doc(db, 'cards/c2'), card))
     await assertSucceeds(deleteDoc(doc(db, 'cards/c1/blocks/b1/houses/h1')))
   })
+
+  it('só a administração lista todos os membros; o publicador lê apenas o próprio documento', async () => {
+    await assertSucceeds(getDocs(collection(adminDb(), 'members')))
+    await assertSucceeds(getDoc(doc(publisherDb(), 'members/publisher@example.com')))
+    await assertFails(getDoc(doc(publisherDb(), 'members/admin@example.com')))
+    await assertFails(getDocs(collection(publisherDb(), 'members')))
+  })
 })
