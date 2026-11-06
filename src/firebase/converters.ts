@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
-import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
+import type { Cartao, Casa, EventoCartao, Quadra, Status, Visita } from '@/domain/types'
 
 export const paraTimestamp = (ms: number): Timestamp => Timestamp.fromMillis(ms)
 export const paraMs = (valor: unknown): number | undefined => (valor instanceof Timestamp ? valor.toMillis() : undefined)
@@ -26,6 +26,36 @@ export function cartaoDe(id: string, d: Dados): Cartao {
 
 export function quadraDe(id: string, d: Dados): Quadra {
   return { id, rotulo: String(d.rotulo ?? ''), ruas: Array.isArray(d.ruas) ? d.ruas.map(String) : [], ordem: Number(d.ordem ?? 0) }
+}
+
+const STATUS: Status[] = ['pendente', 'sem_resposta', 'falado', 'estudo', 'nao_visitar']
+const statusDe = (v: unknown): Status => (STATUS.includes(v as Status) ? (v as Status) : 'pendente')
+
+export function casaDe(id: string, quadraId: string, d: Dados): Casa {
+  return {
+    id,
+    quadraId,
+    rua: String(d.rua ?? ''),
+    ...(typeof d.numero === 'string' && { numero: d.numero }),
+    ...(typeof d.descricao === 'string' && { descricao: d.descricao }),
+    ordem: Number(d.ordem ?? 0),
+    status: statusDe(d.status),
+    ...(paraMs(d.ultimaVisitaEm) !== undefined && { ultimaVisitaEm: paraMs(d.ultimaVisitaEm) }),
+    ...(typeof d.ultimoPor === 'string' && { ultimoPor: d.ultimoPor }),
+    criadoEm: paraMs(d.criadoEm) ?? 0,
+  }
+}
+
+export function visitaDe(id: string, d: Dados): Visita {
+  return {
+    id,
+    status: statusDe(d.status),
+    em: paraMs(d.em) ?? 0,
+    porUid: String(d.porUid ?? ''),
+    porNome: String(d.porNome ?? ''),
+    ciclo: Number(d.ciclo ?? 1),
+    ...(typeof d.obs === 'string' && { obs: d.obs }),
+  }
 }
 
 export function eventoDe(id: string, d: Dados): EventoCartao {
