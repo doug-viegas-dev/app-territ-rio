@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "demo-meu-territorio"
-  }
+    "default": "meu-territorio-f59bd"
+  },
+  "targets": {},
+  "etags": {}
 }

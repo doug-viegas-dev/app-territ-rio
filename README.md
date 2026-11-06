@@ -46,14 +46,15 @@ Estes passos são feitos uma única vez, no console do Firebase e no terminal.
    - `ativo` (booleano): `true`
 
    Depois disso, os demais membros são liberados pela tela Administração do app.
-9. **Publicar:**
+9. **Publicar as regras de segurança** (o app em si fica na Vercel):
 
    ```bash
-   npm run deploy
+   npm run deploy:regras
    ```
 
-   Isso gera o build e publica o Hosting, as regras do Firestore e as regras do Storage (`firebase deploy --only hosting,firestore:rules,storage`).
-10. Em Authentication > Configurações > Domínios autorizados, confirme que o endereço do Hosting (`seu-projeto.web.app`) está na lista.
+   Isso publica só as regras do Firestore e do Storage (`firebase deploy --only firestore:rules,storage`).
+10. **Publicar o app na Vercel.** Importe o repositório em <https://vercel.com/new> (preset Vite, build `npm run build`, saída `dist`). Em Settings > Environment Variables, cadastre as 7 variáveis do `.env` (`VITE_FIREBASE_*` e `VITE_USE_EMULATORS=false`) e faça o deploy. O `vercel.json` já cuida do redirecionamento das rotas.
+11. Em Authentication > Configurações > Domínios autorizados, adicione o endereço da Vercel (por exemplo `seu-app.vercel.app`).
 
 ## Instalar no celular
 

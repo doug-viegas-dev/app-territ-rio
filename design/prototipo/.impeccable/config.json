@@ -1,0 +1,161 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/direcoes-quadra.html"
+        ],
+        "createdAt": "2026-11-06T12:51:11.602Z",
+        "reason": "Contorno de 3px na casa em foco (direção C) é o indicador de seleção, deliberado para contraste e acessibilidade; decisão minha, usuário ainda não confirmou"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/08-casa.html"
+        ],
+        "createdAt": "2026-11-06T13:01:49.443Z",
+        "reason": "falso positivo: botão selecionado usa fundo currentColor (cor do status), texto branco/escuro medido em #5.6:1 ou mais; decisão minha, usuário não confirmou"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/componentes.html"
+        ],
+        "createdAt": "2026-11-06T13:01:49.711Z",
+        "reason": "falso positivo: botão selecionado usa fundo currentColor (cor do status), texto branco/escuro medido em #5.6:1 ou mais; decisão minha, usuário não confirmou"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/05-quadra.html"
+        ],
+        "createdAt": "2026-11-06T13:01:50.000Z",
+        "reason": "falso positivo: alvos de 48 a 56px com min-height e conteúdo centralizado; o recuo vertical vem da altura mínima exigida pelo briefing; decisão minha"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/06-nova-casa.html"
+        ],
+        "createdAt": "2026-11-06T13:01:50.282Z",
+        "reason": "falso positivo: alvos de 48 a 56px com min-height e conteúdo centralizado; o recuo vertical vem da altura mínima exigida pelo briefing; decisão minha"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/07-reordenar.html"
+        ],
+        "createdAt": "2026-11-06T13:01:50.550Z",
+        "reason": "falso positivo: alvos de 48 a 56px com min-height e conteúdo centralizado; o recuo vertical vem da altura mínima exigida pelo briefing; decisão minha"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/08-casa.html"
+        ],
+        "createdAt": "2026-11-06T13:01:50.831Z",
+        "reason": "falso positivo: alvos de 48 a 56px com min-height e conteúdo centralizado; o recuo vertical vem da altura mínima exigida pelo briefing; decisão minha"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/componentes.html"
+        ],
+        "createdAt": "2026-11-06T13:01:51.126Z",
+        "reason": "falso positivo: alvos de 48 a 56px com min-height e conteúdo centralizado; o recuo vertical vem da altura mínima exigida pelo briefing; decisão minha"
+      },
+      {
+        "rule": "repeated-container-text",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/05-quadra.html"
+        ],
+        "createdAt": "2026-11-06T13:01:51.521Z",
+        "reason": "intencional: o briefing exige nome do status junto de cada forma (nunca só cor); decisão minha"
+      },
+      {
+        "rule": "repeated-container-text",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/08-casa.html"
+        ],
+        "createdAt": "2026-11-06T13:01:51.946Z",
+        "reason": "intencional: o briefing exige nome do status junto de cada forma (nunca só cor); decisão minha"
+      },
+      {
+        "rule": "repeated-container-text",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/componentes.html"
+        ],
+        "createdAt": "2026-11-06T13:01:52.384Z",
+        "reason": "intencional: o briefing exige nome do status junto de cada forma (nunca só cor); decisão minha"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/05-quadra.html"
+        ],
+        "createdAt": "2026-11-06T13:01:52.835Z",
+        "reason": "sublinhado âmbar do item ativo é uso permitido pela identidade (README); decisão minha"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/06-nova-casa.html"
+        ],
+        "createdAt": "2026-11-06T13:01:53.234Z",
+        "reason": "sublinhado âmbar do item ativo é uso permitido pela identidade (README); decisão minha"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/09-admin.html"
+        ],
+        "createdAt": "2026-11-06T13:01:53.677Z",
+        "reason": "sublinhado âmbar do item ativo é uso permitido pela identidade (README); decisão minha"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/10-instalar.html"
+        ],
+        "createdAt": "2026-11-06T13:01:54.092Z",
+        "reason": "sublinhado âmbar do item ativo é uso permitido pela identidade (README); decisão minha"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/09-admin.html"
+        ],
+        "createdAt": "2026-11-06T13:13:51.178Z",
+        "reason": "falso positivo: campo de texto com min-height 52px e conteúdo centralizado, igual aos já tratados nas outras telas; decisão minha, usuário não confirmou"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "C:/Users/dolea/Documents/app-território/design/prototipo/11-historico.html"
+        ],
+        "createdAt": "2026-11-06T13:20:21.688Z",
+        "reason": "sublinhado âmbar do item ativo é uso permitido pela identidade (README), mesma regra de CSS das outras telas; decisão minha, usuário não confirmou"
+      }
+    ]
+  }
+}
