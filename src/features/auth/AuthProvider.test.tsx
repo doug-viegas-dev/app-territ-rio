@@ -68,10 +68,22 @@ describe('RequerMembro', () => {
     expect(screen.getByText('Conteúdo protegido')).toBeInTheDocument()
   })
 
-  it('não renderiza conteúdo de admin para publicador', () => {
+  it('não renderiza conteúdo de admin para publicador e avisa que é só para administradores', () => {
     prepararSessao({ papel: 'publicador', ativo: true, nome: 'Maria' })
     renderProtegido('admin')
     expect(screen.queryByText('Conteúdo protegido')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Só para administradores' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Aguardando liberação' })).not.toBeInTheDocument()
+  })
+
+  it('mostra o esqueleto, e não tela em branco, enquanto carrega o membro', () => {
+    vi.mocked(observarUsuario).mockImplementation((cb) => {
+      cb(usuario)
+      return () => {}
+    })
+    vi.mocked(observarMembro).mockImplementation(() => () => {})
+    renderProtegido()
+    expect(screen.getByRole('status', { name: 'Carregando' })).toBeInTheDocument()
   })
 
   it('inicia a autenticação ao tocar em Entrar com Google', async () => {

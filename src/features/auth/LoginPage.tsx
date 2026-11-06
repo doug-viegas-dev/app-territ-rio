@@ -1,32 +1,9 @@
 import { useState } from 'react'
 import { entrarComGoogle } from '@/firebase/auth'
-import marca from '../../../design/identidade/icone.svg'
+import marca from '@/assets/icone.svg'
 
 export function Marca() {
   return <img className="auth-marca" src={marca} alt="" />
-}
-
-export function EstilosAuth() {
-  return <style>{`
-    html,body,#root{margin:0;min-height:100%}
-    .auth-tela{box-sizing:border-box;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:#F6F7FA;color:#252C3B;font:400 16px/1.5 "Nunito Sans",system-ui,sans-serif}
-    .auth-tela *{box-sizing:border-box}
-    .auth-rolagem{width:100%;max-width:430px;flex:1;margin:0 auto;padding:24px;display:flex;flex-direction:column;justify-content:center;gap:24px}
-    .auth-centro{text-align:center}
-    .auth-marca{display:block;width:120px;height:120px;margin:0 auto 20px}
-    .auth-centro h1{font-size:32px;line-height:1.2;font-weight:600;margin:0 0 10px}
-    .auth-centro p{max-width:32ch;margin:0 auto 8px;font-size:18px;line-height:1.5}
-    .auth-rodape{width:100%;max-width:430px;margin:0 auto;padding:16px 24px 28px}
-    .auth-botao{width:100%;min-height:56px;display:flex;justify-content:center;align-items:center;gap:10px;padding:10px 20px;border:1px solid transparent;border-radius:12px;background:#55658C;color:#fff;font-family:inherit;font-size:18px;font-weight:600;line-height:1.3;text-decoration:none;cursor:pointer}
-    .auth-botao:focus-visible{outline:3px solid #252C3B;outline-offset:3px}
-    .auth-secundario{background:transparent;border-color:#7885A7;color:#252C3B;font-size:16px}
-    .auth-pilha{display:grid;gap:12px}
-    .auth-google{width:22px;height:22px;flex:none}
-    .auth-nota{text-align:center;color:#596174;font-size:16px;margin:18px 0 0}
-    .auth-erro{padding:14px;border:1px solid #A84643;border-radius:12px;background:#fff;color:#252C3B}
-    .auth-email{padding:16px;border-radius:16px;background:#D9DFF0;overflow-wrap:anywhere}
-    @media(prefers-color-scheme:dark){.auth-tela{background:#171C28;color:#F6F7FA}.auth-secundario{color:#F6F7FA;border-color:#8994B0}.auth-nota{color:#C3C9D6}.auth-email{background:#2B3347}.auth-erro{background:#252C3B;color:#F6F7FA}}
-  `}</style>
 }
 
 function GoogleG() {
@@ -54,7 +31,6 @@ export default function LoginPage() {
   }
 
   return <main className="auth-tela">
-    <EstilosAuth />
     <div className="auth-rolagem">
       <div className="auth-centro">
         <Marca />

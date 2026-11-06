@@ -3,7 +3,9 @@ import { observarUsuario, type UsuarioAutenticado } from '@/firebase/auth'
 import { observarMembro, type MembroObservado } from '@/firebase/members'
 import type { Papel } from '@/domain/types'
 import LoginPage from './LoginPage'
+import { TelaCarregando } from '@/app/Carregando'
 import AguardandoLiberacao from './AguardandoLiberacao'
+import SoAdministradores from './SoAdministradores'
 
 type Sessao = { carregando: boolean; usuario: UsuarioAutenticado | null; membro: MembroObservado | null }
 const SessaoContext = createContext<Sessao | null>(null)
@@ -38,8 +40,9 @@ export function useSessao(): Sessao {
 
 export function RequerMembro({ papel, children }: { papel?: Papel; children: ReactNode }) {
   const { carregando, usuario, membro } = useSessao()
-  if (carregando) return null
+  if (carregando) return <TelaCarregando />
   if (!usuario) return <LoginPage />
-  if (!membro?.ativo || (papel && membro.papel !== papel)) return <AguardandoLiberacao email={usuario.email} />
+  if (!membro?.ativo) return <AguardandoLiberacao email={usuario.email} />
+  if (papel && membro.papel !== papel) return <SoAdministradores />
   return children
 }

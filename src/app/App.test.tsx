@@ -1,9 +1,16 @@
 import { render, screen } from '@testing-library/react'
-import { test, expect } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import App from './App'
+
+vi.mock('@/firebase/auth', () => ({
+  entrarComGoogle: vi.fn(),
+  sair: vi.fn(),
+  observarUsuario: (cb: (u: null) => void) => { cb(null); return () => {} },
+}))
+vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
+vi.mock('@/firebase/cards', () => ({ observarCartoes: vi.fn() }))
 
 test('mostra o nome do aplicativo', () => {
   render(<App />)
-  expect(screen.getByText('Meu Território')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Meu Território' })).toBeTruthy()
 })
-
