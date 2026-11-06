@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ehMembro() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/members/$(request.auth.token.email))
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email)).data.ativo == true;
+    }
+
+    function ehAdmin() {
+      return ehMembro()
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email)).data.papel == 'admin';
+    }
+
+    function ehPublicador() {
+      return ehMembro()
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email)).data.papel == 'publicador';
+    }
+
+    match /members/{email} {
+      allow read: if ehMembro() && request.auth.token.email == email;
+      allow create, update, delete: if ehAdmin();
+    }
+
+    match /cards/{cardId} {
+      allow read: if ehMembro();
+      allow create, delete: if ehAdmin();
+      allow update: if ehAdmin() || (
+        ehPublicador()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'resolvidas', 'totalCasas', 'estado', 'ciclo', 'atualizadoEm'
+        ])
+        && (request.resource.data.estado == resource.data.estado || request.resource.data.estado == 'fechado')
+      );
+
+      match /eventos/{eventId} {
+        allow read: if ehAdmin();
+        allow create: if ehAdmin() || (
+          ehPublicador()
+          && request.resource.data.tipo == 'fechado'
+          && request.resource.data.motivo == 'fechamento_automatico'
+          && request.resource.data.porUid == request.auth.uid
+        );
+        allow update, delete: if false;
+      }
+
+      match /blocks/{blockId} {
+        allow read: if ehMembro();
+        allow create, delete: if ehAdmin();
+        allow update: if ehAdmin() || (
+          ehPublicador()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ruas'])
+          && resource.data.ruas.toSet().difference(request.resource.data.ruas.toSet()).size() == 0
+        );
+
+        match /houses/{houseId} {
+          allow read: if ehMembro();
+          allow create, update: if ehMembro();
+          allow delete: if ehAdmin();
+
+          match /visits/{visitId} {
+            allow read: if ehMembro();
+            allow create: if ehMembro() && request.resource.data.porUid == request.auth.uid;
+            allow update, delete: if false;
+          }
+        }
+      }
+    }
+  }
+}
