@@ -50,6 +50,18 @@ const barra = () => screen.getByRole('region', { name: 'Registrar visita' })
 const textos = (selector: string) => Array.from(document.querySelectorAll(selector)).map((e) => e.textContent)
 
 describe('QuadraPage', () => {
+  it('"+ casa" abre o cadastro; quadra vazia oferece "Cadastrar a primeira casa"', async () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Adicionar casa' }))
+    expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
+    cleanup()
+    preparar([])
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Cadastrar a primeira casa' }))
+    expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
+  })
+
   beforeEach(() => {
     n = 0
     vi.clearAllMocks()

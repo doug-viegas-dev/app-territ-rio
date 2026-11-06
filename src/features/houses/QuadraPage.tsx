@@ -11,6 +11,7 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
 import CasaLinha, { CasaAtencao } from './CasaLinha'
+import NovaCasaSheet from './NovaCasaSheet'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasas } from './useCasas'
 
@@ -33,6 +34,7 @@ export default function QuadraPage() {
   const [modo, setModo] = useState<'trabalho' | 'todas'>('trabalho')
   const [focoId, setFocoId] = useState<string | null>(null)
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status } | null>(null)
+  const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa } | null>(null)
 
   const quadra = quadras.find((q) => q.id === quadraId)
   const voltar = { voltarPara: `/cartao/${cartaoId}`, voltarRotulo: cartao ? `Voltar para o Cartão ${cartao.numero}` : 'Voltar' }
@@ -93,7 +95,7 @@ export default function QuadraPage() {
         <svg width="72" height="72" viewBox="0 0 192 192" aria-hidden="true" style={{ margin: '0 auto 14px', display: 'block' }}><use href="#i-logo" /></svg>
         <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhuma casa nesta quadra</h2>
         <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
-        {aberto && <button type="button" className="btn primario" style={{ maxWidth: 260, margin: '0 auto' }}><Icone nome="mais" />Cadastrar a primeira casa</button>}
+        {aberto && <button type="button" className="btn primario" style={{ maxWidth: 260, margin: '0 auto' }} onClick={() => setNovaCasa({})}><Icone nome="mais" />Cadastrar a primeira casa</button>}
       </div>
     </div>}
 
@@ -126,7 +128,7 @@ export default function QuadraPage() {
         </div>)}
       </div>
 
-      {aberto && <button type="button" className="fab sobre-barra" aria-label="Adicionar casa"><Icone nome="mais" />casa</button>}
+      {aberto && <button type="button" className="fab sobre-barra" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="mais" />casa</button>}
 
       <section className="barra-fixa" aria-label="Registrar visita">
         <div className="quem">
@@ -152,5 +154,6 @@ export default function QuadraPage() {
         </div>
       </section>
     </>}
+    {aberto && novaCasa && quadra && <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} />}
   </>
 }
