@@ -4,43 +4,11 @@ import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { useSessao } from '@/features/auth/AuthProvider'
-import { abrirCartaoManual } from '@/firebase/cards'
-import type { Cartao } from '@/domain/types'
+import ConfirmarAbertura from './ConfirmarAbertura'
 import ImagemCartao from './ImagemCartao'
 import { useCartao, useQuadras } from './useCartao'
 
 const data = (ms: number) => new Date(ms).toLocaleDateString('pt-BR')
-const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
-function ConfirmarAbertura({ cartao, nome, uid, onFechar }: { cartao: Cartao; nome: string; uid: string; onFechar: () => void }) {
-  const [agora] = useState(() => Date.now())
-  const [enviando, setEnviando] = useState(false)
-  const [erro, setErro] = useState(false)
-
-  async function abrir() {
-    setEnviando(true)
-    setErro(false)
-    try {
-      await abrirCartaoManual(cartao, { uid, nome })
-      onFechar()
-    } catch {
-      setErro(true)
-      setEnviando(false)
-    }
-  }
-
-  return <div className="veu">
-    <div className="folha" role="dialog" aria-label="Abrir cartão">
-      <h2>Abrir o cartão {cartao.numero}?</h2>
-      <p>Depois de aberto, qualquer pessoa registra visitas. Fica registrado que foi você, <b>{nome}</b>, em {data(agora)} às {hora(agora)}.</p>
-      {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p><b>Não foi possível abrir</b>Tente de novo.</p></div>}
-      <div className="pilha">
-        <button type="button" className="btn primario" onClick={() => void abrir()} disabled={enviando}>Abrir cartão</button>
-        <button type="button" className="btn secundario" onClick={onFechar}>Cancelar</button>
-      </div>
-    </div>
-  </div>
-}
 
 export default function CartaoPage() {
   const { cartaoId = '' } = useParams()

@@ -289,6 +289,9 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .caixa-ok { display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 12px 14px; border: 1.5px solid var(--borda-forte); border-radius: 12px; margin-bottom: 14px; }
 .caixa-ok .marca { width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--borda-forte); flex: none; display: grid; place-items: center; background: var(--cor-principal); border-color: var(--cor-principal); color: var(--sobre-principal); }
 
+button.caixa-ok { width: 100%; text-align: left; background: none; color: inherit; font: inherit; cursor: pointer; }
+.caixa-ok .marca.vazia { background: transparent; border-color: var(--borda-forte); }
+
 /* ---------- carregando ---------- */
 .esqueleto { background: var(--cor-secundaria); border-radius: 8px; }
 .esqueleto-cartao { height: 80px; border-radius: 16px; margin-bottom: 10px; }
