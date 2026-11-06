@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Histórico do cartão · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .evento .marca { width: 32px; height: 32px; border-radius: 50%; background: var(--cor-secundaria); display: grid; place-items: center; }
+  .evento .marca .ic { width: 20px; height: 20px; }
+  .evento b { font-size: 18px; font-weight: 600; }
+  .evento .quem { margin-top: 2px; }
+</style>
+<script src="js/app.js"></script>
+</head>
+<body data-tela="Admin · Histórico do cartão" data-variantes="padrao:Cartão 12 (10 registros)|cartao-5:Cartão 5 (poucos registros)|vazio:Cartão sem histórico|carregando:Carregando|sem-acesso:Sem permissão">
+<main class="app">
+  <header class="topo simples">
+    <div class="topo-linha">
+      <a class="voltar" href="09-admin.html#ciclo" aria-label="Voltar para Administração"><svg class="ic ic-28"><use href="#i-voltar"/></svg></a>
+      <h1>Histórico</h1>
+      <span class="sync"><svg class="ic"><use href="#i-nuvem-ok"/></svg><span class="so-leitor">Sincronizado</span></span>
+    </div>
+    <p class="topo-sub" style="margin-bottom:0">Quando cada cartão foi aberto ou fechado</p>
+  </header>
+
+  <div class="rolagem" data-v="sem-acesso">
+    <div class="sem-casas" style="padding-top:56px">
+      <svg class="ic ic-32" style="margin:0 auto 12px"><use href="#i-cadeado"/></svg>
+      <h2 style="font-size:22px;margin-bottom:8px">Só para administradores</h2>
+      <p style="color:var(--texto-suave);max-width:30ch;margin:0 auto">Peça a um administrador da congregação para consultar este histórico.</p>
+    </div>
+  </div>
+
+  <div class="rolagem" data-v-nao="sem-acesso">
+    <div class="campo" style="margin-bottom:8px">
+      <span class="rotulo-campo">Cartão</span>
+      <div class="chips">
+        <a class="chip sel" href="?v=padrao" data-v="padrao carregando"><svg class="ic ic-20"><use href="#i-check"/></svg>12</a>
+        <a class="chip" href="?v=padrao" data-v="cartao-5 vazio">12</a>
+        <a class="chip" href="?v=vazio" data-v="padrao carregando cartao-5">3</a>
+        <a class="chip sel" href="?v=vazio" data-v="vazio"><svg class="ic ic-20"><use href="#i-check"/></svg>3</a>
+        <a class="chip" href="?v=cartao-5" data-v="padrao carregando vazio">5</a>
+        <a class="chip sel" href="?v=cartao-5" data-v="cartao-5"><svg class="ic ic-20"><use href="#i-check"/></svg>5</a>
+      </div>
+    </div>
+
+    <div class="aviso" role="note" style="margin-top:14px" data-v="padrao cartao-5 vazio">
+      <svg class="ic"><use href="#i-info"/></svg>
+      <p>Mostra quem abriu ou fechou o cartão e quando. Só os últimos 10 registros aparecem.</p>
+    </div>
+
+    <!-- carregando -->
+    <div data-v="carregando" style="margin-top:14px">
+      <div class="esqueleto" style="height:56px;margin-bottom:14px"></div><div class="esqueleto" style="height:56px;margin-bottom:14px"></div><div class="esqueleto" style="height:56px;margin-bottom:14px"></div><div class="esqueleto" style="height:56px"></div>
+    </div>
+
+    <!-- vazio -->
+    <div data-v="vazio" class="sem-casas">
+      <h2 style="font-size:20px;margin-bottom:8px">Nenhum registro ainda</h2>
+      <p style="color:var(--texto-suave);max-width:30ch;margin:0 auto">Este cartão ainda não foi fechado nem reaberto.</p>
+    </div>
+
+    <h2 class="titulo-secao" data-v="padrao">Cartão 12 · Jardim das Acácias <small>10</small></h2>
+    <h2 class="titulo-secao" data-v="cartao-5">Cartão 5 · Parque Ipê <small>4</small></h2>
+
+    <!-- Cartão 12 -->
+    <ol class="tempo" data-v="padrao">
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">02/11/2026 · 09:14</div><div class="quem">Maria S. reiniciou o território</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">30/10/2026 · 18:40</div><div class="quem">Automático: Ana P. registrou a última casa</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">21/10/2026 · 20:05</div><div class="quem">Paulo R. abriu o cartão</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">20/10/2026 · 19:30</div><div class="quem">Maria S. fechou manualmente</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">05/09/2026 · 08:50</div><div class="quem">Maria S. reiniciou o território</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">04/09/2026 · 21:12</div><div class="quem">Automático: Marcos S. registrou a última casa</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">12/07/2026 · 10:02</div><div class="quem">Paulo R. abriu o cartão</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">10/07/2026 · 17:45</div><div class="quem">Paulo R. fechou manualmente</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">28/03/2026 · 09:30</div><div class="quem">Maria S. reiniciou o território</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">27/03/2026 · 16:08</div><div class="quem">Automático: Joana L. registrou a última casa</div></div></li>
+    </ol>
+
+    <!-- Cartão 5 -->
+    <ol class="tempo" data-v="cartao-5">
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">28/10/2026 · 18:02</div><div class="quem">Automático: Ana P. registrou a última casa</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">15/09/2026 · 08:40</div><div class="quem">Maria S. reiniciou o território</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado-aberto"/></svg></span><div><b>Aberto</b><div class="quando">03/03/2026 · 10:15</div><div class="quem">Paulo R. abriu o cartão</div></div></li>
+      <li class="evento"><span class="marca"><svg class="ic"><use href="#i-cadeado"/></svg></span><div><b>Fechado</b><div class="quando">02/03/2026 · 09:30</div><div class="quem">Maria S. criou o cartão</div></div></li>
+    </ol>
+  </div>
+</main>
+</body>
+</html>

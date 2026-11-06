@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Nova casa · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+</head>
+<body data-tela="6 · Nova casa" data-variantes="padrao:Uma casa|nova-rua:Nova rua|repetido:Número repetido|salva:Casa salva|faixa:Faixa|offline:Sem internet">
+<main class="app">
+  <header class="topo simples">
+    <div class="topo-linha">
+      <a class="voltar" href="05-quadra.html" aria-label="Voltar para a Quadra 3"><svg class="ic ic-28"><use href="#i-voltar"/></svg></a>
+      <h1>Nova casa</h1>
+      <span class="sync" data-v-nao="offline"><svg class="ic"><use href="#i-nuvem-ok"/></svg><span class="so-leitor">Sincronizado</span></span>
+      <span class="sync" data-v="offline"><svg class="ic"><use href="#i-offline"/></svg>Sem internet</span>
+    </div>
+    <p class="topo-sub" style="margin-bottom:0">Quadra 3 · Cartão 12</p>
+  </header>
+  <div class="aviso faixa" data-v="offline" role="status"><svg class="ic"><use href="#i-offline"/></svg><p>Sem internet — suas anotações serão enviadas depois.</p></div>
+
+  <div class="rolagem" style="padding-bottom:200px">
+    <div class="aviso" data-v="salva" role="status" style="background:var(--superficie);border-color:var(--st-falado)">
+      <svg class="ic c-falado"><use href="#i-falado"/></svg>
+      <p><b>Casa salva</b>112 · muro baixo entrou no fim da Rua das Acácias. Pode cadastrar a próxima.</p>
+    </div>
+
+    <div class="segmento" style="margin-bottom:18px" role="tablist">
+      <a data-v-nao="faixa" class="ativo" href="?v=padrao">Uma casa</a><a data-v="faixa" href="?v=padrao">Uma casa</a>
+      <a data-v="faixa" class="ativo" href="?v=faixa">Faixa</a><a data-v-nao="faixa" href="?v=faixa">Faixa</a>
+    </div>
+
+    <div class="campo">
+      <span class="rotulo-campo">Rua</span>
+      <div class="chips" role="radiogroup" aria-label="Rua">
+        <span class="chip sel" role="radio" aria-checked="true"><svg class="ic ic-20"><use href="#i-check"/></svg>Rua das Acácias</span>
+        <span class="chip" role="radio" aria-checked="false">Rua Ipê Amarelo</span>
+        <a class="chip" href="06-nova-casa.html?v=nova-rua" style="background:transparent;border:1.5px dashed var(--borda-forte)"><svg class="ic ic-20"><use href="#i-mais"/></svg>Nova rua</a>
+      </div>
+    </div>
+
+    <!-- uma casa -->
+    <div data-v-nao="faixa">
+      <div class="campo">
+        <label for="num">Número <span style="font-weight:400;color:var(--texto-suave)">(opcional)</span></label>
+        <div class="entrada" id="num" data-v-nao="repetido"><span style="color:var(--texto-suave)">Ex.: 120</span></div>
+        <div class="entrada" data-v="repetido" style="border-color:var(--cor-principal);border-width:3px">112</div>
+        <div class="aviso" data-v="repetido" role="status" style="margin:6px 0 0;background:var(--superficie)">
+          <svg class="ic"><use href="#i-info"/></svg>
+          <p>Já existe um 112 nesta rua. Pode salvar mesmo assim.</p>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="desc">Descrição curta</label>
+        <div class="entrada" id="desc" data-v-nao="repetido"><span style="color:var(--texto-suave)">Ex.: portão azul</span></div>
+        <div class="entrada" data-v="repetido">muro baixo</div>
+        <span class="dica">Obrigatória quando a casa não tem número. Ex.: ao lado da padaria.</span>
+      </div>
+      <p style="color:var(--texto-suave)">A casa entra no fim da rua. Depois você pode mudar a posição em “Reordenar”.</p>
+    </div>
+
+    <!-- faixa -->
+    <div data-v="faixa">
+      <div class="entrada-grupo">
+        <div class="campo"><label for="ini">Início</label><div class="entrada" id="ini">100</div></div>
+        <div class="campo"><label for="fim">Fim</label><div class="entrada" id="fim">130</div></div>
+      </div>
+      <div class="campo">
+        <span class="rotulo-campo">Quais números</span>
+        <div class="segmento" role="radiogroup">
+          <span>Todos</span><span class="ativo">Pares</span><span>Ímpares</span>
+        </div>
+      </div>
+      <div class="aviso" role="status" style="margin-top:4px">
+        <svg class="ic"><use href="#i-info"/></svg>
+        <p><b>16 casas serão criadas</b>100, 102, 104 … 130, na ordem do menor para o maior, no fim da Rua das Acácias.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="barra-fixa" style="padding-top:14px">
+    <div class="pilha">
+      <a class="btn primario" href="06-nova-casa.html?v=salva" data-v-nao="faixa">Salvar e adicionar outra</a>
+      <a class="btn secundario" href="05-quadra.html" data-v-nao="faixa">Salvar</a>
+      <a class="btn primario" href="05-quadra.html" data-v="faixa">Criar 16 casas</a>
+    </div>
+  </div>
+  <div class="veu" data-v="nova-rua">
+    <div class="folha" role="dialog" aria-label="Nova rua">
+      <h2>Nova rua</h2>
+      <div class="campo"><label for="nr">Nome da rua</label><div class="entrada" id="nr" style="border-color:var(--cor-principal);border-width:2.5px"><span style="color:var(--texto-suave)">Ex.: Rua das Palmeiras</span></div><span class="dica">A rua fica disponível em toda a Quadra 3.</span></div>
+      <div class="pilha">
+        <a class="btn primario" href="06-nova-casa.html">Adicionar rua</a>
+        <a class="btn secundario" href="06-nova-casa.html">Cancelar</a>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

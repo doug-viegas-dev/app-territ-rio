@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Aguardando liberação · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+</head>
+<body data-tela="2 · Aguardando liberação" data-variantes="padrao:Padrão|offline:Sem internet">
+<main class="app">
+  <div class="aviso faixa" data-v="offline" role="status"><svg class="ic"><use href="#i-offline"/></svg><p>Sem internet — suas anotações serão enviadas depois.</p></div>
+  <div class="rolagem centro">
+    <div class="centrado">
+      <svg class="marca-grande" width="88" height="88" viewBox="0 0 192 192" aria-hidden="true"><use href="#i-logo"/></svg>
+      <h1>Aguardando liberação</h1>
+      <p>O administrador precisa liberar o seu e-mail antes de você ver os cartões.</p>
+    </div>
+    <div class="painel-caixa" style="display:flex;gap:12px;align-items:center">
+      <svg class="ic ic-28"><use href="#i-email"/></svg>
+      <div style="min-width:0"><span style="color:var(--texto-suave)">Você entrou como</span><b style="display:block;word-break:break-all">maria.souza@gmail.com</b></div>
+    </div>
+    <p class="nota-pequena" style="margin-top:0;text-align:left">Avise o administrador da congregação. Quando ele liberar, toque em “Verificar de novo”.</p>
+  </div>
+  <div class="rodape-entrada pilha">
+    <a class="btn primario" href="03-cartoes.html">Verificar de novo</a>
+    <a class="btn secundario" href="01-entrar.html"><svg class="ic"><use href="#i-sair"/></svg>Sair</a>
+  </div>
+</main>
+</body>
+</html>

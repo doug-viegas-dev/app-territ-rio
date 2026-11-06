@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Quadra · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+</head>
+<body data-tela="5 · Quadra" data-variantes="padrao:Trabalho|todas:Todas|offline:Sem internet|erro:Erro ao enviar|fechado:Cartão fechado (administrador)|fechado-publicador:Cartão fechado (publicador)|sem-casas:Quadra sem casas">
+<main class="app">
+  <header class="topo">
+    <div class="topo-linha">
+      <a class="voltar" href="04-cartao.html" aria-label="Voltar para o Cartão 12"><svg class="ic ic-28"><use href="#i-voltar"/></svg></a>
+      <h1>Quadra 3</h1>
+      <span class="sync" data-v-nao="offline erro"><svg class="ic"><use href="#i-nuvem-ok"/></svg><span class="so-leitor">Sincronizado</span></span>
+      <span class="sync" data-v="offline"><svg class="ic"><use href="#i-offline"/></svg>Sem internet</span>
+      <span class="sync" data-v="erro"><svg class="ic"><use href="#i-aviso"/></svg>Não enviado</span>
+    </div>
+    <p class="topo-sub">Cartão 12 · <span data-v-nao="sem-casas">3 de 8 resolvidas</span><span data-v="sem-casas">nenhuma casa</span></p>
+    <div class="progresso"><b style="width:37.5%" data-v-nao="sem-casas"></b></div>
+  </header>
+
+  <div class="aviso faixa" data-v="offline" role="status"><svg class="ic"><use href="#i-offline"/></svg><p>Sem internet — suas anotações serão enviadas depois.</p></div>
+  <div class="aviso faixa erro" data-v="erro" role="alert">
+    <svg class="ic"><use href="#i-aviso"/></svg>
+    <p><b>A última anotação não foi enviada</b>Ela está guardada neste aparelho. <a class="btn link" href="?v=erro" style="min-height:40px">Tentar de novo</a></p>
+  </div>
+  <div class="aviso faixa" data-v="fechado" role="status"><svg class="ic"><use href="#i-cadeado"/></svg><p><b>Cartão fechado</b>Abra o cartão para registrar visitas. <a class="btn link" href="04-cartao.html?v=abrir" style="min-height:40px">Abrir cartão</a></p></div>
+  <div class="aviso faixa" data-v="fechado-publicador" role="status"><svg class="ic"><use href="#i-cadeado"/></svg><p><b>Cartão fechado</b>Só um administrador pode abrir o cartão. Peça a um deles.</p></div>
+
+  <div class="rolagem com-barra" data-v-nao="sem-casas">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px">
+      <div class="segmento" style="flex:1" role="tablist">
+        <a href="?v=padrao" class="" data-v="todas">Trabalho</a>
+        <a href="?v=padrao" class="ativo" data-v-nao="todas" aria-current="page">Trabalho</a>
+        <a href="?v=todas" class="ativo" data-v="todas" aria-current="page">Todas</a>
+        <a href="?v=todas" data-v-nao="todas">Todas</a>
+      </div>
+      <a class="btn secundario medio auto" href="07-reordenar.html" style="min-height:52px"><svg class="ic ic-20"><use href="#i-ordem"/></svg>Reordenar</a>
+    </div>
+
+    <!-- ============ Trabalho: só o que falta ============ -->
+    <div data-v-nao="todas">
+      <h2 class="titulo-secao">Rua das Acácias <small>4 para visitar</small></h2>
+      <button class="casa" type="button">
+        <span class="rotulo">104</span>
+        <span class="estado c-pendente" data-v-nao="offline erro"><svg class="ic"><use href="#i-pendente"/></svg>Pendente</span>
+        <span class="estado c-falado" data-v="offline"><svg class="ic"><use href="#i-falado"/></svg><span style="color:var(--cor-texto)">Conversado<br><small><svg class="ic ic-20" style="display:inline;vertical-align:-4px"><use href="#i-nuvem"/></svg> aguardando envio</small></span></span>
+        <span class="estado c-nao-visitar" data-v="erro"><svg class="ic"><use href="#i-aviso"/></svg><span style="color:var(--cor-texto)">Não enviado</span></span>
+      </button>
+      <button class="casa" type="button">
+        <span class="rotulo">Casa verde, ao lado da padaria</span>
+        <span class="estado c-sem-resposta"><svg class="ic"><use href="#i-sem-resposta"/></svg><span style="color:var(--cor-texto)">Não atendeu<br><small>02/11</small></span></span>
+      </button>
+      <button class="casa foco" type="button" aria-current="true">
+        <span class="rotulo">112 · muro baixo</span>
+        <span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg>Pendente</span>
+      </button>
+      <button class="casa" type="button">
+        <span class="rotulo">116 · portão azul</span>
+        <span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg>Pendente</span>
+      </button>
+
+      <h2 class="titulo-secao">Rua Ipê Amarelo <small>1 para visitar</small></h2>
+      <button class="casa" type="button">
+        <span class="rotulo">Sobrado de tijolo</span>
+        <span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg>Pendente</span>
+      </button>
+
+      <h2 class="titulo-secao divisor">Atenção <small>2 casas</small></h2>
+      <a class="casa" href="08-casa.html">
+        <span class="rotulo">108 <span style="font-weight:400;color:var(--texto-suave)">· Rua das Acácias</span></span>
+        <span class="estado c-estudo"><svg class="ic"><use href="#i-estudo"/></svg><span style="color:var(--cor-texto)">Estudo</span></span>
+      </a>
+      <a class="casa" href="08-casa.html">
+        <span class="rotulo">24 <span style="font-weight:400;color:var(--texto-suave)">· Rua Ipê Amarelo</span></span>
+        <span class="estado c-nao-visitar"><svg class="ic"><use href="#i-nao-visitar"/></svg><span style="color:var(--cor-texto)">Não visitar</span></span>
+      </a>
+    </div>
+
+    <!-- ============ Todas: ordem física ============ -->
+    <div data-v="todas">
+      <h2 class="titulo-secao">Rua das Acácias <small>6 casas</small></h2>
+      <button class="casa" type="button"><span class="rotulo">100 · portão azul</span><span class="estado c-falado"><svg class="ic"><use href="#i-falado"/></svg><span style="color:var(--cor-texto)">Conversado<br><small>28/10</small></span></span></button>
+      <button class="casa" type="button"><span class="rotulo">104</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+      <button class="casa" type="button"><span class="rotulo">108</span><span class="estado c-estudo"><svg class="ic"><use href="#i-estudo"/></svg><span style="color:var(--cor-texto)">Estudo</span></span></button>
+      <button class="casa" type="button"><span class="rotulo">Casa verde, ao lado da padaria</span><span class="estado c-sem-resposta"><svg class="ic"><use href="#i-sem-resposta"/></svg><span style="color:var(--cor-texto)">Não atendeu<br><small>02/11</small></span></span></button>
+      <button class="casa foco" type="button" aria-current="true"><span class="rotulo">112 · muro baixo</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+      <button class="casa" type="button"><span class="rotulo">116 · portão azul</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+
+      <h2 class="titulo-secao">Rua Ipê Amarelo <small>2 casas</small></h2>
+      <button class="casa" type="button"><span class="rotulo">Sobrado de tijolo</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+      <button class="casa" type="button"><span class="rotulo">24</span><span class="estado c-nao-visitar"><svg class="ic"><use href="#i-nao-visitar"/></svg><span style="color:var(--cor-texto)">Não visitar</span></span></button>
+    </div>
+  </div>
+
+  <!-- ============ Quadra sem casas ============ -->
+  <div class="rolagem" data-v="sem-casas">
+    <div class="sem-casas" style="padding-top:48px">
+      <svg width="72" height="72" viewBox="0 0 192 192" aria-hidden="true" style="margin:0 auto 14px;display:block"><use href="#i-logo"/></svg>
+      <h2 style="font-size:22px;margin-bottom:8px">Nenhuma casa nesta quadra</h2>
+      <p style="color:var(--texto-suave);max-width:30ch;margin:0 auto 22px">Cadastre as casas na ordem em que aparecem na rua.</p>
+      <a class="btn primario" href="06-nova-casa.html" style="max-width:260px;margin:0 auto"><svg class="ic"><use href="#i-mais"/></svg>Cadastrar a primeira casa</a>
+    </div>
+  </div>
+
+  <a class="fab sobre-barra" href="06-nova-casa.html" data-v-nao="sem-casas fechado fechado-publicador"><svg class="ic"><use href="#i-mais"/></svg>casa</a>
+
+  <div class="barra-fixa" data-v-nao="sem-casas">
+    <div class="quem">
+      <div><b>112 · muro baixo</b><span>Rua das Acácias</span></div>
+      <a class="detalhes" href="08-casa.html">Detalhes<svg class="ic ic-20"><use href="#i-chev"/></svg></a>
+    </div>
+    <div class="grade-status">
+      <button class="bs c-falado" type="button" data-v-nao="fechado fechado-publicador"><svg class="ic"><use href="#i-falado"/></svg><span>Conversado</span></button>
+      <button class="bs c-sem-resposta" type="button" data-v-nao="fechado fechado-publicador"><svg class="ic"><use href="#i-sem-resposta"/></svg><span>Não atendeu</span></button>
+      <button class="bs c-estudo" type="button" data-v-nao="fechado fechado-publicador"><svg class="ic"><use href="#i-estudo"/></svg><span>Estudo</span></button>
+      <button class="bs c-nao-visitar" type="button" data-v-nao="fechado fechado-publicador"><svg class="ic"><use href="#i-nao-visitar"/></svg><span>Não visitar</span></button>
+      <span class="bs c-falado" aria-disabled="true" data-v="fechado fechado-publicador"><svg class="ic"><use href="#i-falado"/></svg><span>Conversado</span></span>
+      <span class="bs c-sem-resposta" aria-disabled="true" data-v="fechado fechado-publicador"><svg class="ic"><use href="#i-sem-resposta"/></svg><span>Não atendeu</span></span>
+      <span class="bs c-estudo" aria-disabled="true" data-v="fechado fechado-publicador"><svg class="ic"><use href="#i-estudo"/></svg><span>Estudo</span></span>
+      <span class="bs c-nao-visitar" aria-disabled="true" data-v="fechado fechado-publicador"><svg class="ic"><use href="#i-nao-visitar"/></svg><span>Não visitar</span></span>
+    </div>
+  </div>
+</main>
+</body>
+</html>

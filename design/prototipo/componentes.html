@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Componentes · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .amostras { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cor { border-radius: 12px; border: 1.5px solid var(--borda); overflow: hidden; background: var(--superficie); }
+  .cor i { display: block; height: 44px; }
+  .cor span { display: block; padding: 6px 10px 8px; font-size: 16px; line-height: 1.25; }
+  .cor small { color: var(--texto-suave); display: block; font-size: 16px; }
+  .rotulo-comp { color: var(--texto-suave); margin: 0 0 8px; }
+  .bloco { margin-bottom: 8px; }
+  .escala p { margin-bottom: 8px; }
+</style>
+<script src="js/app.js"></script>
+</head>
+<body data-tela="Componentes">
+<main class="app">
+  <header class="topo simples">
+    <div class="topo-linha"><a class="voltar" href="index.html" aria-label="Voltar ao índice"><svg class="ic ic-28"><use href="#i-voltar"/></svg></a><h1>Componentes</h1></div>
+  </header>
+
+  <div class="rolagem">
+
+    <h2 class="titulo-secao">Cores <small>variáveis CSS</small></h2>
+    <div class="amostras">
+      <div class="cor"><i style="background:var(--cor-principal)"></i><span><b>--cor-principal</b><small>botões, topo</small></span></div>
+      <div class="cor"><i style="background:var(--cor-secundaria)"></i><span><b>--cor-secundaria</b><small>chips, áreas suaves</small></span></div>
+      <div class="cor"><i style="background:var(--cor-destaque)"></i><span><b>--cor-destaque</b><small>só como fundo</small></span></div>
+      <div class="cor"><i style="background:var(--cor-fundo)"></i><span><b>--cor-fundo</b><small>fundo das telas</small></span></div>
+      <div class="cor"><i style="background:var(--cor-texto)"></i><span><b>--cor-texto</b><small>texto</small></span></div>
+      <div class="cor"><i style="background:var(--superficie)"></i><span><b>--superficie</b><small>cartões</small></span></div>
+    </div>
+
+    <h2 class="titulo-secao divisor">Botão de status <small>cor + forma + nome</small></h2>
+    <p class="rotulo-comp">Normal</p>
+    <div class="grade-status bloco">
+      <button class="bs c-falado" type="button"><svg class="ic"><use href="#i-falado"/></svg><span>Conversado</span></button>
+      <button class="bs c-sem-resposta" type="button"><svg class="ic"><use href="#i-sem-resposta"/></svg><span>Não atendeu</span></button>
+      <button class="bs c-estudo" type="button"><svg class="ic"><use href="#i-estudo"/></svg><span>Estudo</span></button>
+      <button class="bs c-nao-visitar" type="button"><svg class="ic"><use href="#i-nao-visitar"/></svg><span>Não visitar</span></button>
+    </div>
+    <p class="rotulo-comp" style="margin-top:14px">Selecionado</p>
+    <div class="grade-status bloco">
+      <button class="bs c-falado sel" type="button" aria-pressed="true"><svg class="ic"><use href="#i-falado"/></svg><span>Conversado</span></button>
+      <button class="bs c-sem-resposta sel" type="button" aria-pressed="true"><svg class="ic"><use href="#i-sem-resposta"/></svg><span>Não atendeu</span></button>
+      <button class="bs c-estudo sel" type="button" aria-pressed="true"><svg class="ic"><use href="#i-estudo"/></svg><span>Estudo</span></button>
+      <button class="bs c-nao-visitar sel" type="button" aria-pressed="true"><svg class="ic"><use href="#i-nao-visitar"/></svg><span>Não visitar</span></button>
+    </div>
+    <p class="rotulo-comp" style="margin-top:14px">Desativado (cartão fechado)</p>
+    <div class="grade-status bloco">
+      <span class="bs c-falado" aria-disabled="true"><svg class="ic"><use href="#i-falado"/></svg><span>Conversado</span></span>
+      <span class="bs c-nao-visitar" aria-disabled="true"><svg class="ic"><use href="#i-nao-visitar"/></svg><span>Não visitar</span></span>
+    </div>
+    <p class="rotulo-comp" style="margin-top:14px">Pendente (sem cor de status)</p>
+    <p class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg>Pendente</p>
+
+    <h2 class="titulo-secao divisor">Linha de casa</h2>
+    <button class="casa" type="button"><span class="rotulo">116 · portão azul</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+    <button class="casa foco" type="button"><span class="rotulo">112 · muro baixo</span><span class="estado c-pendente"><svg class="ic"><use href="#i-pendente"/></svg><span class="so-leitor">Pendente</span></span></button>
+    <button class="casa" type="button"><span class="rotulo">Casa verde, ao lado da padaria</span><span class="estado c-sem-resposta"><svg class="ic"><use href="#i-sem-resposta"/></svg><span style="color:var(--cor-texto)">Não atendeu<br><small>02/11</small></span></span></button>
+    <button class="casa" type="button"><span class="rotulo">100 · portão azul</span><span class="estado c-falado"><svg class="ic"><use href="#i-falado"/></svg><span style="color:var(--cor-texto)">Conversado<br><small>28/10</small></span></span></button>
+    <button class="casa" type="button"><span class="rotulo">108</span><span class="estado c-estudo"><svg class="ic"><use href="#i-estudo"/></svg><span style="color:var(--cor-texto)">Estudo</span></span></button>
+    <button class="casa" type="button"><span class="rotulo">24</span><span class="estado c-nao-visitar"><svg class="ic"><use href="#i-nao-visitar"/></svg><span style="color:var(--cor-texto)">Não visitar</span></span></button>
+    <p class="rotulo-comp">O contorno grosso marca a casa em foco, a que recebe o próximo registro.</p>
+
+    <h2 class="titulo-secao divisor">Chip de rua</h2>
+    <div class="chips">
+      <span class="chip sel"><svg class="ic ic-20"><use href="#i-check"/></svg>Rua das Acácias</span>
+      <span class="chip">Rua Ipê Amarelo</span>
+      <span class="chip">Rua das Palmeiras</span>
+    </div>
+
+    <h2 class="titulo-secao divisor">Barra de progresso</h2>
+    <p class="rotulo-comp">No cartão, com contagem ao lado</p>
+    <a class="item-cartao" href="#">
+      <span class="num">12</span>
+      <div class="corpo"><h3>Jardim das Acácias</h3></div>
+      <span class="conta">12/30</span>
+      <div class="progresso claro"><b style="width:40%"></b></div>
+    </a>
+    <p class="rotulo-comp">No topo da tela</p>
+    <div class="topo simples" style="border-radius:14px;margin-bottom:12px">
+      <p class="topo-sub">Cartão 12 · 3 de 8 resolvidas</p>
+      <div class="progresso"><b style="width:37.5%"></b></div>
+    </div>
+    <p class="rotulo-comp">Vazia e completa</p>
+    <div class="progresso claro" style="margin-bottom:10px"><b style="width:0%"></b></div>
+    <div class="progresso claro"><b style="width:100%"></b></div>
+
+    <h2 class="titulo-secao divisor">Avisos e conexão</h2>
+    <div class="aviso" role="status"><svg class="ic"><use href="#i-offline"/></svg><p>Sem internet — suas anotações serão enviadas depois.</p></div>
+    <div class="aviso erro" role="alert"><svg class="ic"><use href="#i-aviso"/></svg><p><b>Não foi possível enviar</b>A anotação está guardada neste aparelho. <a class="btn link" href="#" style="min-height:40px">Tentar de novo</a></p></div>
+    <div class="aviso" role="status"><svg class="ic ic-28"><use href="#i-cadeado"/></svg><p><b>Cartão fechado</b>Peça ao administrador que reabra o cartão.</p></div>
+    <p class="rotulo-comp">Estado discreto no topo (ícone + palavra)</p>
+    <div class="topo simples" style="border-radius:14px;display:grid;gap:10px;padding-top:14px;padding-bottom:14px">
+      <span class="sync"><svg class="ic"><use href="#i-nuvem-ok"/></svg><span class="so-leitor">Sincronizado</span></span>
+      <span class="sync"><svg class="ic girar"><use href="#i-sincronizando"/></svg>Sincronizando</span>
+      <span class="sync"><svg class="ic"><use href="#i-offline"/></svg>Sem internet</span>
+      <span class="sync"><svg class="ic"><use href="#i-aviso"/></svg>Não enviado</span>
+    </div>
+
+    <h2 class="titulo-secao divisor">Botões</h2>
+    <div class="pilha">
+      <button class="btn primario" type="button">Entrar com Google</button>
+      <button class="btn secundario" type="button">Abrir no Google Maps</button>
+      <button class="btn suave" type="button">Mover para outra rua</button>
+      <button class="btn perigo" type="button">Reiniciar território</button>
+      <span class="btn secundario" aria-disabled="true">Reabrir cartão</span>
+      <a class="btn link" href="#" style="margin:0 auto">Agora não</a>
+    </div>
+    <p style="margin-top:14px;display:flex;justify-content:flex-end"><span class="fab" style="position:static"><svg class="ic"><use href="#i-mais"/></svg>casa</span></p>
+
+    <h2 class="titulo-secao divisor">Campos</h2>
+    <div class="campo"><label>Número <span style="font-weight:400;color:var(--texto-suave)">(opcional)</span></label><div class="entrada"><span style="color:var(--texto-suave)">Ex.: 120</span></div></div>
+    <div class="campo"><label>Descrição curta</label><div class="entrada">portão azul</div><span class="dica">Obrigatória quando a casa não tem número.</span></div>
+    <span class="chave on"><i></i>Ativo</span> &nbsp; <span class="chave"><i></i>Inativo</span>
+
+    <h2 class="titulo-secao divisor">Texto</h2>
+    <div class="escala">
+      <p style="font-size:32px;font-weight:600">Título 32 · 700</p>
+      <p style="font-size:22px;font-weight:600">Título de tela 22 · 700</p>
+      <p style="font-size:18px;font-weight:600">Rótulo de casa 18 · 700</p>
+      <p style="font-size:16px;font-weight:400">Texto base 16 · 400. Nunito Sans.</p>
+      <p style="font-size:16px;font-weight:500;color:var(--texto-suave)">Apoio 16 · 600</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

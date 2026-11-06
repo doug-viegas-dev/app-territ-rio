@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Administração · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+</head>
+<body data-tela="9 · Admin" data-variantes="padrao:Padrão|nova-rua:Nova rua|reiniciar:Confirmar reinício|cartao-fechado:Cartão fechado|sem-acesso:Sem permissão">
+<main class="app">
+  <header class="topo simples">
+    <div class="topo-linha">
+      <h1>Administração</h1>
+      <span class="sync"><svg class="ic"><use href="#i-nuvem-ok"/></svg><span class="so-leitor">Sincronizado</span></span>
+    </div>
+  </header>
+
+  <div class="rolagem com-nav" data-v="sem-acesso">
+    <div class="sem-casas" style="padding-top:56px">
+      <svg class="ic ic-32" style="margin:0 auto 12px"><use href="#i-cadeado"/></svg>
+      <h2 style="font-size:22px;margin-bottom:8px">Só para administradores</h2>
+      <p style="color:var(--texto-suave);max-width:30ch;margin:0 auto">Peça a um administrador da congregação para fazer esta alteração.</p>
+    </div>
+  </div>
+
+  <div class="rolagem com-nav" data-v-nao="sem-acesso">
+    <div class="segmento" style="margin-bottom:6px">
+      <a class="ativo" href="#membros">Membros</a><a href="#cartoes">Cartões</a><a href="#ciclo">Ciclo</a>
+    </div>
+
+    <!-- membros -->
+    <h2 class="titulo-secao" id="membros">Membros <small>5 pessoas</small></h2>
+    <div class="painel-caixa" style="padding-top:6px;padding-bottom:6px">
+      <div class="membro">
+        <div><b>Maria Souza</b><span class="mail">maria.souza@gmail.com</span><br><span class="papel">Administrador</span></div>
+        <span class="chave on"><i></i>Ativo</span>
+      </div>
+      <div class="membro">
+        <div><b>Paulo Ribeiro</b><span class="mail">paulo.r@gmail.com</span><br><span class="papel">Administrador</span></div>
+        <span class="chave on"><i></i>Ativo</span>
+      </div>
+      <div class="membro">
+        <div><b>Marcos Silva</b><span class="mail">marcos.s@gmail.com</span><br><span class="papel">Publicador</span></div>
+        <span class="chave on"><i></i>Ativo</span>
+      </div>
+      <div class="membro">
+        <div><b>Ana Pereira</b><span class="mail">ana.p@gmail.com</span><br><span class="papel">Publicador</span></div>
+        <span class="chave on"><i></i>Ativo</span>
+      </div>
+      <div class="membro">
+        <div><b>Joana Lima</b><span class="mail">joana.lima@gmail.com</span><br><span class="papel">Publicador</span></div>
+        <span class="chave"><i></i>Inativo</span>
+      </div>
+    </div>
+    <button class="btn secundario" type="button"><svg class="ic"><use href="#i-mais"/></svg>Liberar novo e-mail</button>
+
+    <!-- criar cartão -->
+    <h2 class="titulo-secao divisor" id="cartoes">Novo cartão</h2>
+    <div class="painel-caixa">
+      <div class="entrada-grupo" style="grid-template-columns:96px 1fr">
+        <div class="campo"><label for="nc">Número</label><div class="entrada" id="nc">13</div></div>
+        <div class="campo"><label for="tc">Título</label><div class="entrada" id="tc">Bairro Novo</div></div>
+      </div>
+      <div class="campo"><label for="lm">Link do Google Maps</label><div class="entrada" id="lm" style="color:var(--texto-suave)">Cole o link aqui</div></div>
+      <div class="campo">
+        <span class="rotulo-campo">Mapa do cartão (PDF)</span>
+        <div class="aviso" style="margin:0;background:var(--superficie)">
+          <svg class="ic"><use href="#i-arquivo"/></svg>
+          <p><b>mapa-cartao-13.pdf</b>3 páginas · 1,2 MB</p>
+        </div>
+        <div class="aviso" role="status" style="margin:0">
+          <svg class="ic"><use href="#i-info"/></svg>
+          <p>Este PDF tem várias páginas. Só a primeira será usada como imagem do mapa.</p>
+        </div>
+        <button class="btn secundario medio" type="button"><svg class="ic"><use href="#i-upload"/></svg>Trocar arquivo</button>
+      </div>
+      <button class="btn primario" type="button">Criar cartão</button>
+    </div>
+
+    <!-- quadras e ruas -->
+    <h2 class="titulo-secao">Quadras e ruas <small>Cartão 12</small></h2>
+    <div class="painel-caixa">
+      <ul class="lista-simples">
+        <li><div><b>Quadra 1</b><div style="color:var(--texto-suave)">Rua das Acácias</div></div><svg class="ic" style="color:var(--texto-suave)"><use href="#i-chev"/></svg></li>
+        <li><div><b>Quadra 2</b><div style="color:var(--texto-suave)">Rua das Acácias, Rua Ipê Amarelo</div></div><svg class="ic" style="color:var(--texto-suave)"><use href="#i-chev"/></svg></li>
+        <li><div><b>Quadra 3</b><div style="color:var(--texto-suave)">Rua das Acácias, Rua Ipê Amarelo</div></div><svg class="ic" style="color:var(--texto-suave)"><use href="#i-chev"/></svg></li>
+        <li><div><b>Quadra 4</b><div style="color:var(--texto-suave)">Rua das Palmeiras</div></div><svg class="ic" style="color:var(--texto-suave)"><use href="#i-chev"/></svg></li>
+      </ul>
+      <div class="pilha" style="margin-top:12px">
+        <button class="btn secundario medio" type="button"><svg class="ic ic-20"><use href="#i-mais"/></svg>Adicionar quadra</button>
+        <a class="btn secundario medio" href="09-admin.html?v=nova-rua"><svg class="ic ic-20"><use href="#i-mais"/></svg>Adicionar rua</a>
+      </div>
+    </div>
+
+    <!-- ciclo -->
+    <h2 class="titulo-secao divisor" id="ciclo">Ciclo <small>Cartão 12</small></h2>
+    <div class="painel-caixa">
+      <p style="margin-bottom:14px"><span class="estado" data-v-nao="cartao-fechado"><svg class="ic c-falado"><use href="#i-falado"/></svg>Aberto · ciclo 2 · 12 de 30 casas</span><span class="estado" data-v="cartao-fechado"><svg class="ic"><use href="#i-cadeado"/></svg>Fechado · ciclo 3 · 30 de 30 casas</span></p>
+      <a class="btn suave medio" href="11-historico.html" style="margin-bottom:14px"><svg class="ic ic-20"><use href="#i-historico"/></svg>Ver quando foi aberto e fechado</a>
+      <div class="pilha">
+        <span class="btn secundario" data-v="cartao-fechado" aria-disabled="true">Fechar cartão</span>
+        <button class="btn secundario" type="button" data-v-nao="cartao-fechado">Fechar cartão</button>
+        <span class="btn secundario" data-v-nao="cartao-fechado" aria-disabled="true">Abrir cartão</span>
+        <button class="btn secundario" type="button" data-v="cartao-fechado">Abrir cartão</button>
+        <p style="color:var(--texto-suave);margin-top:-4px" data-v-nao="cartao-fechado">Só administradores abrem cartões. Abrir só fica disponível com o cartão fechado, e fica registrado quem abriu.</p>
+        <a class="btn perigo" href="09-admin.html?v=reiniciar#ciclo">Reiniciar território</a>
+        <p style="color:var(--texto-suave);margin-top:-4px">Todas as casas voltam a Pendente, menos as de Não visitar. O histórico continua guardado.</p>
+        <button class="btn secundario" type="button">Recalcular contadores</button>
+        <p style="color:var(--texto-suave);margin-top:-4px">Use se o total de casas parecer errado.</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Principal">
+    <a href="03-cartoes.html"><svg class="ic"><use href="#i-cartoes"/></svg>Cartões</a>
+    <a href="09-admin.html" aria-current="page"><svg class="ic"><use href="#i-admin"/></svg>Administração</a>
+  </nav>
+
+  <div class="veu" data-v="reiniciar">
+    <div class="folha" role="alertdialog" aria-label="Reiniciar território">
+      <h2>Reiniciar o cartão 12?</h2>
+      <p>As 30 casas voltam a <b>Pendente</b>, exceto 2 marcadas como <b>Não visitar</b>. O histórico de visitas continua guardado. Esta ação não tem desfazer.</p>
+      <div class="caixa-ok"><span class="marca"><svg class="ic ic-20"><use href="#i-check"/></svg></span><span>Entendo que o cartão começa um novo ciclo.</span></div>
+      <div class="pilha">
+        <a class="btn perigo" href="09-admin.html">Reiniciar território</a>
+        <a class="btn secundario" href="09-admin.html">Cancelar</a>
+      </div>
+    </div>
+  </div>
+  <div class="veu" data-v="nova-rua">
+    <div class="folha" role="dialog" aria-label="Nova rua">
+      <h2>Nova rua</h2>
+      <div class="campo"><span class="rotulo-campo">Em qual quadra</span>
+        <div class="chips"><span class="chip">Quadra 1</span><span class="chip">Quadra 2</span><span class="chip sel"><svg class="ic ic-20"><use href="#i-check"/></svg>Quadra 3</span><span class="chip">Quadra 4</span></div></div>
+      <div class="campo"><label for="nr">Nome da rua</label><div class="entrada" id="nr" style="border-color:var(--cor-principal);border-width:2.5px"><span style="color:var(--texto-suave)">Ex.: Rua das Palmeiras</span></div></div>
+      <div class="pilha">
+        <a class="btn primario" href="09-admin.html">Adicionar rua</a>
+        <a class="btn secundario" href="09-admin.html">Cancelar</a>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#55658C">
+<title>Instalar o app · Meu Território</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/app.js"></script>
+</head>
+<body data-tela="10 · Instalar o app" data-variantes="android:Android · botão instalar|android-instalado:Android · instalado|iphone:iPhone · passo a passo" data-v-padrao="android">
+<main class="app">
+  <header class="topo simples">
+    <div class="topo-linha">
+      <h1>Instalar o app</h1>
+      <a class="topo-acao" href="03-cartoes.html" aria-label="Fechar"><svg class="ic"><use href="#i-fechar"/></svg>Fechar</a>
+    </div>
+  </header>
+
+  <div class="rolagem">
+
+    <!-- Android: um toque -->
+    <div data-v="android">
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+        <svg width="64" height="64" viewBox="0 0 192 192" aria-hidden="true" style="flex:none"><use href="#i-logo"/></svg>
+        <p style="font-size:18px;line-height:1.5">Instale em um toque. O app vai para a tela inicial e funciona sem internet.</p>
+      </div>
+      <p style="color:var(--texto-suave)">O Chrome vai pedir uma confirmação. Toque em <b>Instalar</b>.</p>
+
+      <h2 class="titulo-secao" style="margin-top:32px">O botão não funcionou?</h2>
+      <ol class="passos">
+        <li><div>No Chrome, toque no menu <b>três pontos</b> <span class="dentro"><svg class="ic"><use href="#i-pontos"/></svg></span> no canto de cima.</div></li>
+        <li><div>Toque em <b>Instalar app</b> ou em <b>Adicionar à tela inicial</b>.</div></li>
+      </ol>
+    </div>
+
+    <!-- Android: depois de instalar -->
+    <div data-v="android-instalado" class="centrado" style="padding-top:48px">
+      <svg class="ic" style="width:72px;height:72px;margin:0 auto 20px;color:var(--st-falado)"><use href="#i-falado"/></svg>
+      <h1>App instalado</h1>
+      <p>Procure o ícone <b>Território</b> na tela inicial do celular.</p>
+    </div>
+
+    <!-- iPhone: sem instalação automática, só passo a passo -->
+    <div data-v="iphone">
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+        <svg width="64" height="64" viewBox="0 0 192 192" aria-hidden="true" style="flex:none"><use href="#i-logo"/></svg>
+        <p style="font-size:18px;line-height:1.5">Fica na tela inicial, abre mais rápido e funciona sem internet.</p>
+      </div>
+      <ol class="passos">
+        <li><div>No Safari, toque em <b>Compartilhar</b> <span class="dentro"><svg class="ic"><use href="#i-compartilhar"/></svg></span> na barra de baixo.</div></li>
+        <li><div>Role a lista e toque em <b>Adicionar à Tela de Início</b> <span class="dentro"><svg class="ic"><use href="#i-tela-inicio"/></svg></span>.</div></li>
+        <li><div>Toque em <b>Adicionar</b>, no canto de cima. O ícone aparece na tela inicial.</div></li>
+      </ol>
+      <p style="color:var(--texto-suave)">Precisa ser no Safari. Em outros navegadores o iPhone não mostra essa opção.</p>
+    </div>
+  </div>
+
+  <div class="rodape-entrada pilha">
+    <a class="btn primario" href="10-instalar.html?v=android-instalado" data-v="android"><svg class="ic"><use href="#i-tela-inicio"/></svg>Instalar app</a>
+    <a class="btn link" href="03-cartoes.html" data-v="android" style="margin:0 auto">Agora não</a>
+
+    <a class="btn primario" href="03-cartoes.html" data-v="android-instalado">Abrir o app</a>
+
+    <a class="btn primario" href="03-cartoes.html" data-v="iphone">Entendi</a>
+    <a class="btn link" href="03-cartoes.html" data-v="iphone" style="margin:0 auto">Agora não</a>
+  </div>
+</main>
+</body>
+</html>
