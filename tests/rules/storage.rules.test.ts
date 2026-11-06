@@ -24,7 +24,9 @@ describe('regras Storage', () => {
   it('permite leitura a membro ativo, mas escrita apenas a admin', async () => {
     await assertSucceeds(listAll(ref(storageFor('publisher@example.com', 'publisher'), 'cards')))
     await assertFails(deleteObject(ref(storageFor('publisher@example.com', 'publisher'), 'cards/c1/outro.webp')))
-    await assertSucceeds(uploadBytes(ref(storageFor('admin@example.com', 'admin'), 'cards/c1/mapa.webp'), new Uint8Array([5])))
+    await assertSucceeds(uploadBytes(ref(storageFor('admin@example.com', 'admin'), 'cards/c1/mapa.webp'), new Uint8Array([5]), { contentType: 'image/webp' }))
+    await assertFails(uploadBytes(ref(storageFor('admin@example.com', 'admin'), 'cards/c1/script.html'), new Uint8Array([5]), { contentType: 'text/html' }))
+    await assertFails(uploadBytes(ref(storageFor('admin@example.com', 'admin'), 'cards/c1/grande.pdf'), new Uint8Array(21 * 1024 * 1024), { contentType: 'application/pdf' }))
     await assertFails(listAll(ref(env.unauthenticatedContext().storage('gs://demo-meu-territorio.appspot.com'), 'cards')))
     await assertFails(listAll(ref(storageFor('missing@example.com', 'missing'), 'cards')))
   }, 30000)

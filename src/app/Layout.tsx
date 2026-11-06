@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSessao } from '@/features/auth/AuthProvider'
+import ErroDeLeitura from './ErroDeLeitura'
 import { Icone } from './icones'
 
 export default function Layout() {
@@ -7,7 +8,7 @@ export default function Layout() {
   const { pathname } = useLocation()
   const comNav = pathname === '/' || pathname === '/admin'
   return <main className="app">
-    <Outlet />
+    <ErroDeLeitura key={pathname}><Outlet /></ErroDeLeitura>
     {comNav && <nav className="nav" aria-label="Principal">
       <NavLink to="/" end><Icone nome="cartoes" />Cartões</NavLink>
       {membro?.papel === 'admin' && <NavLink to="/admin"><Icone nome="admin" />Administração</NavLink>}

@@ -22,6 +22,8 @@ export default function CartaoForm() {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [criado, setCriado] = useState<{ id: string; numero: string } | null>(null)
+  // Cartão já criado cujo mapa não subiu: a nova tentativa só envia o mapa, para não duplicar o cartão.
+  const pendente = useRef<{ id: string; numero: string } | null>(null)
 
   async function escolher(arquivo: File | undefined) {
     if (!arquivo) return
@@ -44,15 +46,20 @@ export default function CartaoForm() {
     setErro(null)
     setEnviando(true)
     try {
-      const id = await criarCartao({ numero: numero.trim(), titulo: titulo.trim(), ...(mapsUrl.trim() && { mapsUrl: mapsUrl.trim() }) }, { uid: usuario.uid, nome: membro?.nome ?? usuario.nome })
+      const existente = pendente.current
+      const id = existente?.id ?? await criarCartao({ numero: numero.trim(), titulo: titulo.trim(), ...(mapsUrl.trim() && { mapsUrl: mapsUrl.trim() }) }, { uid: usuario.uid, nome: membro?.nome ?? usuario.nome })
+      pendente.current = { id, numero: existente?.numero ?? numero.trim() }
       if (mapa) await atualizarCartao(id, await enviarArquivosDoCartao(id, { pdf: mapa.arquivo, imagem: mapa.imagem }))
-      setCriado({ id, numero: numero.trim() })
+      pendente.current = null
+      setCriado({ id, numero: existente?.numero ?? numero.trim() })
       setNumero('')
       setTitulo('')
       setMapsUrl('')
       setMapa(null)
     } catch {
-      setErro('Não foi possível criar o cartão. Confira a conexão e tente de novo.')
+      setErro(pendente.current
+        ? `O cartão ${pendente.current.numero} foi criado, mas o mapa não foi enviado. Confira a conexão e toque em Criar cartão de novo para enviar o mapa.`
+        : 'Não foi possível criar o cartão. Confira a conexão e tente de novo.')
     } finally {
       setEnviando(false)
     }

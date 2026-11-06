@@ -112,7 +112,7 @@ describe('CartaoPage', () => {
   it('publicador vê a orientação e nenhum botão de abrir', () => {
     preparar({ ...cartaoBase, estado: 'fechado' }, quadras, 'publicador')
     renderPagina()
-    expect(screen.getByText('Para registrar visitas, um administrador precisa abrir o cartão. Peça a um deles.')).toBeInTheDocument()
+    expect(screen.getByText('Só um administrador pode abrir o cartão. Peça a um deles.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Abrir cartão' })).not.toBeInTheDocument()
   })
 

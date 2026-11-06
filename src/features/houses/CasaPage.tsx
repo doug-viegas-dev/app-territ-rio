@@ -64,6 +64,7 @@ export default function CasaPage() {
   const { usuario, membro } = useSessao()
   const [obs, setObs] = useState('')
   const [editando, setEditando] = useState(false)
+  const [erroEdicao, setErroEdicao] = useState(false)
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status; obs: string } | null>(null)
 
   const quadra = quadras.find((q) => q.id === quadraId)
@@ -97,7 +98,8 @@ export default function CasaPage() {
   }
 
   function salvarEdicao(d: { numero: string; descricao: string }) {
-    editarCasa(cartaoId, quadraId, casaId, d).catch(() => {})
+    setErroEdicao(false)
+    editarCasa(cartaoId, quadraId, casaId, d).catch(() => setErroEdicao(true))
     setEditando(false)
   }
 
@@ -107,6 +109,10 @@ export default function CasaPage() {
     {falha && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
       <p><b>A última anotação não foi enviada</b>Ela está guardada neste aparelho. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => enviar(falha.novoStatus, falha.obs)}>Tentar de novo</button></p>
+    </div>}
+    {erroEdicao && <div className="aviso faixa erro" role="alert">
+      <Icone nome="aviso" />
+      <p><b>Não foi possível salvar a edição</b>O número e a descrição voltaram ao que estava. Tente de novo.</p>
     </div>}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />

@@ -6,7 +6,7 @@ import { cartaoDe, eventoDe, paraTimestamp } from './converters'
 
 type Usuario = { uid: string; nome: string }
 
-export function observarCartoes(cb: (c: Cartao[]) => void): () => void {
+export function observarCartoes(cb: (c: Cartao[]) => void, onErro?: (e: Error) => void): () => void {
   return onSnapshot(collection(db, 'cards'), (snap) => {
     const todos = snap.docs.map((d) => cartaoDe(d.id, d.data()))
     const porNumero = (a: Cartao, b: Cartao) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true })
@@ -14,11 +14,11 @@ export function observarCartoes(cb: (c: Cartao[]) => void): () => void {
       ...todos.filter((c) => c.estado === 'aberto').sort(porNumero),
       ...todos.filter((c) => c.estado !== 'aberto').sort(porNumero),
     ])
-  })
+  }, onErro)
 }
 
-export function observarCartao(id: string, cb: (c: Cartao | null) => void): () => void {
-  return onSnapshot(doc(db, 'cards', id), (snap) => cb(snap.exists() ? cartaoDe(snap.id, snap.data()) : null))
+export function observarCartao(id: string, cb: (c: Cartao | null) => void, onErro?: (e: Error) => void): () => void {
+  return onSnapshot(doc(db, 'cards', id), (snap) => cb(snap.exists() ? cartaoDe(snap.id, snap.data()) : null), onErro)
 }
 
 export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?: string }, usuario: Usuario): Promise<string> {

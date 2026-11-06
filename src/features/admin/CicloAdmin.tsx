@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useFalhaDeLeitura } from '@/app/useFalhaDeLeitura'
 import { Icone } from '@/app/icones'
+import { useOnline } from '@/app/useOnline'
+import { contadoresSuspeitos } from '@/domain/ciclo'
 import type { Cartao, Casa } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from '@/features/cards/ConfirmarAbertura'
@@ -13,18 +16,20 @@ function useCasasDoCartao(cartaoId: string): Casa[] {
   const quadras = useQuadras(cartaoId)
   const [porQuadra, setPorQuadra] = useState<Record<string, Casa[]>>({})
   const chave = quadras.map((q) => q.id).join('|')
+  const falhar = useFalhaDeLeitura()
   useEffect(() => {
-    const cancelar = quadras.map((q) => observarCasas(cartaoId, q.id, (casas) => setPorQuadra((atual) => ({ ...atual, [q.id]: casas }))))
+    const cancelar = quadras.map((q) => observarCasas(cartaoId, q.id, (casas) => setPorQuadra((atual) => ({ ...atual, [q.id]: casas })), falhar))
     return () => cancelar.forEach((c) => c())
     // `quadras` só muda de conteúdo quando `chave` muda
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartaoId, chave])
+  }, [cartaoId, chave, falhar])
   return quadras.flatMap((q) => porQuadra[q.id] ?? [])
 }
 
 function ConfirmarReinicio({ cartao, casas, onFechar, onConfirmar }: { cartao: Cartao; casas: Casa[]; onFechar: () => void; onConfirmar: () => void }) {
   const [entendi, setEntendi] = useState(false)
-  const carregando = casas.length === 0 && cartao.totalCasas > 0
+  // Só reinicia com todas as casas na mão: uma lista parcial deixaria quadras sem reiniciar e o contador errado.
+  const carregando = casas.length < cartao.totalCasas
   const naoVisitar = casas.filter((c) => c.status === 'nao_visitar').length
   const reiniciadas = casas.length - naoVisitar
 
@@ -37,6 +42,7 @@ function ConfirmarReinicio({ cartao, casas, onFechar, onConfirmar }: { cartao: C
           : <>As {reiniciadas} casas voltam a <b>Pendente</b>.</>}
         {' '}O histórico de visitas continua guardado. Esta ação não tem desfazer.
       </p>
+      {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({casas.length} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem. Se o total estiver errado, use “Recalcular contadores”.</p>}
       <button type="button" role="checkbox" aria-checked={entendi} className="caixa-ok" onClick={() => setEntendi(!entendi)}>
         <span className={entendi ? 'marca' : 'marca vazia'}>{entendi && <Icone nome="check" className="ic ic-20" />}</span>
         <span>Entendo que o cartão começa um novo ciclo.</span>
@@ -54,6 +60,7 @@ export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
   const casas = useCasasDoCartao(cartao.id)
   const [folha, setFolha] = useState<'abrir' | 'reiniciar' | null>(null)
   const [erro, setErro] = useState(false)
+  const online = useOnline()
   const aberto = cartao.estado === 'aberto'
   const quem = usuario ? { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } : null
 
@@ -66,6 +73,7 @@ export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
   return <>
     <h2 className="titulo-secao divisor" id="ciclo">Ciclo <small>Cartão {cartao.numero}</small></h2>
     {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p><b>Não foi possível salvar</b>Tente de novo.</p></div>}
+    {contadoresSuspeitos(cartao) && <div className="aviso" role="status"><Icone nome="aviso" className="ic ic-28" /><p><b>Os contadores parecem errados</b>O total ou as casas resolvidas não batem. Use “Recalcular contadores”, com internet.</p></div>}
     <div className="painel-caixa">
       <p style={{ marginBottom: 14 }}>
         <span className="estado">
@@ -84,8 +92,8 @@ export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
         {aberto && <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Só administradores abrem cartões. Abrir só fica disponível com o cartão fechado, e fica registrado quem abriu.</p>}
         <button type="button" className="btn perigo" onClick={() => setFolha('reiniciar')}>Reiniciar território</button>
         <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Todas as casas voltam a Pendente, menos as de Não visitar. O histórico continua guardado.</p>
-        <button type="button" className="btn secundario" onClick={() => gravar(recalcularContadores(cartao.id))}>Recalcular contadores</button>
-        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Use se o total de casas parecer errado.</p>
+        <button type="button" className="btn secundario" aria-disabled={online ? undefined : true} onClick={() => { if (online) gravar(recalcularContadores(cartao.id)) }}>Recalcular contadores</button>
+        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use se o total de casas parecer errado.' : 'Precisa de internet: o cálculo lê todas as casas no servidor.'}</p>
       </div>
     </div>
 

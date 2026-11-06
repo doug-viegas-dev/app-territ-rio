@@ -20,7 +20,13 @@ service cloud.firestore {
 
     match /members/{email} {
       allow read: if ehMembro() && (request.auth.token.email == email || ehAdmin());
-      allow create, update, delete: if ehAdmin();
+      allow create: if ehAdmin();
+      // O administrador não se desativa, não muda o próprio papel e não se apaga: o app nunca fica sem administrador.
+      allow update: if ehAdmin() && (
+        email != request.auth.token.email
+        || (request.resource.data.ativo == true && request.resource.data.papel == 'admin')
+      );
+      allow delete: if ehAdmin() && email != request.auth.token.email;
     }
 
     match /cards/{cardId} {
@@ -41,6 +47,8 @@ service cloud.firestore {
           && request.resource.data.tipo == 'fechado'
           && request.resource.data.motivo == 'fechamento_automatico'
           && request.resource.data.porUid == request.auth.uid
+          // só junto com a mudança do cartão para fechado, no mesmo batch
+          && getAfter(/databases/$(database)/documents/cards/$(cardId)).data.estado == 'fechado'
         );
         allow update, delete: if false;
       }

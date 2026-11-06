@@ -2,6 +2,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 /**
  * Renderiza só a página 1 do PDF como imagem WebP (largura máxima `larguraMax`)
+ * (ampliada até 3x quando a página é pequena, como um A4 de ~600px, para o mapa não ficar borrado ao dar zoom)
  * e devolve o total de páginas, para o chamador avisar quando houver mais de uma.
  */
 export async function pdfParaImagem(arquivo: File, opts: { larguraMax?: number } = {}): Promise<{ imagem: Blob; paginas: number }> {
@@ -13,9 +14,9 @@ export async function pdfParaImagem(arquivo: File, opts: { larguraMax?: number }
     const doc = await tarefa.promise
     const pagina = await doc.getPage(1)
     const base = pagina.getViewport({ scale: 1 })
-    const viewport = pagina.getViewport({ scale: Math.min(1, larguraMax / base.width) })
+    const viewport = pagina.getViewport({ scale: Math.min(3, larguraMax / base.width) })
     const canvas = document.createElement('canvas')
-    canvas.width = Math.min(larguraMax, Math.floor(viewport.width))
+    canvas.width = Math.min(larguraMax, Math.round(viewport.width))
     canvas.height = Math.floor(viewport.height)
     const contexto = canvas.getContext('2d')
     if (!contexto) throw new Error('Não foi possível preparar a imagem do mapa.')

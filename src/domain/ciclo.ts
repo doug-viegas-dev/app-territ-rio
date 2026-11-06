@@ -10,6 +10,14 @@ export function fecharCartao(c: Cartao): Pick<Cartao, 'estado' | 'ciclo'> {
 export function abrirCartao(c: Cartao): Pick<Cartao, 'estado' | 'ciclo'> {
   return { estado: 'aberto', ciclo: c.ciclo }
 }
+/** Reiniciar sempre começa um ciclo novo: cartão fechado já subiu o ciclo ao fechar; cartão aberto sobe agora. */
+export function reiniciarCartaoEstado(c: Pick<Cartao, 'estado' | 'ciclo'>): Pick<Cartao, 'estado' | 'ciclo'> {
+  return { estado: 'aberto', ciclo: c.estado === 'aberto' ? c.ciclo + 1 : c.ciclo }
+}
+/** Contadores que não batem com o que o fechamento automático garante: pedem "Recalcular contadores". */
+export function contadoresSuspeitos(c: Pick<Cartao, 'estado' | 'totalCasas' | 'resolvidas'>): boolean {
+  return c.resolvidas > c.totalCasas || c.resolvidas < 0 || (c.estado === 'aberto' && c.totalCasas > 0 && c.resolvidas === c.totalCasas)
+}
 export function podeRegistrar(c: Pick<Cartao, 'estado'>): boolean { return c.estado === 'aberto' }
 export function listaDeTrabalho(casas: Casa[]): { pendentes: Casa[]; destacadas: Casa[] } {
   const ordenadas = ordenarCasas(casas)

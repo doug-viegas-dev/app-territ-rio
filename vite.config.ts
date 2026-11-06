@@ -27,6 +27,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
+        // O login por popup abre /__/auth/handler; o fallback não pode devolver o index.html nele.
+        navigateFallbackDenylist: [/^\/__\//],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.hostname === 'firebasestorage.googleapis.com',

@@ -20,6 +20,6 @@ describe('useQuadras', () => {
 
   it('observa as quadras do cartão informado', () => {
     renderHook(() => useQuadras('c1'))
-    expect(observarQuadras).toHaveBeenCalledWith('c1', expect.any(Function))
+    expect(observarQuadras).toHaveBeenCalledWith('c1', expect.any(Function), expect.any(Function))
   })
 })

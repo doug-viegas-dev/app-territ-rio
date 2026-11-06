@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icone } from './icones'
 import { Progresso } from './Progresso'
+import { useSincronizando } from '@/pwa/useSincronizando'
 import { useOnline } from './useOnline'
 
 type Props = {
@@ -16,7 +17,9 @@ type Props = {
 
 export function Conexao({ naoEnviado = false }: { naoEnviado?: boolean }) {
   const online = useOnline()
+  const sincronizando = useSincronizando()
   if (naoEnviado) return <span className="sync"><Icone nome="aviso" />Não enviado</span>
+  if (online && sincronizando) return <span className="sync" role="status"><Icone nome="nuvem" />Sincronizando</span>
   return online
     ? <span className="sync"><Icone nome="nuvem-ok" /><span className="so-leitor">Sincronizado</span></span>
     : <span className="sync"><Icone nome="offline" />Sem internet</span>

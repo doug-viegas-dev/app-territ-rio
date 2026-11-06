@@ -14,6 +14,7 @@ type Props = {
   cartaoId: string
   quadraId: string
   onAdicionarDepois: (casa: Casa) => void
+  onErro?: () => void
 }
 
 type LinhaProps = {
@@ -76,7 +77,7 @@ function FolhaMover({ casa, destinos, onMover, onCancelar }: { casa: Casa; desti
   </div>
 }
 
-export default function ReordenarLista({ casas, ruas, cartaoId, quadraId, onAdicionarDepois }: Props) {
+export default function ReordenarLista({ casas, ruas, cartaoId, quadraId, onAdicionarDepois, onErro }: Props) {
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [movendo, setMovendo] = useState<Casa | null>(null)
   const sensores = useSensors(
@@ -91,7 +92,7 @@ export default function ReordenarLista({ casas, ruas, cartaoId, quadraId, onAdic
 
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
   function mover(casa: Casa, rua: string, antes: Casa | null, depois: Casa | null) {
-    moverCasa(cartaoId, quadraId, casa.id, { rua, antes, depois }, casas).catch(() => {})
+    moverCasa(cartaoId, quadraId, casa.id, { rua, antes, depois }, casas).catch(() => onErro?.())
   }
 
   function irPara(ruaCasas: Casa[], casa: Casa, indice: number) {

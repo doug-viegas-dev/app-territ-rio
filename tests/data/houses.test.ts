@@ -115,6 +115,21 @@ describe('criarCasa', () => {
     expect(ruaA(l, 'Rua B')).toEqual(['5'])
   })
 
+  it('depoisDe renumera a rua quando as vizinhas têm a mesma ordem (inserções offline)', async () => {
+    const c = await cenario()
+    const base = `cards/${c.cartaoId}/blocks/${c.quadraId}/houses`
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const f = ctx.firestore()
+      await setDoc(doc(f, `${base}/x1`), { rua: 'Rua A', numero: '1', ordem: 5, status: 'pendente', criadoEm: new Date(1) })
+      await setDoc(doc(f, `${base}/x2`), { rua: 'Rua A', numero: '2', ordem: 5, status: 'pendente', criadoEm: new Date(2) })
+      await setDoc(doc(f, `${base}/x3`), { rua: 'Rua A', numero: '3', ordem: 6, status: 'pendente', criadoEm: new Date(3) })
+    })
+    await casasDe(c.cartaoId, c.quadraId, (l) => l.length === 3)
+    await novaCasa(c, { numero: '1b', depoisDe: 'x1' })
+    const l = await casasDe(c.cartaoId, c.quadraId, (x) => x.length === 4)
+    expect(ruaA(l)).toEqual(['1', '1b', '2', '3'])
+  })
+
   it('aceita só descrição e guarda os campos sem espaços nas pontas', async () => {
     const c = await cenario()
     await novaCasa(c, { descricao: '  portão azul ' })
@@ -303,6 +318,15 @@ describe('reiniciarCartao', () => {
     const depois = await casasDe(c.cartaoId, c.quadraId, (l) => l.filter((x) => x.status === 'pendente').length === 3)
     expect(depois.map((x) => x.status)).toEqual(['pendente', 'pendente', 'nao_visitar', 'pendente'])
     expect((await eventos(c.cartaoId))[0]).toMatchObject({ tipo: 'aberto', motivo: 'reinicio', porNome: 'Ana' })
+  })
+
+  it('reiniciar um cartão aberto começa um ciclo novo', async () => {
+    const c = await cenario()
+    await novaCasa(c, { numero: '1' })
+    const aberto = await cartaoAtual(c.cartaoId, (x) => x.estado === 'aberto')
+    const casas = await casasDe(c.cartaoId, c.quadraId, (l) => l.length === 1)
+    await reiniciarCartao(aberto, casas, admin)
+    expect(await cartaoAtual(c.cartaoId, (x) => x.ciclo === aberto.ciclo + 1)).toMatchObject({ estado: 'aberto', ciclo: aberto.ciclo + 1 })
   })
 
   it('divide em batches de até 400 casas', async () => {

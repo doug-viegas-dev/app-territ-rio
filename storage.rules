@@ -14,7 +14,9 @@ service firebase.storage {
 
     match /cards/{allPaths=**} {
       allow read: if ehMembro();
-      allow write: if ehAdmin();
+      allow write: if ehAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && (request.resource.contentType == 'application/pdf' || request.resource.contentType.matches('image/.*'));
     }
   }
 }

@@ -121,6 +121,28 @@ describe('CicloAdmin', () => {
     expect(reiniciarCartao).not.toHaveBeenCalled()
   })
 
+  it('não reinicia com casas faltando (quadra ainda não carregada)', async () => {
+    vi.mocked(observarCasas).mockImplementation((_c, q, cb) => { if (q === 'q1') cb(casasPorQuadra.q1); return () => {} })
+    renderCiclo(aberto)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Reiniciar território' }))
+    const folha = screen.getByRole('alertdialog', { name: 'Reiniciar território' })
+    expect(within(folha).getByText(/ainda estamos carregando todas as casas/)).toBeInTheDocument()
+    await user.click(within(folha).getByRole('checkbox', { name: 'Entendo que o cartão começa um novo ciclo.' }))
+    await user.click(within(folha).getByRole('button', { name: 'Reiniciar território' }))
+    expect(reiniciarCartao).not.toHaveBeenCalled()
+  })
+
+  it('avisa quando os contadores parecem errados', () => {
+    renderCiclo({ ...aberto, resolvidas: 5 })
+    expect(screen.getByText('Os contadores parecem errados')).toBeInTheDocument()
+  })
+
+  it('não avisa de contadores quando estão coerentes', () => {
+    renderCiclo(aberto)
+    expect(screen.queryByText('Os contadores parecem errados')).not.toBeInTheDocument()
+  })
+
   it('recalcular chama recalcularContadores', async () => {
     renderCiclo(aberto)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Recalcular contadores' }))

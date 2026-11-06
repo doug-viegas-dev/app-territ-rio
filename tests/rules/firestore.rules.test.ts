@@ -89,6 +89,9 @@ describe('regras Firestore', () => {
     const publisher = publisherDb()
     const events = collection(publisher, 'cards/c1/eventos')
     await assertFails(getDocs(events))
+    // com o cartão ainda aberto, o evento sozinho (sem fechar o cartão no mesmo batch) é recusado
+    await assertFails(setDoc(doc(events, 'auto'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
+    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1'), { estado: 'fechado' }))
     await assertSucceeds(setDoc(doc(events, 'auto'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
     await assertFails(setDoc(doc(events, 'fake'), { tipo: 'aberto', motivo: 'abertura', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
     await assertFails(setDoc(doc(events, 'other'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'other', porNome: 'Outra pessoa', em: 3 }))
@@ -106,6 +109,12 @@ describe('regras Firestore', () => {
     const db = adminDb()
     await assertSucceeds(getDoc(doc(db, 'members/admin@example.com')))
     await assertSucceeds(setDoc(doc(db, 'members/new@example.com'), member()))
+    // o administrador não se desativa, não rebaixa e não se apaga
+    await assertFails(setDoc(doc(db, 'members/admin@example.com'), member('admin', false)))
+    await assertFails(setDoc(doc(db, 'members/admin@example.com'), member('publicador')))
+    await assertFails(deleteDoc(doc(db, 'members/admin@example.com')))
+    await assertSucceeds(setDoc(doc(db, 'members/admin@example.com'), { ...member('admin'), nome: 'Outro nome' }))
+    await assertSucceeds(deleteDoc(doc(db, 'members/new@example.com')))
     await assertSucceeds(updateDoc(doc(db, 'cards/c1'), { titulo: 'Novo tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­tulo' }))
     await assertSucceeds(setDoc(doc(db, 'cards/c2'), card))
     await assertSucceeds(deleteDoc(doc(db, 'cards/c1/blocks/b1/houses/h1')))

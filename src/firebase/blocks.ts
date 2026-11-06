@@ -3,9 +3,9 @@ import type { Quadra } from '@/domain/types'
 import { db } from './app'
 import { quadraDe } from './converters'
 
-export function observarQuadras(cartaoId: string, cb: (q: Quadra[]) => void): () => void {
+export function observarQuadras(cartaoId: string, cb: (q: Quadra[]) => void, onErro?: (e: Error) => void): () => void {
   const q = query(collection(db, 'cards', cartaoId, 'blocks'), orderBy('ordem'))
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => quadraDe(d.id, d.data()))))
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => quadraDe(d.id, d.data()))), onErro)
 }
 
 export async function criarQuadra(cartaoId: string, d: { rotulo: string; ruas: string[] }): Promise<string> {

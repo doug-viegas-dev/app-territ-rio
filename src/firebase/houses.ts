@@ -1,5 +1,5 @@
-import { collection, deleteField, doc, getDocs, increment, onSnapshot, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
-import { abrirCartao, deveFecharAuto, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
+import { collection, deleteField, doc, getDocsFromServer, increment, onSnapshot, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
+import { deveFecharAuto, fecharCartao, idsParaReiniciar, podeRegistrar, reiniciarCartaoEstado } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
 import { deltaResolvidas, isResolvida } from '@/domain/status'
@@ -12,8 +12,13 @@ type Usuario = { uid: string; nome: string }
 const casasRef = (cartaoId: string, quadraId: string) => collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses')
 const cartaoRef = (cartaoId: string) => doc(db, 'cards', cartaoId)
 
-export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[]) => void): () => void {
-  return onSnapshot(casasRef(cartaoId, quadraId), (snap) => cb(ordenarCasas(snap.docs.map((d) => casaDe(d.id, quadraId, d.data())))))
+/** `semDados` é verdadeiro quando a lista veio vazia só do cache: sem rede, isso não prova que a quadra não tem casas. */
+export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[], semDados?: boolean) => void, onErro?: (e: Error) => void): () => void {
+  return onSnapshot(
+    casasRef(cartaoId, quadraId),
+    (snap) => cb(ordenarCasas(snap.docs.map((d) => casaDe(d.id, quadraId, d.data()))), snap.empty && snap.metadata.fromCache),
+    onErro,
+  )
 }
 
 export function observarVisitas(cartaoId: string, quadraId: string, casaId: string, cb: (v: Visita[]) => void): () => void {
@@ -45,6 +50,12 @@ export async function criarCasa(
   const agora = paraTimestamp(Date.now())
   const ref = doc(casasRef(cartaoId, quadraId))
   const batch = writeBatch(db)
+  const vizinha = i >= 0 ? daRua[i + 1] : undefined
+  if (i >= 0 && vizinha && precisaRenumerar(daRua[i].ordem, vizinha.ordem)) {
+    // Sem espaço entre as vizinhas (ou ordem repetida): renumera a rua e põe a casa nova logo depois da escolhida.
+    daRua.forEach((c, k) => batch.update(doc(casasRef(cartaoId, quadraId), c.id), { ordem: k <= i ? k + 1 : k + 2 }))
+    ordem = i + 2
+  }
   batch.set(ref, {
     rua: d.rua,
     ...(numero && { numero: numero.valor }),
@@ -149,7 +160,7 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
   const ultimo = lotes.length ? lotes[lotes.length - 1] : writeBatch(db)
   if (!lotes.length) lotes.push(ultimo)
   ultimo.update(cartaoRef(cartao.id), {
-    ...abrirCartao(cartao),
+    ...reiniciarCartaoEstado(cartao),
     resolvidas: casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length,
     atualizadoEm: agora,
     abertoPorNome: usuario.nome,
@@ -160,11 +171,12 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
 }
 
 export async function recalcularContadores(cartaoId: string): Promise<void> {
-  const quadras = await getDocs(collection(db, 'cards', cartaoId, 'blocks'))
+  // Só do servidor: o cache pode ter quadras ou casas faltando e gravaria contadores errados.
+  const quadras = await getDocsFromServer(collection(db, 'cards', cartaoId, 'blocks'))
   let total = 0
   let resolvidas = 0
   for (const q of quadras.docs) {
-    const casas = await getDocs(casasRef(cartaoId, q.id))
+    const casas = await getDocsFromServer(casasRef(cartaoId, q.id))
     for (const c of casas.docs) {
       total++
       if (isResolvida(casaDe(c.id, q.id, c.data()).status)) resolvidas++

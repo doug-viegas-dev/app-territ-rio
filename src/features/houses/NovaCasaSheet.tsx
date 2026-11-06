@@ -8,7 +8,7 @@ import { criarCasa, criarCasasEmFaixa } from '@/firebase/houses'
 import FaixaForm from './FaixaForm'
 import { rotuloCasa } from './rotuloCasa'
 
-type Props = { quadra: Quadra; casas: Casa[]; cartaoId: string; depoisDe?: Casa; onFechar: () => void }
+type Props = { quadra: Quadra; casas: Casa[]; cartaoId: string; depoisDe?: Casa; onFechar: () => void; onErro?: () => void }
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
 
@@ -39,7 +39,7 @@ function FolhaNovaRua({ quadra, ruas, onAdicionar, onCancelar }: { quadra: Quadr
   </div>
 }
 
-export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFechar }: Props) {
+export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFechar, onErro }: Props) {
   const [aba, setAba] = useState<'uma' | 'faixa'>('uma')
   const [extras, setExtras] = useState<string[]>([])
   const todas = [...quadra.ruas, ...casas.map((c) => c.rua), ...extras]
@@ -60,7 +60,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFec
   }
 
   function adicionarNovaRua(nome: string) {
-    void adicionarRua(cartaoId, quadra.id, nome).catch(() => {})
+    adicionarRua(cartaoId, quadra.id, nome).catch(() => onErro?.())
     setExtras((e) => [...e, nome])
     mudarRua(nome)
     setNovaRua(false)
@@ -139,7 +139,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFec
           </div>
         </div>
       </> : <FaixaForm rua={rua} onCriar={(numeros) => {
-        void criarCasasEmFaixa(cartaoId, quadra.id, { rua, numeros }, casas).catch(() => {})
+        criarCasasEmFaixa(cartaoId, quadra.id, { rua, numeros }, casas).catch(() => onErro?.())
         onFechar()
       }} />}
     </div>

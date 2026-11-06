@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
+import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from './ConfirmarAbertura'
 import ImagemCartao from './ImagemCartao'
@@ -17,6 +18,7 @@ export default function CartaoPage() {
   const { usuario, membro } = useSessao()
   const [confirmando, setConfirmando] = useState(false)
   const ehAdmin = membro?.papel === 'admin'
+  const online = useOnline()
 
   if (cartao === undefined) return <>
     <Topo titulo="Cartão" voltarPara="/" voltarRotulo="Voltar para Cartões" />
@@ -26,8 +28,13 @@ export default function CartaoPage() {
   if (cartao === null) return <>
     <Topo titulo="Cartão" voltarPara="/" voltarRotulo="Voltar para Cartões" />
     <div className="rolagem"><div className="sem-casas">
-      <h2 style={{ fontSize: 22, marginBottom: 8 }}>Cartão não encontrado</h2>
-      <p style={{ color: 'var(--texto-suave)' }}>Ele pode ter sido removido. Volte para a lista de cartões.</p>
+      {online ? <>
+        <h2 style={{ fontSize: 22, marginBottom: 8 }}>Cartão não encontrado</h2>
+        <p style={{ color: 'var(--texto-suave)' }}>Ele pode ter sido removido. Volte para a lista de cartões.</p>
+      </> : <>
+        <h2 style={{ fontSize: 22, marginBottom: 8 }}>Este cartão não está neste aparelho</h2>
+        <p style={{ color: 'var(--texto-suave)' }}>Sem internet não dá para abri-lo agora. Conecte-se e abra o cartão uma vez para usá-lo sem sinal.</p>
+      </>}
     </div></div>
   </>
 
@@ -47,7 +54,7 @@ export default function CartaoPage() {
           <b>Cartão fechado</b>
           {ehAdmin
             ? 'Para registrar visitas, um administrador precisa abrir o cartão. Fica registrado quem abriu.'
-            : 'Para registrar visitas, um administrador precisa abrir o cartão. Peça a um deles.'}
+            : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
           {ehAdmin && <span className="acoes">
             <button type="button" className="btn primario medio auto" onClick={() => setConfirmando(true)}><Icone nome="cadeado-aberto" className="ic ic-20" />Abrir cartão</button>
           </span>}

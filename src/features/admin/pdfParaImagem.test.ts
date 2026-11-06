@@ -36,12 +36,14 @@ describe('pdfParaImagem', () => {
     expect(render).toHaveBeenCalledTimes(1)
   })
 
-  it('respeita larguraMax e não amplia páginas pequenas', async () => {
+  it('respeita larguraMax e amplia páginas pequenas em até 3x', async () => {
     const canvas = falsoCanvas()
     await pdfParaImagem(new File(['%PDF'], 'mapa.pdf'), { larguraMax: 800 })
     expect(canvas.width).toBe(800)
     getViewport.mockImplementation(({ scale }: { scale: number }) => ({ width: 500 * scale, height: 700 * scale }))
     await pdfParaImagem(new File(['%PDF'], 'mapa.pdf'))
-    expect(canvas.width).toBe(500)
+    expect(canvas.width).toBe(1500)
+    await pdfParaImagem(new File(['%PDF'], 'mapa.pdf'), { larguraMax: 1000 })
+    expect(canvas.width).toBe(1000)
   })
 })

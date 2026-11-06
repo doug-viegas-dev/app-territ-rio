@@ -46,6 +46,21 @@ function renderPagina() {
   )
 }
 
+describe('QuadraPage sem rede e sem cache da quadra', () => {
+  afterEach(() => cleanup())
+  it('não mostra "Nenhuma casa" nem convida a cadastrar: a lista vazia veio só do cache', () => {
+    vi.mocked(useOnline).mockReturnValue(false)
+    vi.mocked(observarCartao).mockImplementation((_id, cb) => { cb(cartaoAberto); return () => {} })
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([quadra]); return () => {} })
+    vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([], true); return () => {} })
+    vi.mocked(useSessao).mockReturnValue({ carregando: false, usuario: { uid: 'u1', email: 'm@x.com', nome: 'Maria' }, membro: { papel: 'publicador', ativo: true, nome: 'Maria S.' } })
+    renderPagina()
+    expect(screen.getByText('Esta quadra não está neste aparelho')).toBeInTheDocument()
+    expect(screen.queryByText('Nenhuma casa nesta quadra')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Cadastrar a primeira casa/ })).not.toBeInTheDocument()
+  })
+})
+
 const barra = () => screen.getByRole('region', { name: 'Registrar visita' })
 const textos = (selector: string) => Array.from(document.querySelectorAll(selector)).map((e) => e.textContent)
 

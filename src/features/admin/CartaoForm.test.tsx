@@ -77,6 +77,20 @@ describe('CartaoForm', () => {
     expect(screen.getByLabelText('Número')).toHaveValue('')
   })
 
+  it('se o mapa falha depois de criar o cartão, tentar de novo não cria um cartão duplicado', async () => {
+    vi.mocked(enviarArquivosDoCartao).mockRejectedValueOnce(new Error('rede'))
+    renderForm()
+    const user = userEvent.setup()
+    await preencher(user, true)
+    await screen.findByText(/Só a primeira página/)
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    expect(await screen.findByText(/O cartão 13 foi criado, mas o mapa não foi enviado/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    await waitFor(() => expect(atualizarCartao).toHaveBeenCalledWith('novo', expect.anything()))
+    expect(criarCartao).toHaveBeenCalledTimes(1)
+    expect(enviarArquivosDoCartao).toHaveBeenCalledTimes(2)
+  })
+
   it('sem número ou título não cria', async () => {
     renderForm()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Criar cartão' }))
