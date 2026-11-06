@@ -292,6 +292,11 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 button.caixa-ok { width: 100%; text-align: left; background: none; color: inherit; font: inherit; cursor: pointer; }
 .caixa-ok .marca.vazia { background: transparent; border-color: var(--borda-forte); }
 
+.evento .marca { width: 32px; height: 32px; border-radius: 50%; background: var(--cor-secundaria); display: grid; place-items: center; }
+.evento .marca .ic { width: 20px; height: 20px; }
+.evento b { font-size: 18px; font-weight: 600; }
+.evento .quem { margin-top: 2px; }
+
 /* ---------- carregando ---------- */
 .esqueleto { background: var(--cor-secundaria); border-radius: 8px; }
 .esqueleto-cartao { height: 80px; border-radius: 16px; margin-bottom: 10px; }
