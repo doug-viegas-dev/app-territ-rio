@@ -1,5 +1,6 @@
 import Carregando from '@/app/Carregando'
 import Topo from '@/app/Topo'
+import AvisoInstalar from '@/pwa/AvisoInstalar'
 import CartaoResumo from './CartaoResumo'
 import { useCartoes } from './useCartoes'
 
@@ -12,6 +13,7 @@ export default function CartoesPage() {
   return <>
     <Topo titulo="Cartões" logo />
     <div className="rolagem com-nav">
+      {cartoes !== null && cartoes.length > 0 && <AvisoInstalar />}
       {cartoes === null && <Carregando />}
       {cartoes?.length === 0 && <div className="sem-casas">
         <svg width="72" height="72" viewBox="0 0 192 192" aria-hidden="true" style={{ margin: '0 auto 14px', display: 'block' }}><use href="#i-logo" /></svg>
