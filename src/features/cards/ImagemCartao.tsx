@@ -9,8 +9,6 @@ export default function ImagemCartao({ path, numero }: { path: string; numero: s
 
   useEffect(() => {
     let vivo = true
-    setUrl(null)
-    setFalhou(false)
     urlDaImagem(path).then((u) => vivo && setUrl(u), () => vivo && setFalhou(true))
     return () => { vivo = false }
   }, [path])

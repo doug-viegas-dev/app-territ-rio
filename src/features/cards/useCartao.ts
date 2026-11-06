@@ -5,12 +5,9 @@ import type { Cartao, Quadra } from '@/domain/types'
 
 /** `undefined` enquanto carrega; `null` quando o cartão não existe. */
 export function useCartao(id: string): Cartao | null | undefined {
-  const [cartao, setCartao] = useState<Cartao | null | undefined>(undefined)
-  useEffect(() => {
-    setCartao(undefined)
-    return observarCartao(id, setCartao)
-  }, [id])
-  return cartao
+  const [atual, setAtual] = useState<{ id: string; cartao: Cartao | null } | null>(null)
+  useEffect(() => observarCartao(id, (cartao) => setAtual({ id, cartao })), [id])
+  return atual?.id === id ? atual.cartao : undefined
 }
 
 export function useQuadras(cartaoId: string): Quadra[] {

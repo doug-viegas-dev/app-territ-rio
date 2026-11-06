@@ -86,7 +86,7 @@ export default function CartaoPage() {
         </p>
       </div>}
 
-      {cartao.imagemPath && <ImagemCartao path={cartao.imagemPath} numero={cartao.numero} />}
+      {cartao.imagemPath && <ImagemCartao key={cartao.imagemPath} path={cartao.imagemPath} numero={cartao.numero} />}
 
       {cartao.mapsUrl && <p style={{ margin: '14px 0 0' }}>
         <a className="btn secundario" href={cartao.mapsUrl} target="_blank" rel="noopener noreferrer"><Icone nome="pin" />Abrir no Google Maps</a>
