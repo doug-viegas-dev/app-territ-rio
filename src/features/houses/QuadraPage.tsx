@@ -12,6 +12,7 @@ import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
 import CasaLinha, { CasaAtencao } from './CasaLinha'
 import NovaCasaSheet from './NovaCasaSheet'
+import ReordenarLista from './ReordenarLista'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasas } from './useCasas'
 
@@ -35,6 +36,7 @@ export default function QuadraPage() {
   const [focoId, setFocoId] = useState<string | null>(null)
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status } | null>(null)
   const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa } | null>(null)
+  const [reordenando, setReordenando] = useState(false)
 
   const quadra = quadras.find((q) => q.id === quadraId)
   const voltar = { voltarPara: `/cartao/${cartaoId}`, voltarRotulo: cartao ? `Voltar para o Cartão ${cartao.numero}` : 'Voltar' }
@@ -69,6 +71,25 @@ export default function QuadraPage() {
   }
 
   const vazia = casas.length === 0
+  const sheet = aberto && novaCasa && quadra
+    ? <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} />
+    : null
+
+  if (reordenando && aberto && !vazia) return <>
+    <header className="topo simples">
+      <div className="topo-linha">
+        <button type="button" className="voltar" aria-label={`Voltar para a ${quadra?.rotulo ?? 'quadra'}`} onClick={() => setReordenando(false)}><Icone nome="voltar" className="ic ic-28" /></button>
+        <h1>Reordenar</h1>
+        <button type="button" className="topo-acao" onClick={() => setReordenando(false)}><Icone nome="check" />Concluir</button>
+      </div>
+      <p className="topo-sub" style={{ marginBottom: 0 }}>{quadra?.rotulo ?? 'Quadra'} · na ordem em que aparecem na rua</p>
+    </header>
+    <div className="rolagem">
+      <ReordenarLista casas={casas} ruas={ruas} cartaoId={cartaoId} quadraId={quadraId} onAdicionarDepois={(c) => setNovaCasa({ depoisDe: c })} />
+    </div>
+    {sheet}
+  </>
+
   return <>
     <Topo
       titulo={quadra?.rotulo ?? 'Quadra'}
@@ -106,7 +127,7 @@ export default function QuadraPage() {
             <button type="button" role="tab" aria-selected={modo === 'trabalho'} className={modo === 'trabalho' ? 'ativo' : ''} onClick={() => setModo('trabalho')}>Trabalho</button>
             <button type="button" role="tab" aria-selected={modo === 'todas'} className={modo === 'todas' ? 'ativo' : ''} onClick={() => setModo('todas')}>Todas</button>
           </div>
-          <button type="button" className="btn secundario medio auto" style={{ minHeight: 52 }}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>
+          {aberto && <button type="button" className="btn secundario medio auto" style={{ minHeight: 52 }} onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>}
         </div>
 
         {modo === 'trabalho' ? <>
@@ -154,6 +175,6 @@ export default function QuadraPage() {
         </div>
       </section>
     </>}
-    {aberto && novaCasa && quadra && <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} />}
+    {sheet}
   </>
 }

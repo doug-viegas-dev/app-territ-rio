@@ -62,6 +62,35 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
   })
 
+  it('só existe alça de arrastar depois de tocar em "Reordenar"; "Concluir" volta à quadra', async () => {
+    preparar([casa({ numero: '100' }), casa({ numero: '104' })])
+    renderPagina()
+    const user = userEvent.setup()
+    expect(screen.queryByLabelText(/^Arrastar /)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Reordenar' }))
+    expect(screen.getAllByLabelText(/^Arrastar /)).toHaveLength(2)
+    expect(screen.queryByRole('region', { name: 'Registrar visita' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Concluir' }))
+    expect(screen.queryByLabelText(/^Arrastar /)).not.toBeInTheDocument()
+    expect(barra()).toBeInTheDocument()
+  })
+
+  it('"Adicionar depois desta" abre o cadastro dentro do modo reordenar', async () => {
+    preparar([casa({ numero: '100' }), casa({ numero: '104' })])
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Reordenar' }))
+    await user.click(screen.getByRole('button', { name: /^100/ }))
+    await user.click(screen.getByRole('button', { name: 'Adicionar depois desta' }))
+    expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
+  })
+
+  it('cartão fechado não oferece "Reordenar"', () => {
+    preparar([casa({ numero: '1' })], { cartao: { ...cartaoAberto, estado: 'fechado' } })
+    renderPagina()
+    expect(screen.queryByRole('button', { name: 'Reordenar' })).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     n = 0
     vi.clearAllMocks()
