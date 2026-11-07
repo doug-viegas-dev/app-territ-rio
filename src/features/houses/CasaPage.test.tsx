@@ -6,13 +6,13 @@ import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { observarQuadras } from '@/firebase/blocks'
 import { observarCartao } from '@/firebase/cards'
-import { editarCasa, observarCasas, observarVisitas, registrarVisita } from '@/firebase/houses'
+import { editarCasa, excluirCasa, observarCasas, observarVisitas, registrarVisita } from '@/firebase/houses'
 import type { Cartao, Casa, Quadra, Visita } from '@/domain/types'
 import CasaPage from './CasaPage'
 
 vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
-vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), registrarVisita: vi.fn(), editarCasa: vi.fn() }))
+vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), registrarVisita: vi.fn(), editarCasa: vi.fn(), excluirCasa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 
@@ -146,6 +146,34 @@ describe('CasaPage', () => {
     preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' }, papel: 'admin' })
     renderPagina()
     expect(screen.getByRole('link', { name: 'Abrir cartão' })).toHaveAttribute('href', '/cartao/c12')
+  })
+
+  it('administrador exclui a casa depois de confirmar', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    vi.mocked(excluirCasa).mockResolvedValue()
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).not.toHaveBeenCalled()
+    const folha = screen.getByRole('dialog', { name: 'Excluir casa' })
+    await user.click(within(folha).getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero)
+  })
+
+  it('cancelar a confirmação não exclui', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(excluirCasa).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
+  })
+
+  it('publicador não vê "Excluir casa"', () => {
+    preparar(casaComNumero)
+    renderPagina()
+    expect(screen.queryByRole('button', { name: 'Excluir casa' })).not.toBeInTheDocument()
   })
 
   it('casa sem número mostra só a descrição e "Sem número"', () => {

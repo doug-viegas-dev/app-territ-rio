@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
@@ -9,7 +9,7 @@ import { rotuloStatus } from '@/domain/rotulos'
 import type { Casa, Status, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
-import { editarCasa, observarVisitas, registrarVisita } from '@/firebase/houses'
+import { editarCasa, excluirCasa, observarVisitas, registrarVisita } from '@/firebase/houses'
 import HistoricoVisitas from './HistoricoVisitas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasas } from './useCasas'
@@ -65,6 +65,8 @@ export default function CasaPage() {
   const [obs, setObs] = useState('')
   const [editando, setEditando] = useState(false)
   const [erroEdicao, setErroEdicao] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
+  const navigate = useNavigate()
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status; obs: string } | null>(null)
 
   const quadra = quadras.find((q) => q.id === quadraId)
@@ -101,6 +103,13 @@ export default function CasaPage() {
     setErroEdicao(false)
     editarCasa(cartaoId, quadraId, casaId, d).catch(() => setErroEdicao(true))
     setEditando(false)
+  }
+
+  /** Não espera a escrita: offline ela só resolve com rede. */
+  function excluir() {
+    if (!casa) return
+    excluirCasa(cartaoId, quadraId, casa).catch(() => {})
+    navigate(voltar.voltarPara, { replace: true })
   }
 
   const nome = classeStatus(casa.status)
@@ -163,7 +172,22 @@ export default function CasaPage() {
 
       <h2 className="titulo-secao divisor">Histórico</h2>
       <HistoricoVisitas visitas={visitas} />
+
+      {ehAdmin && aberto && <div style={{ marginTop: 28 }}>
+        <button type="button" className="btn perigo" onClick={() => setExcluindo(true)}>Excluir casa</button>
+      </div>}
     </div>
+
+    {excluindo && <div className="veu">
+      <div className="folha" role="dialog" aria-label="Excluir casa">
+        <h2>Excluir esta casa?</h2>
+        <p>{rotuloCasa(casa)} sai da lista e do total do cartão. O histórico de visitas dela não será mais exibido. Isso não pode ser desfeito.</p>
+        <div className="pilha">
+          <button type="button" className="btn perigo" onClick={excluir}>Excluir casa</button>
+          <button type="button" className="btn secundario" onClick={() => setExcluindo(false)}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
 
     {editando && <FolhaEditar casa={casa} onSalvar={salvarEdicao} onCancelar={() => setEditando(false)} />}
   </>

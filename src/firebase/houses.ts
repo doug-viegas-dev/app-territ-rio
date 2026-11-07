@@ -114,6 +114,19 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
   })
 }
 
+/** Apaga a casa e ajusta os contadores do cartão. O histórico de visitas fica sem uso (as regras não permitem apagá-lo). */
+export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
+  const agora = paraTimestamp(Date.now())
+  const batch = writeBatch(db)
+  batch.delete(doc(casasRef(cartaoId, quadraId), casa.id))
+  batch.update(cartaoRef(cartaoId), {
+    totalCasas: increment(-1),
+    ...(isResolvida(casa.status) && { resolvidas: increment(-1) }),
+    atualizadoEm: agora,
+  })
+  await batch.commit()
+}
+
 export async function registrarVisita(a: { cartao: Cartao; quadraId: string; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
