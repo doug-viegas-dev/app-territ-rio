@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { entrarNaDemo } from '@/demo/modo'
 import { entrarComGoogle } from '@/firebase/auth'
 import marca from '@/assets/icone.svg'
 
@@ -39,10 +40,12 @@ export default function LoginPage() {
       </div>
       {erro && <div className="auth-erro" role="alert"><strong>Não foi possível entrar</strong><br />Confira a conexão e tente de novo.</div>}
     </div>
-    <footer className="auth-rodape">
+    <footer className="auth-rodape auth-pilha">
       <button className="auth-botao" type="button" onClick={entrar} disabled={entrando}>
         {!entrando && <GoogleG />}{entrando ? 'Entrando…' : 'Entrar com Google'}
       </button>
+      <button className="auth-botao auth-secundario" type="button" onClick={entrarNaDemo} disabled={entrando}>Ver demonstração</button>
+      <p className="auth-nota auth-nota-demo">A demonstração não pede login. Os dados são fictícios e ficam só neste aparelho.</p>
       <p className="auth-nota">Ferramenta feita pela e para a congregação. Não é um app oficial.</p>
     </footer>
   </main>

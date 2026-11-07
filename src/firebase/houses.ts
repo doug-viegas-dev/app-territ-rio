@@ -5,6 +5,8 @@ import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/o
 import { deltaResolvidas, isResolvida } from '@/domain/status'
 import type { Cartao, Casa, Status, Visita } from '@/domain/types'
 import { db } from './app'
+import * as demo from '@/demo/banco'
+import { demoAtivo } from '@/demo/modo'
 import { casaDe, paraTimestamp, visitaDe } from './converters'
 
 type Usuario = { uid: string; nome: string }
@@ -14,6 +16,7 @@ const cartaoRef = (cartaoId: string) => doc(db, 'cards', cartaoId)
 
 /** `semDados` é verdadeiro quando a lista veio vazia só do cache: sem rede, isso não prova que a quadra não tem casas. */
 export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[], semDados?: boolean) => void, onErro?: (e: Error) => void): () => void {
+  if (demoAtivo()) return demo.observarCasas(cartaoId, quadraId, cb)
   return onSnapshot(
     casasRef(cartaoId, quadraId),
     (snap) => cb(ordenarCasas(snap.docs.map((d) => casaDe(d.id, quadraId, d.data()))), snap.empty && snap.metadata.fromCache),
@@ -22,6 +25,7 @@ export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[]
 }
 
 export function observarVisitas(cartaoId: string, quadraId: string, casaId: string, cb: (v: Visita[]) => void): () => void {
+  if (demoAtivo()) return demo.observarVisitas(cartaoId, quadraId, casaId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses', casaId, 'visits'), orderBy('em', 'desc'))
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => visitaDe(d.id, d.data()))))
 }
@@ -39,6 +43,7 @@ export async function criarCasa(
   d: { rua: string; numero?: string; descricao?: string; depoisDe?: string },
   existentes: Casa[],
 ): Promise<string> {
+  if (demoAtivo()) return demo.criarCasa(cartaoId, quadraId, d, existentes)
   exigirValida(d)
   const daRua = ordenarCasas(existentes.filter((c) => c.rua === d.rua))
   let ordem: number
@@ -70,6 +75,7 @@ export async function criarCasa(
 }
 
 export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: { rua: string; numeros: string[] }, existentes: Casa[]): Promise<void> {
+  if (demoAtivo()) return demo.criarCasasEmFaixa(cartaoId, quadraId, d, existentes)
   const numeros = d.numeros.map((n) => n.trim()).filter(Boolean)
   if (!numeros.length) return
   const inicio = ordemFim(existentes.filter((c) => c.rua === d.rua).map((c) => c.ordem))
@@ -89,6 +95,7 @@ export async function moverCasa(
   destino: { rua: string; antes: Casa | null; depois: Casa | null },
   ruaCasas: Casa[],
 ): Promise<void> {
+  if (demoAtivo()) return demo.moverCasa(cartaoId, quadraId, casaId, destino, ruaCasas)
   const ref = (id: string) => doc(casasRef(cartaoId, quadraId), id)
   const { antes, depois } = destino
   if (antes && depois && precisaRenumerar(antes.ordem, depois.ordem)) {
@@ -105,6 +112,7 @@ export async function moverCasa(
 }
 
 export async function editarCasa(cartaoId: string, quadraId: string, casaId: string, d: { numero?: string; descricao?: string }): Promise<void> {
+  if (demoAtivo()) return demo.editarCasa(cartaoId, quadraId, casaId, d)
   exigirValida(d)
   const numero = textoOuNada(d.numero)
   const descricao = textoOuNada(d.descricao)
@@ -116,6 +124,7 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
 
 /** Apaga a casa e ajusta os contadores do cartão. O histórico de visitas fica sem uso (as regras não permitem apagá-lo). */
 export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
+  if (demoAtivo()) return demo.excluirCasa(cartaoId, quadraId, casa)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.delete(doc(casasRef(cartaoId, quadraId), casa.id))
@@ -128,6 +137,7 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
 }
 
 export async function registrarVisita(a: { cartao: Cartao; quadraId: string; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
+  if (demoAtivo()) return demo.registrarVisita(a)
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
   const agora = paraTimestamp(Date.now())
@@ -160,6 +170,7 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; cas
 const LOTE = 400
 
 export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Usuario): Promise<void> {
+  if (demoAtivo()) return demo.reiniciarCartao(cartao, casas, usuario)
   const ids = new Set(idsParaReiniciar(casas))
   const alvo = casas.filter((c) => ids.has(c.id))
   if (alvo.some((c) => !c.quadraId)) throw new Error('Casa sem quadra: use as casas lidas por observarCasas')
@@ -184,6 +195,7 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
 }
 
 export async function recalcularContadores(cartaoId: string): Promise<void> {
+  if (demoAtivo()) return demo.recalcularContadores(cartaoId)
   // Só do servidor: o cache pode ter quadras ou casas faltando e gravaria contadores errados.
   const quadras = await getDocsFromServer(collection(db, 'cards', cartaoId, 'blocks'))
   let total = 0

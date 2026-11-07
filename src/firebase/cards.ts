@@ -2,11 +2,14 @@ import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBat
 import { abrirCartao, fecharCartao } from '@/domain/ciclo'
 import type { Cartao, EventoCartao } from '@/domain/types'
 import { db } from './app'
+import * as demo from '@/demo/banco'
+import { demoAtivo } from '@/demo/modo'
 import { cartaoDe, eventoDe, paraTimestamp } from './converters'
 
 type Usuario = { uid: string; nome: string }
 
 export function observarCartoes(cb: (c: Cartao[]) => void, onErro?: (e: Error) => void): () => void {
+  if (demoAtivo()) return demo.observarCartoes(cb)
   return onSnapshot(collection(db, 'cards'), (snap) => {
     const todos = snap.docs.map((d) => cartaoDe(d.id, d.data()))
     const porNumero = (a: Cartao, b: Cartao) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true })
@@ -18,10 +21,12 @@ export function observarCartoes(cb: (c: Cartao[]) => void, onErro?: (e: Error) =
 }
 
 export function observarCartao(id: string, cb: (c: Cartao | null) => void, onErro?: (e: Error) => void): () => void {
+  if (demoAtivo()) return demo.observarCartao(id, cb)
   return onSnapshot(doc(db, 'cards', id), (snap) => cb(snap.exists() ? cartaoDe(snap.id, snap.data()) : null), onErro)
 }
 
 export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?: string }, usuario: Usuario): Promise<string> {
+  if (demoAtivo()) return demo.criarCartao(d, usuario)
   const ref = doc(collection(db, 'cards'))
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
@@ -41,10 +46,12 @@ export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?:
 }
 
 export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numero' | 'titulo' | 'mapsUrl' | 'imagemPath' | 'pdfPath'>>): Promise<void> {
+  if (demoAtivo()) return demo.atualizarCartao(id, d)
   await updateDoc(doc(db, 'cards', id), { ...d, atualizadoEm: paraTimestamp(Date.now()) })
 }
 
 export async function fecharCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
+  if (demoAtivo()) return demo.fecharCartaoManual(c, usuario)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.update(doc(db, 'cards', c.id), { ...fecharCartao(c), atualizadoEm: agora })
@@ -53,6 +60,7 @@ export async function fecharCartaoManual(c: Cartao, usuario: Usuario): Promise<v
 }
 
 export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
+  if (demoAtivo()) return demo.abrirCartaoManual(c, usuario)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.update(doc(db, 'cards', c.id), { ...abrirCartao(c), atualizadoEm: agora, abertoPorNome: usuario.nome, abertoEm: agora })
@@ -61,6 +69,7 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
 }
 
 export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void): () => void {
+  if (demoAtivo()) return demo.observarEventos(cartaoId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'eventos'), orderBy('em', 'desc'), limit(10))
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => eventoDe(d.id, d.data()))))
 }

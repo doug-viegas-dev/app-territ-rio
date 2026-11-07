@@ -1,10 +1,12 @@
 import { onSnapshotsInSync, waitForPendingWrites } from 'firebase/firestore'
 import { db } from './app'
+import { demoAtivo } from '@/demo/modo'
 
 const ESPERA_MS = 400
 
 /** Avisa `true` enquanto há escritas feitas neste aparelho que o servidor ainda não confirmou. */
 export function observarSincronizando(cb: (pendente: boolean) => void): () => void {
+  if (demoAtivo()) { cb(false); return () => {} }
   let vivo = true
   let rodada = 0
   const conferir = () => {

@@ -1,10 +1,13 @@
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore'
 import type { Papel } from '@/domain/types'
 import { db } from './app'
+import * as demo from '@/demo/banco'
+import { demoAtivo } from '@/demo/modo'
 
 export type MembroObservado = { papel: Papel; ativo: boolean; nome: string }
 
 export function observarMembro(email: string, cb: (membro: MembroObservado | null) => void): () => void {
+  if (demoAtivo()) return demo.observarMembroDemo(email, cb)
   return onSnapshot(doc(db, 'members', email.toLowerCase()), (snapshot) => {
     const data = snapshot.data()
     cb(snapshot.exists() && (data?.papel === 'admin' || data?.papel === 'publicador')
@@ -14,6 +17,7 @@ export function observarMembro(email: string, cb: (membro: MembroObservado | nul
 }
 
 export function observarMembros(cb: (m: (MembroObservado & { email: string })[]) => void): () => void {
+  if (demoAtivo()) return demo.observarMembros(cb)
   return onSnapshot(collection(db, 'members'), (snap) => {
     const lista = snap.docs.flatMap((d) => {
       const data = d.data()
@@ -25,5 +29,6 @@ export function observarMembros(cb: (m: (MembroObservado & { email: string })[])
 }
 
 export async function salvarMembro(email: string, d: { nome: string; papel: Papel; ativo: boolean }): Promise<void> {
+  if (demoAtivo()) return demo.salvarMembro(email, d)
   await setDoc(doc(db, 'members', email.trim().toLowerCase()), { nome: d.nome.trim(), papel: d.papel, ativo: d.ativo })
 }
