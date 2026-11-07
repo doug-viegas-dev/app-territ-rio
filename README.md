@@ -6,7 +6,7 @@ PWA em português do Brasil para uma congregação registrar as casas de cada qu
 
 **Stack:** React 18 · TypeScript · Vite · Firebase (Auth, Firestore, Storage) · PWA com service worker · Vitest · Playwright · Vercel
 
-> ### 👉 [Experimente a demonstração](URL_AQUI)
+> ### 👉 [Experimente a demonstração](https://meu-territorio.vercel.app/)
 > Sem cadastro: toque em **Explorar demonstração** na tela de entrada. Os dados ficam só no seu aparelho.
 
 ## Por que este projeto
