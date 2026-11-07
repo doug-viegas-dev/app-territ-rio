@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <title>Meu Território (maskable)</title>
   <!-- fundo sangrado até a borda; a arte fica dentro da zona segura (80% central) -->
-  <rect width="192" height="192" fill="#55658C"/>
+  <rect width="192" height="192" fill="#5662B5"/>
   <g transform="translate(19.2 19.2) scale(0.8)">
     <path fill="#FAF8F3" d="M117 41h25q16 0 16 17v85q0 18-18 18H58q-24 0-24-22V118h86V41z"/>
     <path fill="none" stroke="#E5AD50" stroke-width="15" stroke-linecap="round" d="M41 128h34c20 0 22-24 42-24h34"/>
-    <path fill="#FAF8F3" stroke="#55658C" stroke-width="6" stroke-linejoin="round" d="M72 29L33 62q-3 5 3 5h8v32l28 21 28-21V67h8q6 0 3-5z"/>
-    <path fill="#55658C" d="M61 98V83a11 11 0 0 1 22 0v15z"/>
+    <path fill="#FAF8F3" stroke="#5662B5" stroke-width="6" stroke-linejoin="round" d="M72 29L33 62q-3 5 3 5h8v32l28 21 28-21V67h8q6 0 3-5z"/>
+    <path fill="#5662B5" d="M61 98V83a11 11 0 0 1 22 0v15z"/>
   </g>
 </svg>

@@ -23,7 +23,7 @@
   --sombra: 0 1px 2px rgba(58, 70, 140, .06), 0 8px 22px rgba(58, 70, 140, .08);
   --sombra-forte: 0 2px 4px rgba(58, 70, 140, .10), 0 12px 28px rgba(58, 70, 140, .16);
   --sombra-botao: 0 6px 16px rgba(86, 98, 181, .30);
-  --logo-tile: #55658C;
+  --logo-tile: #5662B5;
   --veu: rgba(23, 28, 40, .55);
 
   /* status: cor + forma + nome */
@@ -366,3 +366,9 @@ html, body, #root { min-height: 100%; }
 
 /* ---------- tela sobreposta (cadastro de casas) ---------- */
 .tela-sobre { position: absolute; inset: 0; z-index: 8; background: var(--cor-fundo); display: flex; flex-direction: column; }
+
+/* ---------- acabamento ---------- */
+.topo-linha > svg { border-radius: 9px; box-shadow: 0 0 0 2px rgba(255, 255, 255, .28); }
+@media (prefers-color-scheme: dark) {
+  .segmento .ativo { background: var(--cor-principal); color: var(--sobre-principal); box-shadow: none; }
+}

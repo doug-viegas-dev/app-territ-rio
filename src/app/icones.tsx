@@ -45,11 +45,11 @@ const simbolos =
   `<symbol id="i-cadeado-aberto" viewBox="0 0 24 24"><rect ${forma} x="5" y="11" width="14" height="9" rx="2.5"/><path ${forma} d="M8 11V8a4 4 0 0 1 7.6-1.7"/></symbol>` +
   `<symbol id="i-historico" viewBox="0 0 24 24"><path ${forma} d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4.5l3 1.8"/></symbol>` +
   // marca: casa, mapa e caminho
-  `<symbol id="i-logo" viewBox="0 0 192 192"><rect x="0" y="0" width="192" height="192" rx="46" style="fill:var(--logo-tile,#55658C)"/>` +
+  `<symbol id="i-logo" viewBox="0 0 192 192"><rect x="0" y="0" width="192" height="192" rx="46" style="fill:var(--logo-tile,#5662B5)"/>` +
   `<path fill="#FAF8F3" d="M117 41h25q16 0 16 17v85q0 18-18 18H58q-24 0-24-22V118h86V41z"/>` +
   `<path fill="none" stroke="#E5AD50" stroke-width="15" stroke-linecap="round" d="M41 128h34c20 0 22-24 42-24h34"/>` +
-  `<path fill="#FAF8F3" stroke="var(--logo-tile,#55658C)" stroke-width="6" stroke-linejoin="round" d="M72 29L33 62q-3 5 3 5h8v32l28 21 28-21V67h8q6 0 3-5z"/>` +
-  `<path style="fill:var(--logo-tile,#55658C)" d="M61 98V83a11 11 0 0 1 22 0v15z"/></symbol>`
+  `<path fill="#FAF8F3" stroke="var(--logo-tile,#5662B5)" stroke-width="6" stroke-linejoin="round" d="M72 29L33 62q-3 5 3 5h8v32l28 21 28-21V67h8q6 0 3-5z"/>` +
+  `<path style="fill:var(--logo-tile,#5662B5)" d="M61 98V83a11 11 0 0 1 22 0v15z"/></symbol>`
 
 export function Sprite() {
   return <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">

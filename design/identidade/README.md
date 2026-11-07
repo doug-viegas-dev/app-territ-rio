@@ -1,23 +1,23 @@
 # Identidade visual — Meu Território
 
-Fonte: `identidade-visual.png` (nesta pasta). Conceito: "Casa, mapa e caminho". Azul-violeta sereno, âmbar para dar presença. Formas planas, sem gradientes nem sombras.
+Fonte: `identidade-visual.png` (nesta pasta). Conceito: "Casa, mapa e caminho". Azul-violeta sereno, âmbar para dar presença. Visual leve e clean: cabeçalho curvo com degradê suave, cartões brancos com sombra leve, botões em pílula.
 
 ## Cores da marca (modo claro)
 
 | Token | Nome | HEX | Uso |
 |---|---|---|---|
-| `--cor-principal` | Principal | `#55658C` | Botões primários, cabeçalho, ícone do app |
-| `--cor-secundaria` | Secundária | `#D9DFF0` | Fundos de cartões, chips, áreas suaves |
+| `--cor-principal` | Principal | `#5662B5` | Botões primários, cabeçalho, ícone do app |
+| `--cor-secundaria` | Secundária | `#E6E9F8` | Fundos de cartões, chips, áreas suaves |
 | `--cor-destaque` | Destaque | `#E5AD50` | Detalhes e realces (ver aviso abaixo) |
-| `--cor-fundo` | Fundo claro | `#F6F7FA` | Fundo das telas |
-| `--cor-texto` | Texto | `#252C3B` | Texto principal |
+| `--cor-fundo` | Fundo claro | `#F5F7FD` | Fundo das telas |
+| `--cor-texto` | Texto | `#232A40` | Texto principal |
 | `--cor-fundo-escuro` | Fundo escuro | `#171C28` | Fundo do modo escuro |
 
 Regras de contraste:
 - Âmbar `#E5AD50` nunca como cor de texto nem de ícone pequeno sobre fundo claro (contraste baixo).
-- Âmbar como **fundo** de um elemento: texto e ícone em `#252C3B`.
+- Âmbar como **fundo** de um elemento: texto e ícone em `#232A40`.
 - Usos permitidos: preenchimento da barra de progresso, botão flutuante "+ casa" (ícone escuro), sublinhado do item ativo, o caminho do ícone do app.
-- Texto branco só sobre `#55658C` ou mais escuro; texto `#252C3B` sobre `#D9DFF0`, `#F6F7FA` e âmbar.
+- Texto branco só sobre `#5662B5` ou mais escuro; texto `#232A40` sobre `#E6E9F8`, `#F5F7FD` e âmbar.
 
 ## Status (cor + forma + nome, nunca só a cor)
 

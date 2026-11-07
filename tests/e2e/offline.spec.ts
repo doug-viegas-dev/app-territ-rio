@@ -106,6 +106,7 @@ test('(b) registrar a última casa pendente fecha o cartão e ele vai para Fecha
 test('(c) admin reinicia o território: casas voltam a pendente, menos "Não visitar"', async ({ page }) => {
   await entrar(page, ADMIN)
   await page.getByRole('link', { name: 'Administração' }).click()
+  await page.getByRole('tab', { name: 'Ciclo' }).click()
   await page.getByRole('radiogroup', { name: 'Cartão do ciclo' }).getByRole('radio', { name: 'Cartão 3' }).click()
   await page.getByRole('button', { name: 'Reiniciar território' }).first().click()
   await page.getByRole('checkbox', { name: /novo ciclo/ }).click()
