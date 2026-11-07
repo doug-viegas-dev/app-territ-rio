@@ -2,7 +2,7 @@
 
 PWA em português do Brasil para uma congregação registrar as casas de cada quadra e cartão de território, com histórico de visitas, funcionamento offline e sincronização automática. Pensado para quem usa na rua, de 20 a 80 anos, com o celular em uma mão e conexão instável.
 
-> Projeto pessoal feito de ponta a ponta: produto, design, front-end, regras de segurança e testes.
+> Projeto pessoal feito de ponta a ponta com auxilio do Claude Code: produto, design, front-end, regras de segurança e testes.
 
 **Stack:** React 18 · TypeScript · Vite · Firebase (Auth, Firestore, Storage) · PWA com service worker · Vitest · Playwright · Vercel
 
