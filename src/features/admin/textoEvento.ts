@@ -35,3 +35,9 @@ export function dataHora(ms: number): string {
 export function hora(ms: number): string {
   return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
+
+/** "07/11 às 09:00": dia e mês, sem o ano. */
+export function diaEHora(ms: number): string {
+  const d = new Date(ms)
+  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às ${hora(ms)}`
+}

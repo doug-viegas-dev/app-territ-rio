@@ -23,8 +23,8 @@ const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'
 const casaComNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', numero: '112', descricao: 'muro baixo', ordem: 1, status: 'pendente', criadoEm: 1 }
 const casaSemNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', descricao: 'Casa verde, ao lado da padaria', ordem: 1, status: 'sem_resposta', ultimaVisitaEm: new Date(2026, 10, 2).getTime(), ultimoPor: 'Marcos S.', criadoEm: 1 }
 const visitas: Visita[] = [
-  { id: 'v2', status: 'sem_resposta', em: new Date(2026, 10, 2).getTime(), porUid: 'u9', porNome: 'Marcos S.', ciclo: 2 },
-  { id: 'v1', status: 'falado', em: new Date(2026, 8, 18).getTime(), porUid: 'u8', porNome: 'Ana P.', ciclo: 1, obs: 'Pediu para voltar à tarde.' },
+  { id: 'v2', status: 'sem_resposta', em: new Date(2026, 10, 2).getTime(), porUid: 'u9', porNome: 'Marcos S.', ciclo: 2, rodada: 2 },
+  { id: 'v1', status: 'falado', em: new Date(2026, 8, 18).getTime(), porUid: 'u8', porNome: 'Ana P.', ciclo: 1, rodada: 1, obs: 'Pediu para voltar à tarde.' },
 ]
 
 function preparar(casa: Casa, opcoes: { cartao?: Cartao; papel?: 'admin' | 'publicador'; visitas?: Visita[]; quadra?: Quadra } = {}) {
@@ -69,23 +69,33 @@ describe('CasaPage', () => {
     expect(registrarVisita).not.toHaveBeenCalled()
   })
 
-  it('lista o histórico na ordem recebida, com nome, data e ciclo', () => {
+  it('lista o histórico na ordem recebida, com nome, data e rodada', () => {
     preparar(casaComNumero)
     renderPagina()
     const itens = screen.getAllByRole('listitem')
     expect(itens).toHaveLength(2)
     expect(itens[0]).toHaveTextContent('Não atendeu')
-    expect(itens[0]).toHaveTextContent('02/11/2026 · Marcos S. · Ciclo 2')
+    expect(itens[0]).toHaveTextContent('02/11/2026 · Marcos S. · Rodada 2')
     expect(itens[1]).toHaveTextContent('Conversado')
-    expect(itens[1]).toHaveTextContent('18/09/2026 · Ana P. · Ciclo 1')
+    expect(itens[1]).toHaveTextContent('18/09/2026 · Ana P. · Rodada 1')
+    expect(screen.queryByText(/Ciclo/)).not.toBeInTheDocument()
     expect(itens[1]).toHaveTextContent('Pediu para voltar à tarde.')
+  })
+
+  it('visita antiga sem rodada não mostra Rodada nem Ciclo', () => {
+    preparar(casaComNumero, { visitas: [{ id: 'v0', status: 'falado', em: new Date(2026, 8, 18).getTime(), porUid: 'u8', porNome: 'Ana P.', ciclo: 1 }] })
+    renderPagina()
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveTextContent('18/09/2026 · Ana P.')
+    expect(item).not.toHaveTextContent('Rodada')
+    expect(item).not.toHaveTextContent('Ciclo')
   })
 
   it('casa sem visitas mostra "Nenhuma visita ainda"', () => {
     preparar(casaComNumero, { visitas: [] })
     renderPagina()
     expect(screen.getByText(/Nenhuma visita ainda/)).toBeInTheDocument()
-    expect(screen.getByText(/nenhuma visita neste ciclo/)).toBeInTheDocument()
+    expect(screen.getByText(/nenhuma visita ainda/)).toBeInTheDocument()
   })
 
   it('registrar com observação envia a observação e limpa o campo', async () => {

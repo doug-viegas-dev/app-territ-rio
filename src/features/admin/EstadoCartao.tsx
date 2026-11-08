@@ -54,7 +54,7 @@ function ConfirmarReinicio({ cartao, casas, quadras, podeFechar, onFechar, onCon
       {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({casas.length} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem. Se o total estiver errado, use “Recalcular contadores”.</p>}
       <button type="button" role="checkbox" aria-checked={entendi} className="caixa-ok" onClick={() => setEntendi(!entendi)}>
         <span className={entendi ? 'marca' : 'marca vazia'}>{entendi && <Icone nome="check" className="ic ic-20" />}</span>
-        <span>Entendo que o cartão começa um novo ciclo.</span>
+        <span>Entendo que o cartão volta ao início.</span>
       </button>
       <div className="pilha">
         <button type="button" className="btn perigo" aria-disabled={liberado ? undefined : true} onClick={() => { if (liberado) onConfirmar() }}>Fechar e reiniciar</button>

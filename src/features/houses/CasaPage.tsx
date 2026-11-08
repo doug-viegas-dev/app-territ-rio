@@ -150,7 +150,7 @@ export default function CasaPage() {
         <div style={{ gridColumn: '1 / 3', marginTop: 6 }}>
           <span className={`estado c-${nome}`}>
             <Icone nome={nome} />{rotuloStatus(casa.status)}{' '}
-            <small>· {casa.status === 'pendente' || casa.ultimaVisitaEm === undefined ? 'nenhuma visita neste ciclo' : `${dia(casa.ultimaVisitaEm)}${casa.ultimoPor ? ` · ${casa.ultimoPor}` : ''}`}</small>
+            <small>· {casa.status === 'pendente' || casa.ultimaVisitaEm === undefined ? 'nenhuma visita ainda' : `${dia(casa.ultimaVisitaEm)}${casa.ultimoPor ? ` · ${casa.ultimoPor}` : ''}`}</small>
           </span>
         </div>
       </div>

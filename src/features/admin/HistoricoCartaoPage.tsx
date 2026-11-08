@@ -6,7 +6,7 @@ import type { EventoCartao } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartoes } from '@/features/cards/useCartoes'
 import { observarEventos } from '@/firebase/cards'
-import { dataHora, hora, iconeEvento, textoEvento, tituloEvento } from './textoEvento'
+import { dataHora, diaEHora, iconeEvento, textoEvento, tituloEvento } from './textoEvento'
 
 /** `undefined` enquanto carrega. */
 function useEventos(cartaoId: string): EventoCartao[] | undefined {
@@ -17,19 +17,21 @@ function useEventos(cartaoId: string): EventoCartao[] | undefined {
 
 type Rodada = { numero: number; abertaPor?: string; abertaEm?: number; encerradaPor?: string; encerradaEm?: number }
 
-/** Agrupa os eventos de rodada por quadra (rótulo), da quadra e da rodada mais recentes para as mais antigas. */
-function rodadasPorQuadra(eventos: EventoCartao[]): { rotulo: string; rodadas: Rodada[] }[] {
-  const quadras = new Map<string, Map<number, Rodada>>()
+/** Agrupa os eventos de rodada por quadra (`quadraId`; sem ele, o rótulo), com as rodadas da mais recente para a mais antiga. */
+function rodadasPorQuadra(eventos: EventoCartao[]): { chave: string; rotulo: string; rodadas: Rodada[] }[] {
+  const quadras = new Map<string, { rotulo: string; rodadas: Map<number, Rodada> }>()
   for (const e of eventos) {
     if (e.tipo !== 'rodada' || e.quadraRotulo === undefined || e.rodada === undefined) continue
-    const rodadas = quadras.get(e.quadraRotulo) ?? new Map<number, Rodada>()
+    const chave = e.quadraId ?? e.quadraRotulo
+    const grupo = quadras.get(chave) ?? { rotulo: e.quadraRotulo, rodadas: new Map<number, Rodada>() }
+    const rodadas = grupo.rodadas
     const r = rodadas.get(e.rodada) ?? { numero: e.rodada }
     if (e.motivo === 'rodada_aberta') { r.abertaPor = e.porNome; r.abertaEm = e.em }
     if (e.motivo === 'rodada_encerrada') { r.encerradaPor = e.porNome; r.encerradaEm = e.em }
     rodadas.set(e.rodada, r)
-    quadras.set(e.quadraRotulo, rodadas)
+    quadras.set(chave, grupo)
   }
-  return [...quadras].map(([rotulo, rodadas]) => ({ rotulo, rodadas: [...rodadas.values()].sort((a, b) => b.numero - a.numero) }))
+  return [...quadras].map(([chave, g]) => ({ chave, rotulo: g.rotulo, rodadas: [...g.rodadas.values()].sort((a, b) => b.numero - a.numero) }))
 }
 
 function Eventos({ cartaoId }: { cartaoId: string }) {
@@ -48,13 +50,13 @@ function Eventos({ cartaoId }: { cartaoId: string }) {
   return <>
     {quadras.length > 0 && <section aria-labelledby="rodadas-por-quadra">
       <h2 className="titulo-secao" id="rodadas-por-quadra">Rodadas por quadra</h2>
-      {quadras.map((q) => <div key={q.rotulo} style={{ marginBottom: 14 }}>
+      {quadras.map((q) => <div key={q.chave} style={{ marginBottom: 14 }}>
         <h3 style={{ fontSize: 18 }}>{q.rotulo}</h3>
         <ul style={{ listStyle: 'none' }}>
           {q.rodadas.map((r) => <li key={r.numero} style={{ padding: '6px 0' }}>
             <b>Rodada {r.numero}</b>
-            {r.abertaEm !== undefined && <div className="quem">aberta por {r.abertaPor} às {hora(r.abertaEm)}</div>}
-            {r.encerradaEm !== undefined && <div className="quem">encerrada por {r.encerradaPor} às {hora(r.encerradaEm)}</div>}
+            {r.abertaEm !== undefined && <div className="quem">aberta por {r.abertaPor} em {diaEHora(r.abertaEm)}</div>}
+            {r.encerradaEm !== undefined && <div className="quem">encerrada por {r.encerradaPor} em {diaEHora(r.encerradaEm)}</div>}
           </li>)}
         </ul>
       </div>)}

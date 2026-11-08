@@ -90,8 +90,38 @@ describe('HistoricoCartaoPage', () => {
     const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
     expect(within(bloco).getByRole('heading', { name: 'Quadra A' })).toBeInTheDocument()
     expect(within(bloco).getByText('Rodada 2')).toBeInTheDocument()
-    expect(within(bloco).getByText(/aberta por Maria S\. às 09:05/)).toBeInTheDocument()
-    expect(within(bloco).getByText(/encerrada por João P\. às 18:30/)).toBeInTheDocument()
+    expect(within(bloco).getByText('aberta por Maria S. em 24/10 às 09:05')).toBeInTheDocument()
+    expect(within(bloco).getByText('encerrada por João P. em 25/10 às 18:30')).toBeInTheDocument()
+  })
+
+  it('duas quadras com o mesmo rótulo e quadraId diferentes ficam em grupos separados', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([
+        { id: 'b1', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'qb', quadraRotulo: 'Quadra A', rodada: 1, em: em(26, 10, 0), porUid: 'u1', porNome: 'Maria S.' },
+        { id: 'a1', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'qa', quadraRotulo: 'Quadra A', rodada: 1, em: em(24, 9, 5), porUid: 'u1', porNome: 'Ana P.' },
+      ])
+      return () => {}
+    })
+    renderPagina()
+    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    expect(within(bloco).getAllByRole('heading', { name: 'Quadra A' })).toHaveLength(2)
+    expect(within(bloco).getAllByText('Rodada 1')).toHaveLength(2)
+    expect(within(bloco).getByText('aberta por Maria S. em 26/10 às 10:00')).toBeInTheDocument()
+    expect(within(bloco).getByText('aberta por Ana P. em 24/10 às 09:05')).toBeInTheDocument()
+  })
+
+  it('evento de rodada sem quadraId agrupa pelo rótulo', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([
+        { id: 'r2', tipo: 'rodada', motivo: 'rodada_encerrada', quadraRotulo: 'Quadra A', rodada: 1, em: em(25, 18, 30), porUid: 'u2', porNome: 'João P.' },
+        { id: 'r1', tipo: 'rodada', motivo: 'rodada_aberta', quadraRotulo: 'Quadra A', rodada: 1, em: em(24, 9, 5), porUid: 'u1', porNome: 'Maria S.' },
+      ])
+      return () => {}
+    })
+    renderPagina()
+    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    expect(within(bloco).getAllByRole('heading', { name: 'Quadra A' })).toHaveLength(1)
+    expect(within(bloco).getAllByText('Rodada 1')).toHaveLength(1)
   })
 
   it('mostra fechou e reiniciou o território', () => {

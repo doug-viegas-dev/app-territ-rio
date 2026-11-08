@@ -15,7 +15,7 @@ export default function HistoricoVisitas({ visitas }: { visitas: Visita[] }) {
       <span className={`c-${classeStatus(v.status)}`}><Icone nome={classeStatus(v.status)} className="ic ic-32" /></span>
       <div>
         <b>{rotuloStatus(v.status)}</b>
-        <div className="quando">{data(v.em)} · {v.porNome} · Ciclo {v.ciclo}</div>
+        <div className="quando">{data(v.em)} · {v.porNome}{v.rodada !== undefined && ` · Rodada ${v.rodada}`}</div>
         {v.obs && <p className="obs">{v.obs}</p>}
       </div>
     </li>)}
