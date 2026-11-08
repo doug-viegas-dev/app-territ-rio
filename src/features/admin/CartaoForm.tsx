@@ -10,7 +10,8 @@ import { pdfParaImagem } from './pdfParaImagem'
 type Mapa = { arquivo: File; imagem: Blob; paginas: number }
 const tamanho = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
 
-export default function CartaoForm() {
+export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: () => void; onCancelar?: () => void } = {}) {
+  const emFolha = onCancelar !== undefined
   const { usuario, membro } = useSessao()
   const online = useOnline()
   const entrada = useRef<HTMLInputElement>(null)
@@ -56,6 +57,7 @@ export default function CartaoForm() {
       setTitulo('')
       setMapsUrl('')
       setMapa(null)
+      onCriado?.()
     } catch {
       setErro(pendente.current
         ? `O cartão ${pendente.current.numero} foi criado, mas o mapa não foi enviado. Confira a conexão e toque em Criar cartão de novo para enviar o mapa.`
@@ -66,12 +68,12 @@ export default function CartaoForm() {
   }
 
   return <>
-    <h2 className="titulo-secao divisor" id="cartoes">Novo cartão</h2>
+    {emFolha ? <h2>Novo cartão</h2> : <h2 className="titulo-secao divisor" id="cartoes">Novo cartão</h2>}
     {criado && <div className="aviso" role="status" style={{ background: 'var(--superficie)', borderColor: 'var(--st-falado)' }}>
       <Icone nome="falado" className="ic c-falado" />
       <p><b>Cartão {criado.numero} criado</b>Ele começa fechado. Um administrador precisa abri-lo para registrar visitas. <Link className="btn link" style={{ minHeight: 40 }} to={`/cartao/${criado.id}`}>Ver cartão</Link></p>
     </div>}
-    <form className="painel-caixa" onSubmit={(e) => void salvar(e)}>
+    <form className={emFolha ? undefined : 'painel-caixa'} onSubmit={(e) => void salvar(e)}>
       <div className="entrada-grupo" style={{ gridTemplateColumns: '96px 1fr' }}>
         <div className="campo"><label htmlFor="cartao-numero">Número</label><input id="cartao-numero" className="entrada" value={numero} onChange={(e) => setNumero(e.target.value)} /></div>
         <div className="campo"><label htmlFor="cartao-titulo">Título</label><input id="cartao-titulo" className="entrada" value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
@@ -92,7 +94,10 @@ export default function CartaoForm() {
       </div>
       {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
       {!online && <p style={{ color: 'var(--texto-suave)', marginBottom: 12 }}>Sem internet. Conecte-se para criar um cartão.</p>}
-      <button type="submit" className="btn primario" aria-disabled={!online || enviando || lendo ? true : undefined}>{enviando ? 'Criando…' : 'Criar cartão'}</button>
+      <div className={emFolha ? 'pilha' : undefined}>
+        <button type="submit" className="btn primario" aria-disabled={!online || enviando || lendo ? true : undefined}>{enviando ? 'Criando…' : 'Criar cartão'}</button>
+        {onCancelar && <button type="button" className="btn secundario" onClick={onCancelar}>Cancelar</button>}
+      </div>
     </form>
   </>
 }

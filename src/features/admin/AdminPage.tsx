@@ -1,34 +1,17 @@
 import { useState } from 'react'
-import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
-import { useCartoes } from '@/features/cards/useCartoes'
-import CartaoForm from './CartaoForm'
-import CicloAdmin from './CicloAdmin'
+import ListaCartoesAdmin from './ListaCartoesAdmin'
 import MembrosAdmin from './MembrosAdmin'
-import QuadrasAdmin from './QuadrasAdmin'
 
-function CicloDoCartao() {
-  const cartoes = useCartoes()
-  const [escolhido, setEscolhido] = useState<string | null>(null)
-  const cartao = cartoes?.find((c) => c.id === escolhido) ?? cartoes?.[0]
-  if (!cartao) return <>
-    <h2 className="titulo-secao divisor" id="ciclo">Ciclo</h2>
-    <p style={{ color: 'var(--texto-suave)' }}>Crie um cartão para controlar o ciclo.</p>
-  </>
-  return <>
-    {(cartoes?.length ?? 0) > 1 && <div className="chips" role="radiogroup" aria-label="Cartão do ciclo" style={{ marginTop: 24 }}>
-      {cartoes?.map((c) => <button key={c.id} type="button" role="radio" aria-checked={c.id === cartao.id} className={c.id === cartao.id ? 'chip sel' : 'chip'} onClick={() => setEscolhido(c.id)}>
-        {c.id === cartao.id && <Icone nome="check" className="ic ic-20" />}Cartão {c.numero}
-      </button>)}
-    </div>}
-    <CicloAdmin key={cartao.id} cartao={cartao} />
-  </>
+// provisório: Tarefa 11
+function HistoricoProvisorio() {
+  return <p style={{ color: 'var(--texto-suave)', marginTop: 16 }}>O histórico dos cartões aparece aqui.</p>
 }
 
 const ABAS = [
   { id: 'membros', rotulo: 'Membros' },
   { id: 'cartoes', rotulo: 'Cartões' },
-  { id: 'ciclo', rotulo: 'Ciclo' },
+  { id: 'historico', rotulo: 'Histórico' },
 ] as const
 type AbaId = typeof ABAS[number]['id']
 
@@ -42,11 +25,8 @@ export default function AdminPage() {
       </div>
       <div role="tabpanel" id="painel-admin" aria-labelledby={`aba-${aba}`}>
         {aba === 'membros' && <MembrosAdmin />}
-        {aba === 'cartoes' && <>
-          <CartaoForm />
-          <QuadrasAdmin />
-        </>}
-        {aba === 'ciclo' && <CicloDoCartao />}
+        {aba === 'cartoes' && <ListaCartoesAdmin />}
+        {aba === 'historico' && <HistoricoProvisorio />}
       </div>
     </div>
   </>

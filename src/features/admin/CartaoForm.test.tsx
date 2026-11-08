@@ -91,6 +91,23 @@ describe('CartaoForm', () => {
     expect(enviarArquivosDoCartao).toHaveBeenCalledTimes(2)
   })
 
+  it('chama onCriado só quando tudo deu certo e onCancelar ao cancelar', async () => {
+    vi.mocked(enviarArquivosDoCartao).mockRejectedValueOnce(new Error('rede'))
+    const onCriado = vi.fn()
+    const onCancelar = vi.fn()
+    render(<MemoryRouter><CartaoForm onCriado={onCriado} onCancelar={onCancelar} /></MemoryRouter>)
+    const user = userEvent.setup()
+    await preencher(user, true)
+    await screen.findByText(/Só a primeira página/)
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    await screen.findByText(/O cartão 13 foi criado, mas o mapa não foi enviado/)
+    expect(onCriado).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    await waitFor(() => expect(onCriado).toHaveBeenCalledTimes(1))
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(onCancelar).toHaveBeenCalledTimes(1)
+  })
+
   it('sem número ou título não cria', async () => {
     renderForm()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Criar cartão' }))
