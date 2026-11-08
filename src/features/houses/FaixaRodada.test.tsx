@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -97,12 +97,81 @@ describe('FaixaRodada', () => {
     expect(abrirRodada).toHaveBeenCalledTimes(2)
   })
 
-  it('quando a rodada aberta chega pela quadra, Encerrar rodada já fica disponível', async () => {
+  it('quando a rodada aberta chega pela quadra, Encerrar rodada aparece, mas só aceita toque depois da pausa', async () => {
     vi.mocked(abrirRodada).mockReturnValue(new Promise(() => {}))
     const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
     rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(hoje())} cartaoAberto onErro={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
+    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  describe('depois de Abrir ou Encerrar neste aparelho', () => {
+    beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] }) })
+    afterEach(() => { vi.useRealTimers() })
+    // fireEvent, não userEvent: o userEvent espera por setTimeout real e trava com o relógio falso
+    const tocar = async (nome: string) => { await act(async () => { fireEvent.click(screen.getByRole('button', { name: nome })) }) }
+    const arvore = (q: Quadra) => <FaixaRodada cartaoId="c12" quadra={q} cartaoAberto onErro={vi.fn()} />
+
+    it('o botão Encerrar que aparece no lugar de Abrir ignora toques por 1500 ms e depois funciona', async () => {
+        const aberta = comRodada(hoje())
+      const { rerender } = render(arvore(base))
+      await tocar('Abrir rodada')
+      expect(abrirRodada).toHaveBeenCalledTimes(1)
+      rerender(arvore(aberta))
+      const encerrar = screen.getByRole('button', { name: 'Encerrar rodada' })
+      expect(encerrar).toHaveAttribute('aria-disabled', 'true')
+      await tocar('Encerrar rodada')
+      expect(encerrarRodada).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1499) })
+      await tocar('Encerrar rodada')
+      expect(encerrarRodada).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
+      await tocar('Encerrar rodada')
+      expect(encerrarRodada).toHaveBeenCalledWith('c12', aberta, usuario)
+    })
+
+    it('o botão Abrir que aparece no lugar de Encerrar também ignora toques por 1500 ms', async () => {
+        const aberta = comRodada(hoje())
+      const { rerender } = render(arvore(aberta))
+      await tocar('Encerrar rodada')
+      expect(encerrarRodada).toHaveBeenCalledTimes(1)
+      rerender(arvore({ ...base, rodadasTotal: 2 }))
+      const abrir = screen.getByRole('button', { name: 'Abrir rodada' })
+      expect(abrir).toHaveAttribute('aria-disabled', 'true')
+      await tocar('Abrir rodada')
+      expect(abrirRodada).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
+      await tocar('Abrir rodada')
+      expect(abrirRodada).toHaveBeenCalledTimes(1)
+    })
+
+    it('a mudança de rodada vinda de outro aparelho não bloqueia o botão novo', async () => {
+        const aberta = comRodada(hoje())
+      const { rerender } = render(arvore(base))
+      rerender(arvore(aberta))
+      const encerrar = screen.getByRole('button', { name: 'Encerrar rodada' })
+      expect(encerrar).not.toHaveAttribute('aria-disabled')
+      await tocar('Encerrar rodada')
+      expect(encerrarRodada).toHaveBeenCalledTimes(1)
+    })
+
+    it('o bloqueio vale mesmo quando a gravação termina antes de a quadra mudar', async () => {
+        const { rerender } = render(arvore(base))
+      await tocar('Abrir rodada')
+      await act(async () => {})
+      rerender(arvore(comRodada(hoje())))
+      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toHaveAttribute('aria-disabled', 'true')
+    })
+
+    it('falha na gravação não deixa marca: uma mudança de outro aparelho depois não bloqueia', async () => {
+      vi.mocked(abrirRodada).mockRejectedValueOnce(new Error('falhou'))
+        const { rerender } = render(arvore(base))
+      await tocar('Abrir rodada')
+      await act(async () => {})
+      rerender(arvore(comRodada(hoje())))
+      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
+    })
   })
 
   it('usa a hora atual a cada render: rodada aberta depois da meia-noite não aparece como de outro dia', () => {
