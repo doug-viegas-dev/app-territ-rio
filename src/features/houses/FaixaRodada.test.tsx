@@ -64,14 +64,20 @@ describe('FaixaRodada', () => {
     await waitFor(() => expect(onErro).toHaveBeenCalledTimes(1))
   })
 
-  it('com o cartão fechado os botões ficam desativados e não gravam', async () => {
+  it('com o cartão fechado, Abrir rodada fica desativado e não grava', async () => {
     renderFaixa(base, false)
     const botao = screen.getByRole('button', { name: 'Abrir rodada' })
     expect(botao).toHaveAttribute('aria-disabled', 'true')
     await userEvent.setup().click(botao)
     expect(abrirRodada).not.toHaveBeenCalled()
-    cleanup()
-    renderFaixa(comRodada(hoje()), false)
-    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('com o cartão fechado e uma rodada aberta, Encerrar rodada continua disponível e grava', async () => {
+    const q = comRodada(hoje())
+    renderFaixa(q, false)
+    const botao = screen.getByRole('button', { name: 'Encerrar rodada' })
+    expect(botao).not.toHaveAttribute('aria-disabled')
+    await userEvent.setup().click(botao)
+    expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario)
   })
 })

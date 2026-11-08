@@ -15,8 +15,9 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
   const atual = quadra.rodadaAtual
   const [agora] = useState(() => Date.now())
 
+  // Abrir exige cartão aberto; encerrar não: uma rodada aberta offline pode chegar depois que o cartão fechou.
   function executar(acao: typeof abrirRodada) {
-    if (!cartaoAberto || !usuario) return
+    if (!usuario) return
     acao(cartaoId, quadra, { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }).catch(onErro)
   }
 
@@ -29,7 +30,7 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
   return <div className="aviso faixa" style={{ alignItems: 'center' }}>
     <Icone nome={atual ? 'historico' : 'info'} />
     <p>{texto}</p>
-    {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" aria-disabled={cartaoAberto ? undefined : true} onClick={() => executar(encerrarRodada)}>Encerrar rodada</button>}
-    {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto ? undefined : true} onClick={() => executar(abrirRodada)}>Abrir rodada</button>}
+    {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" onClick={() => executar(encerrarRodada)}>Encerrar rodada</button>}
+    {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir rodada</button>}
   </div>
 }

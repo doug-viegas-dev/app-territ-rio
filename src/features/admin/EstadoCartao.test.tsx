@@ -195,6 +195,15 @@ describe('EstadoCartao', () => {
     expect(screen.queryByText(/Recalcule os contadores/)).not.toBeInTheDocument()
   })
 
+  it('o aviso de rodada aberta diz em quais quadras, na tela e na confirmação', async () => {
+    const duas: Quadra[] = [comRodadaAberta[0], { ...quadras[1], rodadaAtual: { id: 'r9', numero: 2, porNome: 'Ana', em: 1 } }]
+    const { rerender } = renderEstado(aberto)
+    const folha = await abrirReinicio(userEvent.setup())
+    rerender(arvore(aberto, duas))
+    expect(screen.getAllByText('Rodada aberta em: Quadra 1, Quadra 2.')).toHaveLength(2)
+    expect(within(folha).getByText('Rodada aberta em: Quadra 1, Quadra 2.')).toBeInTheDocument()
+  })
+
   it('recalcular chama recalcularContadores', async () => {
     renderEstado(aberto)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Recalcular contadores' }))

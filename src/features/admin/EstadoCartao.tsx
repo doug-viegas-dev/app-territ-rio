@@ -3,7 +3,7 @@ import { Icone } from '@/app/icones'
 import { useFalhaDeLeitura } from '@/app/useFalhaDeLeitura'
 import { useOnline } from '@/app/useOnline'
 import { contadoresSuspeitos } from '@/domain/ciclo'
-import { podeFecharCartao } from '@/domain/rodada'
+import { podeFecharCartao, quadrasComRodadaAberta } from '@/domain/rodada'
 import type { Cartao, Casa, Quadra } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from '@/features/cards/ConfirmarAbertura'
@@ -24,7 +24,15 @@ function useCasasDoCartao(cartaoId: string, quadras: Quadra[]): Casa[] {
   return quadras.flatMap((q) => porQuadra[q.id] ?? [])
 }
 
-function ConfirmarReinicio({ cartao, casas, podeFechar, onFechar, onConfirmar }: { cartao: Cartao; casas: Casa[]; podeFechar: boolean; onFechar: () => void; onConfirmar: () => void }) {
+/** Diz onde estão as rodadas abertas: a quadra pode estar fora da lista do cartão. */
+function AvisoRodadas({ quadras, estilo }: { quadras: Quadra[]; estilo?: React.CSSProperties }) {
+  const nomes = quadrasComRodadaAberta(quadras).map((q) => q.rotulo).join(', ')
+  return <p role="status" style={{ color: 'var(--texto-suave)', ...estilo }}>
+    <span>Encerre as rodadas abertas antes de fechar.</span> <span>Rodada aberta em: {nomes}.</span>
+  </p>
+}
+
+function ConfirmarReinicio({ cartao, casas, quadras, podeFechar, onFechar, onConfirmar }: { cartao: Cartao; casas: Casa[]; quadras: Quadra[]; podeFechar: boolean; onFechar: () => void; onConfirmar: () => void }) {
   const [entendi, setEntendi] = useState(false)
   // Só reinicia com todas as casas na mão: uma lista parcial deixaria quadras sem reiniciar e o contador errado.
   const carregando = casas.length < cartao.totalCasas
@@ -42,7 +50,7 @@ function ConfirmarReinicio({ cartao, casas, podeFechar, onFechar, onConfirmar }:
         {' '}O histórico de visitas continua guardado. Esta ação não tem desfazer.
       </p>
       <p>O cartão fica <b>fechado</b> depois de reiniciar. Para registrar visitas de novo, um administrador precisa abri-lo.</p>
-      {!podeFechar && <p role="status" style={{ color: 'var(--texto-suave)' }}>Encerre as rodadas abertas antes de fechar.</p>}
+      {!podeFechar && <AvisoRodadas quadras={quadras} />}
       {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({casas.length} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem. Se o total estiver errado, use “Recalcular contadores”.</p>}
       <button type="button" role="checkbox" aria-checked={entendi} className="caixa-ok" onClick={() => setEntendi(!entendi)}>
         <span className={entendi ? 'marca' : 'marca vazia'}>{entendi && <Icone nome="check" className="ic ic-20" />}</span>
@@ -91,7 +99,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
           onClick={() => { if (aberto && podeFechar && quem && quadras) gravar(fecharCartaoManual(cartao, quem, quadras)) }}>Fechar cartão</button>
         <button type="button" className="btn secundario" aria-disabled={podeFechar ? undefined : true}
           onClick={() => { if (podeFechar) setFolha('reiniciar') }}>Fechar e reiniciar</button>
-        {rodadaAberta && <p role="status" style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Encerre as rodadas abertas antes de fechar.</p>}
+        {rodadaAberta && <AvisoRodadas quadras={quadras} estilo={{ marginTop: -4 }} />}
         {carregandoQuadras && <p role="status" style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Aguarde: ainda estamos carregando as quadras do cartão.</p>}
         <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>“Fechar e reiniciar” leva todas as casas de volta a Pendente, menos as de Não visitar, e deixa o cartão fechado. O histórico continua guardado.</p>
         <button type="button" className="btn secundario" aria-disabled={aberto ? true : undefined}
@@ -103,7 +111,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
     </div>
 
     {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} onFechar={() => setFolha(null)} />}
-    {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} casas={casas} podeFechar={podeFechar} onFechar={() => setFolha(null)}
+    {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} casas={casas} quadras={quadras} podeFechar={podeFechar} onFechar={() => setFolha(null)}
       onConfirmar={() => { setFolha(null); gravar(fecharEReiniciarCartao(cartao, casas, quadras, quem)) }} />}
   </>
 }
