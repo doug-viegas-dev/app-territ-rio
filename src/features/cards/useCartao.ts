@@ -18,3 +18,11 @@ export function useQuadras(cartaoId: string): Quadra[] {
   useEffect(() => (cartaoId ? observarQuadras(cartaoId, setQuadras, falhar) : undefined), [cartaoId, falhar])
   return quadras
 }
+
+/** Como `useQuadras`, mas `null` enquanto a primeira resposta não chega (diferente de "sem quadras"). */
+export function useQuadrasCarregadas(cartaoId: string): Quadra[] | null {
+  const [atual, setAtual] = useState<{ id: string; quadras: Quadra[] } | null>(null)
+  const falhar = useFalhaDeLeitura()
+  useEffect(() => (cartaoId ? observarQuadras(cartaoId, (quadras) => setAtual({ id: cartaoId, quadras }), falhar) : undefined), [cartaoId, falhar])
+  return atual?.id === cartaoId ? atual.quadras : null
+}

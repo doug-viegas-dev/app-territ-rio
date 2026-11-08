@@ -53,7 +53,7 @@ export default function HistoricoCartaoPage() {
   const cartao = cartoes?.find((c) => c.id === atual)
 
   return <>
-    <Topo titulo="Histórico" voltarPara="/admin#ciclo" voltarRotulo="Voltar para Administração" sub="Quando cada cartão foi aberto ou fechado" />
+    <Topo titulo="Histórico" voltarPara={`/admin/cartao/${cartaoId}`} voltarRotulo="Voltar para o cartão" sub="Quando cada cartão foi aberto ou fechado" />
     {membro?.papel !== 'admin'
       ? <div className="rolagem"><div className="sem-casas" style={{ paddingTop: 56 }}>
         <Icone nome="cadeado" className="ic ic-32" />

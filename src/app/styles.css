@@ -377,3 +377,12 @@ html, body, #root { min-height: 100%; }
 @media (prefers-color-scheme: dark) {
   .segmento .ativo { background: var(--cor-principal); color: var(--sobre-principal); box-shadow: none; }
 }
+
+/* Blocos recolhíveis da tela do cartão no admin */
+.bloco { margin-bottom: 12px; }
+.bloco > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding: 0 16px; background: var(--superficie); border-radius: 22px; box-shadow: var(--sombra); font-size: 18px; font-weight: 600; cursor: pointer; list-style: none; }
+.bloco > summary::-webkit-details-marker { display: none; }
+.bloco > summary .bloco-seta { color: var(--texto-suave); transition: transform 0.15s; }
+.bloco[open] > summary .bloco-seta { transform: rotate(90deg); }
+.bloco-corpo { padding-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .bloco > summary .bloco-seta { transition: none; } }

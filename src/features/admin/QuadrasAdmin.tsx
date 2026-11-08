@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Icone } from '@/app/icones'
-import type { Quadra } from '@/domain/types'
-import { useCartoes } from '@/features/cards/useCartoes'
+import type { Cartao, Quadra } from '@/domain/types'
 import { useQuadras } from '@/features/cards/useCartao'
 import { adicionarRua, atualizarQuadra, criarQuadra } from '@/firebase/blocks'
 import { ruasDoTexto } from './ruasDoTexto'
@@ -77,11 +76,8 @@ function FolhaNovaRua({ quadras, onSalvar, onCancelar }: { quadras: Quadra[]; on
   </div>
 }
 
-export default function QuadrasAdmin() {
-  const cartoes = useCartoes()
-  const [escolhido, setEscolhido] = useState<string | null>(null)
-  const cartao = cartoes?.find((c) => c.id === escolhido) ?? cartoes?.[0]
-  const quadras = useQuadras(cartao?.id ?? '')
+export default function QuadrasAdmin({ cartao }: { cartao: Cartao }) {
+  const quadras = useQuadras(cartao.id)
   const [folha, setFolha] = useState<'rua' | 'nova' | Quadra | null>(null)
   const [erro, setErro] = useState(false)
 
@@ -92,18 +88,7 @@ export default function QuadrasAdmin() {
     setFolha(null)
   }
 
-  if (!cartao) return <>
-    <h2 className="titulo-secao">Quadras e ruas</h2>
-    <p style={{ color: 'var(--texto-suave)' }}>Crie um cartão para cadastrar quadras e ruas.</p>
-  </>
-
   return <>
-    <h2 className="titulo-secao">Quadras e ruas <small>Cartão {cartao.numero}</small></h2>
-    {(cartoes?.length ?? 0) > 1 && <div className="chips" role="radiogroup" aria-label="Cartão" style={{ marginBottom: 12 }}>
-      {cartoes?.map((c) => <button key={c.id} type="button" role="radio" aria-checked={c.id === cartao.id} className={c.id === cartao.id ? 'chip sel' : 'chip'} onClick={() => setEscolhido(c.id)}>
-        {c.id === cartao.id && <Icone nome="check" className="ic ic-20" />}Cartão {c.numero}
-      </button>)}
-    </div>}
     {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p><b>Não foi possível salvar</b>Tente de novo.</p></div>}
     <div className="painel-caixa">
       <ul className="lista-simples">

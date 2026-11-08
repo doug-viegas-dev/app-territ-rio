@@ -34,7 +34,7 @@ function renderPagina(papel: 'admin' | 'publicador' = 'admin', protegido = true)
       <AuthProvider>
         <Routes>
           <Route path="/admin/cartao/:cartaoId/historico" element={protegido ? <RequerMembro papel="admin">{pagina}</RequerMembro> : pagina} />
-          <Route path="/admin" element={<p>Administração</p>} />
+          <Route path="/admin/cartao/:cartaoId" element={<p>Tela do cartão</p>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -69,6 +69,12 @@ describe('HistoricoCartaoPage', () => {
     await userEvent.setup().click(screen.getByRole('radio', { name: '5' }))
     expect(observarEventos).toHaveBeenLastCalledWith('c5', expect.any(Function))
     expect(screen.getByRole('radio', { name: '5' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('voltar leva à tela do cartão', async () => {
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Voltar para o cartão' }))
+    expect(screen.getByText('Tela do cartão')).toBeInTheDocument()
   })
 
   it('lista vazia mostra o texto de vazio', () => {

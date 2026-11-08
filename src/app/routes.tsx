@@ -4,6 +4,7 @@ import CartaoPage from '@/features/cards/CartaoPage'
 import CartoesPage from '@/features/cards/CartoesPage'
 import CasaPage from '@/features/houses/CasaPage'
 import AdminPage from '@/features/admin/AdminPage'
+import CartaoAdminPage from '@/features/admin/CartaoAdminPage'
 import HistoricoCartaoPage from '@/features/admin/HistoricoCartaoPage'
 import QuadraPage from '@/features/houses/QuadraPage'
 import InstalarPage from '@/pwa/InstalarPage'
@@ -18,6 +19,7 @@ export default function AppRoutes() {
       <Route path="cartao/:cartaoId/quadra/:quadraId/casa/:casaId" element={<CasaPage />} />
       <Route path="instalar" element={<InstalarPage />} />
       <Route path="admin" element={<RequerMembro papel="admin"><AdminPage /></RequerMembro>} />
+      <Route path="admin/cartao/:cartaoId" element={<RequerMembro papel="admin"><CartaoAdminPage /></RequerMembro>} />
       <Route path="admin/cartao/:cartaoId/historico" element={<RequerMembro papel="admin"><HistoricoCartaoPage /></RequerMembro>} />
     </Route>
   </Routes>
