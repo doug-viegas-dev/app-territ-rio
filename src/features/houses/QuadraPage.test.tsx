@@ -15,17 +15,19 @@ vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), registrarVisita: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
+vi.mock('@/firebase/rodadas', () => ({ abrirRodada: vi.fn(), encerrarRodada: vi.fn() }))
 
 const cartaoAberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 1, totalCasas: 8, resolvidas: 3, atualizadoEm: 0 }
-const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 }
+const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 2, rodadaAtual: { id: 'r2', numero: 2, porNome: 'Ana', em: Date.now() } }
+const quadraSemRodada: Quadra = { ...quadra, rodadaAtual: undefined }
 let n = 0
 const casa = (p: Partial<Casa> & { status?: Status }): Casa => ({
   id: `h${++n}`, rua: 'Rua das Acácias', ordem: n, status: 'pendente', criadoEm: n, ...p,
 })
 
-function preparar(casas: Casa[], opcoes: { cartao?: Cartao; papel?: 'admin' | 'publicador' } = {}) {
+function preparar(casas: Casa[], opcoes: { cartao?: Cartao; papel?: 'admin' | 'publicador'; quadra?: Quadra } = {}) {
   vi.mocked(observarCartao).mockImplementation((_id, cb) => { cb(opcoes.cartao ?? cartaoAberto); return () => {} })
-  vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([quadra]); return () => {} })
+  vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([opcoes.quadra ?? quadra]); return () => {} })
   vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb(casas); return () => {} })
   vi.mocked(useSessao).mockReturnValue({
     carregando: false,
@@ -175,7 +177,7 @@ describe('QuadraPage', () => {
     await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: cartaoAberto, quadraId: 'q3', rodada: 0, casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' },
+      cartao: cartaoAberto, quadraId: 'q3', rodada: 2, casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' },
     })
   })
 
@@ -265,5 +267,56 @@ describe('QuadraPage', () => {
     preparar([casa({ numero: '1', status: 'falado' }), casa({ numero: '2' }), casa({ numero: '3', status: 'nao_visitar' })])
     renderPagina()
     expect(screen.getByText(/2 de 3 resolvidas/)).toBeInTheDocument()
+  })
+})
+
+describe('QuadraPage com rodadas', () => {
+  beforeEach(() => {
+    n = 0
+    vi.clearAllMocks()
+    vi.mocked(useOnline).mockReturnValue(true)
+    vi.mocked(registrarVisita).mockResolvedValue()
+  })
+  afterEach(cleanup)
+
+  it('mostra a faixa da rodada aberta', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    expect(screen.getByText(/^Rodada 2 · aberta por Ana às /)).toBeInTheDocument()
+  })
+
+  it('sem rodada aberta os botões de status ficam bloqueados', async () => {
+    preparar([casa({ numero: '1' })], { quadra: quadraSemRodada })
+    renderPagina()
+    expect(screen.getByText('Nenhuma rodada aberta')).toBeInTheDocument()
+    const botao = within(barra()).getByRole('button', { name: 'Conversado' })
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.setup().click(botao)
+    expect(registrarVisita).not.toHaveBeenCalled()
+  })
+
+  it('com rodada aberta registrar a visita grava a rodada', async () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const botao = within(barra()).getByRole('button', { name: 'Não atendeu' })
+    expect(botao).not.toHaveAttribute('aria-disabled')
+    await userEvent.setup().click(botao)
+    expect(registrarVisita).toHaveBeenCalledWith(expect.objectContaining({ rodada: 2, novoStatus: 'sem_resposta' }))
+  })
+
+  it('Nada para visitar nesta quadra com atalho para Todas quando só restam casas resolvidas', async () => {
+    preparar([casa({ numero: '1', status: 'falado' }), casa({ numero: '2', status: 'falado' })])
+    renderPagina()
+    expect(screen.getByText('Nada para visitar nesta quadra')).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Ver todas as casas' }))
+    expect(screen.getByRole('tab', { name: 'Todas' })).toHaveAttribute('aria-selected', 'true')
+    expect(textos('.casa .rotulo')).toContain('1')
+  })
+
+  it('Trabalho continua mostrando Atenção para Estudo e Não visitar', () => {
+    preparar([casa({ numero: '1' }), casa({ numero: '3', status: 'estudo' }), casa({ numero: '4', status: 'nao_visitar' })])
+    renderPagina()
+    expect(screen.getByRole('heading', { name: /Atenção/ })).toBeInTheDocument()
+    expect(screen.queryByText('Nada para visitar nesta quadra')).not.toBeInTheDocument()
   })
 })

@@ -17,7 +17,7 @@ vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 0, atualizadoEm: 0 }
-const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 }
+const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 2, rodadaAtual: { id: 'r2', numero: 2, porNome: 'Ana', em: Date.now() } }
 const casaComNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', numero: '112', descricao: 'muro baixo', ordem: 1, status: 'pendente', criadoEm: 1 }
 const casaSemNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', descricao: 'Casa verde, ao lado da padaria', ordem: 1, status: 'sem_resposta', ultimaVisitaEm: new Date(2026, 10, 2).getTime(), ultimoPor: 'Marcos S.', criadoEm: 1 }
 const visitas: Visita[] = [
@@ -57,6 +57,16 @@ describe('CasaPage', () => {
   })
   afterEach(cleanup)
 
+  it('sem rodada aberta os botões de status ficam bloqueados e nada é gravado', async () => {
+    preparar(casaComNumero)
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([{ ...quadra, rodadaAtual: undefined }]); return () => {} })
+    renderPagina()
+    const botao = screen.getByRole('button', { name: 'Conversado' })
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.setup().click(botao)
+    expect(registrarVisita).not.toHaveBeenCalled()
+  })
+
   it('lista o histórico na ordem recebida, com nome, data e ciclo', () => {
     preparar(casaComNumero)
     renderPagina()
@@ -84,7 +94,7 @@ describe('CasaPage', () => {
     await user.click(screen.getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: aberto, quadraId: 'q3', rodada: 0, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' },
+      cartao: aberto, quadraId: 'q3', rodada: 2, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' },
     })
     expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
   })

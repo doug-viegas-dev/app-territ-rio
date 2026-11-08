@@ -5,6 +5,7 @@ import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { validarCasa } from '@/domain/casa'
 import { podeRegistrar } from '@/domain/ciclo'
+import { podeRegistrarNaQuadra } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
 import type { Casa, Status, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -83,18 +84,20 @@ export default function CasaPage() {
   </>
 
   const aberto = podeRegistrar(cartao)
+  const podeAnotar = !!quadra && podeRegistrarNaQuadra(cartao, quadra)
   const ehAdmin = membro?.papel === 'admin'
 
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
   function enviar(novoStatus: Status, texto: string) {
-    if (!cartao || !casa || !usuario || !podeRegistrar(cartao)) return
+    const rodada = quadra?.rodadaAtual?.numero
+    if (!cartao || !casa || !usuario || !quadra || rodada === undefined || !podeRegistrarNaQuadra(cartao, quadra)) return
     setFalha(null)
-    registrarVisita({ cartao, quadraId, rodada: quadra?.rodadaAtual?.numero ?? 0 /* ajustado na Tarefa 7 */, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
+    registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
       .catch(() => setFalha({ casa, novoStatus, obs: texto }))
   }
 
   function registrar(s: Status) {
-    if (!aberto) return
+    if (!podeAnotar) return
     enviar(s, obs)
     setObs('')
   }
@@ -158,7 +161,7 @@ export default function CasaPage() {
             className={`bs c-${n}${atual ? ' sel' : ''}`}
             style={{ minHeight: 56 }}
             aria-pressed={atual}
-            aria-disabled={aberto ? undefined : true}
+            aria-disabled={podeAnotar ? undefined : true}
             onClick={() => registrar(s)}
           ><Icone nome={n} /><span>{rotuloStatus(s)}</span></button>
         })}

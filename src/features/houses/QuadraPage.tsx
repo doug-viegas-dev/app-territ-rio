@@ -6,12 +6,14 @@ import Logo from '@/app/Logo'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
+import { podeRegistrarNaQuadra } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
 import { isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
+import FaixaRodada from './FaixaRodada'
 import CasaLinha, { CasaAtencao } from './CasaLinha'
 import NovaCasaSheet from './NovaCasaSheet'
 import ReordenarLista from './ReordenarLista'
@@ -54,21 +56,24 @@ export default function QuadraPage() {
   </>
 
   const aberto = podeRegistrar(cartao)
+  const podeAnotar = !!quadra && podeRegistrarNaQuadra(cartao, quadra)
   const ehAdmin = membro?.papel === 'admin'
   const ruas = [...(quadra?.ruas ?? []), ...casas.map((c) => c.rua).filter((r, i, l) => l.indexOf(r) === i && !(quadra?.ruas ?? []).includes(r))]
   const grupos = ruas.map((rua) => ({ rua, casas: casas.filter((c) => c.rua === rua) })).filter((g) => g.casas.length > 0)
   const ordenadas = grupos.flatMap((g) => g.casas)
   const destacadas = grupos.flatMap((g) => listaDeTrabalho(g.casas).destacadas)
   const foco = ordenadas.find((c) => c.id === focoId) ?? ordenadas.find(falta) ?? ordenadas[0] ?? null
+  const semFaltar = grupos.every((g) => listaDeTrabalho(g.casas).pendentes.length === 0)
   const resolvidas = casas.filter((c) => isResolvida(c.status)).length
   const paraCasa = (c: Casa) => `/cartao/${cartaoId}/quadra/${quadraId}/casa/${c.id}`
 
   async function enviar(casa: Casa, novoStatus: Status, mover = true) {
-    if (!cartao || !usuario || !podeRegistrar(cartao)) return
+    const rodada = quadra?.rodadaAtual?.numero
+    if (!cartao || !usuario || !quadra || rodada === undefined || !podeRegistrarNaQuadra(cartao, quadra)) return
     if (mover) setFocoId(proximaDoTrabalho(ordenadas, casa)?.id ?? casa.id)
     setFalha(null)
     try {
-      await registrarVisita({ cartao, quadraId, rodada: quadra?.rodadaAtual?.numero ?? 0 /* ajustado na Tarefa 7 */, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
+      await registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
     } catch {
       setFalha({ casa, novoStatus })
     }
@@ -113,6 +118,7 @@ export default function QuadraPage() {
       <Icone nome="aviso" />
       <p><b>A última anotação não foi enviada</b>Ela está guardada neste aparelho. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => void enviar(falha.casa, falha.novoStatus, false)}>Tentar de novo</button></p>
     </div>}
+    {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />
       <p>
@@ -150,6 +156,10 @@ export default function QuadraPage() {
         </div>
 
         {modo === 'trabalho' ? <>
+          {semFaltar && <div className="sem-casas" style={{ paddingTop: 24 }}>
+            <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nada para visitar nesta quadra</h2>
+            <button type="button" className="btn secundario medio auto" style={{ margin: '0 auto' }} onClick={() => setModo('todas')}>Ver todas as casas</button>
+          </div>}
           {grupos.map((g) => {
             const faltam = listaDeTrabalho(g.casas).pendentes
             if (faltam.length === 0) return null
@@ -185,8 +195,8 @@ export default function QuadraPage() {
               className={`bs c-${nome}${atual ? ' sel' : ''}`}
               style={{ minHeight: 56 }}
               aria-pressed={atual}
-              aria-disabled={aberto ? undefined : true}
-              onClick={() => { if (aberto) void enviar(foco, s) }}
+              aria-disabled={podeAnotar ? undefined : true}
+              onClick={() => { if (podeAnotar) void enviar(foco, s) }}
             >
               <Icone nome={nome} /><span>{rotuloStatus(s)}</span>
             </button>
