@@ -1,12 +1,8 @@
 import { useState } from 'react'
 import Topo from '@/app/Topo'
+import HistoricoAdmin from './HistoricoAdmin'
 import ListaCartoesAdmin from './ListaCartoesAdmin'
 import MembrosAdmin from './MembrosAdmin'
-
-// provisório: Tarefa 11
-function HistoricoProvisorio() {
-  return <p style={{ color: 'var(--texto-suave)', marginTop: 16 }}>O histórico dos cartões aparece aqui.</p>
-}
 
 const ABAS = [
   { id: 'membros', rotulo: 'Membros' },
@@ -26,7 +22,7 @@ export default function AdminPage() {
       <div role="tabpanel" id="painel-admin" aria-labelledby={`aba-${aba}`}>
         {aba === 'membros' && <MembrosAdmin />}
         {aba === 'cartoes' && <ListaCartoesAdmin />}
-        {aba === 'historico' && <HistoricoProvisorio />}
+        {aba === 'historico' && <HistoricoAdmin />}
       </div>
     </div>
   </>

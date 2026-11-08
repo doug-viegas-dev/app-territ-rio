@@ -12,3 +12,26 @@ export function textoEvento(e: Pick<EventoCartao, 'motivo' | 'porNome'> & Partia
     case 'criacao': return `${e.porNome} criou o cartão`
   }
 }
+
+type Tipado = Pick<EventoCartao, 'tipo' | 'motivo'>
+
+/** Rótulo curto do evento: cor nunca é o único sinal. */
+export function tituloEvento(e: Tipado): string {
+  if (e.motivo === 'rodada_aberta') return 'Rodada aberta'
+  if (e.motivo === 'rodada_encerrada') return 'Rodada encerrada'
+  return e.tipo === 'aberto' ? 'Aberto' : 'Fechado'
+}
+
+export function iconeEvento(e: Tipado): string {
+  if (e.tipo === 'rodada') return 'rodada'
+  return e.tipo === 'aberto' ? 'cadeado-aberto' : 'cadeado'
+}
+
+export function dataHora(ms: number): string {
+  const d = new Date(ms)
+  return `${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+export function hora(ms: number): string {
+  return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}

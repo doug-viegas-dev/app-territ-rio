@@ -50,10 +50,11 @@ describe('HistoricoCartaoPage', () => {
   })
   afterEach(cleanup)
 
-  it('mostra o título, o aviso e 10 eventos na ordem recebida', () => {
+  it('mostra o título, o aviso sem limite de 10 e os eventos na ordem recebida', () => {
     renderPagina()
     expect(screen.getByRole('heading', { name: 'Histórico', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('Mostra quem abriu ou fechou o cartão e quando. Só os últimos 10 registros aparecem.')).toBeInTheDocument()
+    expect(screen.getByText('Mostra quem abriu ou fechou o cartão e quando.')).toBeInTheDocument()
+    expect(screen.queryByText(/Só os últimos 10/)).not.toBeInTheDocument()
     const itens = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getAllByRole('listitem')
     expect(itens).toHaveLength(10)
     expect(within(itens[0]).getByText('Aberto')).toBeInTheDocument()
@@ -63,12 +64,46 @@ describe('HistoricoCartaoPage', () => {
     expect(within(itens[1]).getByText('Maria S. fechou manualmente')).toBeInTheDocument()
   })
 
-  it('começa pelo cartão da rota e troca de cartão pelos chips', async () => {
+  it('não mostra mais chips de cartão', () => {
     renderPagina()
     expect(observarEventos).toHaveBeenLastCalledWith('c12', expect.any(Function))
-    await userEvent.setup().click(screen.getByRole('radio', { name: '5' }))
-    expect(observarEventos).toHaveBeenLastCalledWith('c5', expect.any(Function))
-    expect(screen.getByRole('radio', { name: '5' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('heading', { name: 'Cartão 12 · Jardim das Acácias' })).toBeInTheDocument()
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+  })
+
+  it('mostra eventos de rodada com quadra e número', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([
+        { id: 'r2', tipo: 'rodada', motivo: 'rodada_encerrada', quadraId: 'qa', quadraRotulo: 'Quadra A', rodada: 2, em: em(25, 18, 30), porUid: 'u2', porNome: 'João P.' },
+        { id: 'r1', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'qa', quadraRotulo: 'Quadra A', rodada: 2, em: em(24, 9, 5), porUid: 'u1', porNome: 'Maria S.' },
+      ])
+      return () => {}
+    })
+    renderPagina()
+    const itens = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getAllByRole('listitem')
+    expect(within(itens[0]).getByText('Rodada encerrada')).toBeInTheDocument()
+    expect(within(itens[0]).getByText('João P. encerrou a rodada 2 da Quadra A')).toBeInTheDocument()
+    expect(within(itens[1]).getByText('Rodada aberta')).toBeInTheDocument()
+    expect(screen.queryByText('Aberto')).not.toBeInTheDocument()
+    expect(screen.queryByText('Fechado')).not.toBeInTheDocument()
+    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    expect(within(bloco).getByRole('heading', { name: 'Quadra A' })).toBeInTheDocument()
+    expect(within(bloco).getByText('Rodada 2')).toBeInTheDocument()
+    expect(within(bloco).getByText(/aberta por Maria S\. às 09:05/)).toBeInTheDocument()
+    expect(within(bloco).getByText(/encerrada por João P\. às 18:30/)).toBeInTheDocument()
+  })
+
+  it('mostra fechou e reiniciou o território', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([{ id: 'f', tipo: 'fechado', motivo: 'fechamento_reinicio', em: em(26, 10, 0), porUid: 'u1', porNome: 'Maria S.' }])
+      return () => {}
+    })
+    renderPagina()
+    const item = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getByRole('listitem')
+    expect(within(item).getByText('Fechado')).toBeInTheDocument()
+    expect(within(item).getByText('Maria S. fechou e reiniciou o território')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Rodadas por quadra' })).not.toBeInTheDocument()
   })
 
   it('voltar leva à tela do cartão', async () => {

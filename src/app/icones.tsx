@@ -44,6 +44,7 @@ const simbolos =
   `<symbol id="i-nuvem" viewBox="0 0 24 24"><path ${forma} d="${nuvem}"/></symbol>` +
   `<symbol id="i-sincronizando" viewBox="0 0 24 24"><path ${forma} d="M20 11a8 8 0 0 0-14.5-4M4 5v4h4M4 13a8 8 0 0 0 14.5 4M20 19v-4h-4"/></symbol>` +
   `<symbol id="i-cadeado-aberto" viewBox="0 0 24 24"><rect ${forma} x="5" y="11" width="14" height="9" rx="2.5"/><path ${forma} d="M8 11V8a4 4 0 0 1 7.6-1.7"/></symbol>` +
+  `<symbol id="i-rodada" viewBox="0 0 24 24"><path ${forma} d="M5 21V4M5 5h12l-2.5 4 2.5 4H5"/></symbol>` +
   `<symbol id="i-historico" viewBox="0 0 24 24"><path ${forma} d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4.5l3 1.8"/></symbol>`
 
 export function Sprite() {
