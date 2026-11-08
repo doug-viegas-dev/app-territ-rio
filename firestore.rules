@@ -34,21 +34,17 @@ service cloud.firestore {
       allow create, delete: if ehAdmin();
       allow update: if ehAdmin() || (
         ehPublicador()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'resolvidas', 'totalCasas', 'estado', 'ciclo', 'atualizadoEm'
-        ])
-        && (request.resource.data.estado == resource.data.estado || request.resource.data.estado == 'fechado')
+        // só o administrador muda o estado e o ciclo do cartão
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolvidas', 'totalCasas', 'atualizadoEm'])
       );
 
       match /eventos/{eventId} {
         allow read: if ehAdmin();
         allow create: if ehAdmin() || (
           ehPublicador()
-          && request.resource.data.tipo == 'fechado'
-          && request.resource.data.motivo == 'fechamento_automatico'
+          && request.resource.data.tipo == 'rodada'
+          && request.resource.data.motivo in ['rodada_aberta', 'rodada_encerrada']
           && request.resource.data.porUid == request.auth.uid
-          // só junto com a mudança do cartão para fechado, no mesmo batch
-          && getAfter(/databases/$(database)/documents/cards/$(cardId)).data.estado == 'fechado'
         );
         allow update, delete: if false;
       }
@@ -58,9 +54,32 @@ service cloud.firestore {
         allow create, delete: if ehAdmin();
         allow update: if ehAdmin() || (
           ehPublicador()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ruas'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ruas', 'totalCasas', 'faltam', 'rodadaAtual', 'rodadasTotal'])
           && resource.data.ruas.toSet().difference(request.resource.data.ruas.toSet()).size() == 0
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rodadaAtual', 'rodadasTotal'])
+            // encerrar: remove rodadaAtual, sem mexer em rodadasTotal
+            || (
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rodadasTotal'])
+              && !('rodadaAtual' in request.resource.data)
+            )
+            // abrir: rodadaAtual estava vazia e rodadasTotal sobe de 1 em 1
+            || (
+              resource.data.get('rodadaAtual', null) == null
+              && request.resource.data.get('rodadaAtual', null) != null
+              && request.resource.data.rodadasTotal == resource.data.get('rodadasTotal', 0) + 1
+            )
+          )
         );
+
+        match /rodadas/{rodadaId} {
+          allow read: if ehMembro();
+          allow create: if ehMembro() && request.resource.data.abertaPorUid == request.auth.uid;
+          allow update: if ehMembro()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['encerradaPorUid', 'encerradaPorNome', 'encerradaEm'])
+            && request.resource.data.encerradaPorUid == request.auth.uid;
+          allow delete: if false;
+        }
 
         match /houses/{houseId} {
           allow read: if ehMembro();

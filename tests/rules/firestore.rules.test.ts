@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 
 let env: RulesTestEnvironment
 const projectId = 'demo-meu-territorio'
@@ -73,7 +73,7 @@ describe('regras Firestore', () => {
     const batch = writeBatch(db)
     batch.update(doc(db, 'cards/c1'), { estado: 'fechado', ciclo: 2 })
     batch.set(doc(db, 'cards/c1/eventos/e1'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher', porNome: 'Publicador', em: 2 })
-    await assertSucceeds(batch.commit())
+    await assertFails(batch.commit())
   })
 
   it('permite apenas acrescentar ruas e mantÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©m rotulo e ordem protegidos', async () => {
@@ -91,10 +91,9 @@ describe('regras Firestore', () => {
     await assertFails(getDocs(events))
     // com o cartão ainda aberto, o evento sozinho (sem fechar o cartão no mesmo batch) é recusado
     await assertFails(setDoc(doc(events, 'auto'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
-    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1'), { estado: 'fechado' }))
-    await assertSucceeds(setDoc(doc(events, 'auto'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
+    await assertSucceeds(setDoc(doc(events, 'auto'), { tipo: 'rodada', motivo: 'rodada_aberta', porUid: 'publisher', porNome: 'Publicador', em: 3, quadraId: 'b1', quadraRotulo: 'Quadra 1', rodada: 1 }))
     await assertFails(setDoc(doc(events, 'fake'), { tipo: 'aberto', motivo: 'abertura', porUid: 'publisher', porNome: 'Publicador', em: 3 }))
-    await assertFails(setDoc(doc(events, 'other'), { tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'other', porNome: 'Outra pessoa', em: 3 }))
+    await assertFails(setDoc(doc(events, 'other'), { tipo: 'rodada', motivo: 'rodada_aberta', porUid: 'other', porNome: 'Outra pessoa', em: 3 }))
     await assertFails(updateDoc(doc(events, 'auto'), { porNome: 'Alterado' }))
     await assertFails(deleteDoc(doc(events, 'auto')))
 
@@ -118,6 +117,90 @@ describe('regras Firestore', () => {
     await assertSucceeds(updateDoc(doc(db, 'cards/c1'), { titulo: 'Novo tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­tulo' }))
     await assertSucceeds(setDoc(doc(db, 'cards/c2'), card))
     await assertSucceeds(deleteDoc(doc(db, 'cards/c1/blocks/b1/houses/h1')))
+  })
+
+  it('publicador atualiza totalCasas, faltam e rodadasTotal da quadra', async () => {
+    const block = doc(publisherDb(), 'cards/c1/blocks/b1')
+    await assertSucceeds(updateDoc(block, { totalCasas: 10, faltam: 10 }))
+    await assertSucceeds(updateDoc(block, { faltam: 9 }))
+  })
+
+  it('publicador não renomeia a quadra nem remove rua', async () => {
+    const block = doc(publisherDb(), 'cards/c1/blocks/b1')
+    await assertFails(updateDoc(block, { rotulo: 'Outra', totalCasas: 3 }))
+    await assertFails(updateDoc(block, { ruas: [], totalCasas: 3 }))
+  })
+
+  const rodadaAtual = { id: 'r1', numero: 1, porNome: 'Publicador', em: 5 }
+
+  it('publicador define rodadaAtual quando está vazia', async () => {
+    await assertSucceeds(updateDoc(doc(publisherDb(), 'cards/c1/blocks/b1'), { rodadaAtual, rodadasTotal: 1 }))
+  })
+
+  it('segunda definição de rodadaAtual é negada', async () => {
+    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1/blocks/b1'), { rodadaAtual, rodadasTotal: 1 }))
+    const block = doc(publisherDb(), 'cards/c1/blocks/b1')
+    await assertFails(updateDoc(block, { rodadaAtual: { ...rodadaAtual, id: 'r2', numero: 2 }, rodadasTotal: 2 }))
+  })
+
+  it('rodadasTotal que não sobe de 1 em 1 é negado', async () => {
+    const block = doc(publisherDb(), 'cards/c1/blocks/b1')
+    await assertFails(updateDoc(block, { rodadaAtual, rodadasTotal: 2 }))
+    await assertFails(updateDoc(block, { rodadaAtual, rodadasTotal: 0 }))
+    await assertFails(updateDoc(block, { rodadasTotal: 1 }))
+  })
+
+  it('publicador encerra a rodada (remove rodadaAtual)', async () => {
+    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1/blocks/b1'), { rodadaAtual, rodadasTotal: 1 }))
+    const block = doc(publisherDb(), 'cards/c1/blocks/b1')
+    await assertFails(updateDoc(block, { rodadaAtual: deleteField(), rodadasTotal: 5 }))
+    await assertSucceeds(updateDoc(block, { rodadaAtual: deleteField() }))
+  })
+
+  it('membro cria rodada com abertaPorUid próprio e é negado com uid de outro', async () => {
+    const db = publisherDb()
+    const dados = { numero: 1, abertaPorUid: 'publisher', abertaPorNome: 'Publicador', abertaEm: 5 }
+    await assertSucceeds(setDoc(doc(db, 'cards/c1/blocks/b1/rodadas/r1'), dados))
+    await assertFails(setDoc(doc(db, 'cards/c1/blocks/b1/rodadas/r2'), { ...dados, abertaPorUid: 'outro' }))
+    await assertSucceeds(getDoc(doc(db, 'cards/c1/blocks/b1/rodadas/r1')))
+    await assertFails(deleteDoc(doc(db, 'cards/c1/blocks/b1/rodadas/r1')))
+    await assertFails(setDoc(doc(user('inactive@example.com', 'inactive'), 'cards/c1/blocks/b1/rodadas/r3'), { ...dados, abertaPorUid: 'inactive' }))
+  })
+
+  it('rodada só aceita preencher campos de encerramento no update', async () => {
+    const ref = doc(publisherDb(), 'cards/c1/blocks/b1/rodadas/r1')
+    await env.withSecurityRulesDisabled(async (context) => setDoc(doc(context.firestore(), 'cards/c1/blocks/b1/rodadas/r1'), { numero: 1, abertaPorUid: 'publisher', abertaPorNome: 'Publicador', abertaEm: 5 }))
+    await assertFails(updateDoc(ref, { abertaPorNome: 'Outro' }))
+    await assertFails(updateDoc(ref, { encerradaPorUid: 'outro', encerradaPorNome: 'Outro', encerradaEm: 9 }))
+    await assertFails(updateDoc(ref, { encerradaPorUid: 'publisher', numero: 7 }))
+    await assertSucceeds(updateDoc(ref, { encerradaPorUid: 'publisher', encerradaPorNome: 'Publicador', encerradaEm: 9 }))
+  })
+
+  it('publicador cria evento rodada_aberta com o próprio uid e é negado a criar fechamento_automatico ou fechado', async () => {
+    const events = collection(publisherDb(), 'cards/c1/eventos')
+    const base = { porNome: 'Publicador', em: 3, quadraId: 'b1', quadraRotulo: 'Quadra 1', rodada: 1 }
+    await assertSucceeds(setDoc(doc(events, 'e1'), { ...base, tipo: 'rodada', motivo: 'rodada_aberta', porUid: 'publisher' }))
+    await assertSucceeds(setDoc(doc(events, 'e2'), { ...base, tipo: 'rodada', motivo: 'rodada_encerrada', porUid: 'publisher' }))
+    await assertFails(setDoc(doc(events, 'e3'), { ...base, tipo: 'rodada', motivo: 'rodada_aberta', porUid: 'outro' }))
+    await assertFails(setDoc(doc(events, 'e4'), { ...base, tipo: 'rodada', motivo: 'fechamento_manual', porUid: 'publisher' }))
+    await assertFails(setDoc(doc(events, 'e5'), { ...base, tipo: 'fechado', motivo: 'fechamento_automatico', porUid: 'publisher' }))
+    await assertFails(setDoc(doc(events, 'e6'), { ...base, tipo: 'fechado', motivo: 'fechamento_manual', porUid: 'publisher' }))
+  })
+
+  it('publicador não muda o estado do cartão', async () => {
+    const ref = doc(publisherDb(), 'cards/c1')
+    await assertFails(updateDoc(ref, { estado: 'fechado' }))
+    await assertFails(updateDoc(ref, { ciclo: 2 }))
+    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1'), { estado: 'fechado' }))
+    await assertFails(updateDoc(ref, { estado: 'aberto' }))
+  })
+
+  it('publicador atualiza resolvidas, totalCasas e atualizadoEm do cartão', async () => {
+    await assertSucceeds(updateDoc(doc(publisherDb(), 'cards/c1'), { resolvidas: 2, totalCasas: 5, atualizadoEm: 9 }))
+  })
+
+  it('admin fecha o cartão', async () => {
+    await assertSucceeds(updateDoc(doc(adminDb(), 'cards/c1'), { estado: 'fechado', ciclo: 2 }))
   })
 
   it('só a administração lista todos os membros; o publicador lê apenas o próprio documento', async () => {
