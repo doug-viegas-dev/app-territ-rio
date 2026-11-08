@@ -15,7 +15,10 @@ export function observarMembro(email: string, cb: (membro: MembroObservado | nul
     cb(snapshot.exists() && (data?.papel === 'admin' || data?.papel === 'publicador')
       ? { papel: data.papel, ativo: data.ativo === true, nome: typeof data.nome === 'string' ? data.nome : email }
       : null)
-  }, () => cb(null))
+  }, (erro) => {
+    // O servidor nega a leitura a quem não está liberado; qualquer outro erro é falha de conexão, não "não liberado".
+    if (erro.code === 'permission-denied') cb(null)
+  })
 }
 
 export function observarMembros(cb: (m: (MembroObservado & { email: string })[]) => void): () => void {

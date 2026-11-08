@@ -38,3 +38,28 @@ describe('observarMembro', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 })
+
+describe('observarMembro, erros de leitura', () => {
+  let falhar: (e: { code: string }) => void = () => undefined
+  const cb = vi.fn()
+
+  beforeEach(async () => {
+    cb.mockClear()
+    const fs = await import('firebase/firestore')
+    vi.spyOn(fs, 'onSnapshot').mockImplementation(((_r: unknown, _ok: unknown, erro: (e: { code: string }) => void) => {
+      falhar = erro
+      return () => undefined
+    }) as never)
+    observarMembro('ana@gmail.com', cb)
+  })
+
+  it('permission-denied significa e-mail não liberado', () => {
+    falhar({ code: 'permission-denied' })
+    expect(cb).toHaveBeenCalledWith(null)
+  })
+
+  it('erro de conexão não significa e-mail não liberado', () => {
+    falhar({ code: 'unavailable' })
+    expect(cb).not.toHaveBeenCalled()
+  })
+})
