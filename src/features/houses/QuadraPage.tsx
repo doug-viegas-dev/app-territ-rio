@@ -83,8 +83,8 @@ export default function QuadraPage() {
   // Sem rede e sem cache desta quadra: a lista vazia não é a verdade, então não convida a cadastrar.
   const semCache = vazia && semDados && !online
   const aoFalharEscrita = () => setErroEscrita(true)
-  const sheet = aberto && novaCasa && quadra
-    ? <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} onErro={aoFalharEscrita} />
+  const sheet = aberto && novaCasa && quadra && usuario
+    ? <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} cartao={cartao} usuario={{ uid: usuario.uid, nome: membro?.nome ?? usuario.nome }} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} onErro={aoFalharEscrita} />
     : null
 
   if (reordenando && aberto && !vazia) return <>

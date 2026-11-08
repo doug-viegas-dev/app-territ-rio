@@ -2,13 +2,21 @@ import { useState } from 'react'
 import { Conexao } from '@/app/Topo'
 import { Icone } from '@/app/icones'
 import { validarCasa } from '@/domain/casa'
-import type { Casa, Quadra } from '@/domain/types'
+import { podeRegistrarNaQuadra } from '@/domain/rodada'
+import { rotuloStatus } from '@/domain/rotulos'
+import type { Cartao, Casa, Quadra, Status } from '@/domain/types'
 import { adicionarRua } from '@/firebase/blocks'
 import { criarCasa, criarCasasEmFaixa } from '@/firebase/houses'
+import { abrirRodada } from '@/firebase/rodadas'
 import FaixaForm from './FaixaForm'
-import { rotuloCasa } from './rotuloCasa'
+import { classeStatus, rotuloCasa } from './rotuloCasa'
 
-type Props = { quadra: Quadra; casas: Casa[]; cartaoId: string; depoisDe?: Casa; onFechar: () => void; onErro?: () => void }
+type Props = {
+  quadra: Quadra; casas: Casa[]; cartaoId: string; cartao: Cartao; usuario: { uid: string; nome: string }
+  depoisDe?: Casa; onFechar: () => void; onErro?: () => void
+}
+
+const RESULTADOS: Status[] = ['pendente', 'falado', 'sem_resposta', 'estudo', 'nao_visitar']
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
 
@@ -39,7 +47,7 @@ function FolhaNovaRua({ quadra, ruas, onAdicionar, onCancelar }: { quadra: Quadr
   </div>
 }
 
-export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFechar, onErro }: Props) {
+export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario, depoisDe, onFechar, onErro }: Props) {
   const [aba, setAba] = useState<'uma' | 'faixa'>('uma')
   const [extras, setExtras] = useState<string[]>([])
   const todas = [...quadra.ruas, ...casas.map((c) => c.rua), ...extras]
@@ -51,6 +59,8 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFec
   const [erro, setErro] = useState<string | null>(null)
   const [salva, setSalva] = useState<{ rotulo: string; rua: string; depois: boolean } | null>(null)
   const [novaRua, setNovaRua] = useState(false)
+  const [resultado, setResultado] = useState<Status>('pendente')
+  const podeResultado = podeRegistrarNaQuadra(cartao, quadra)
 
   const repetido = numero.trim() !== '' && casas.some((c) => c.rua === rua && c.numero?.trim() === numero.trim())
 
@@ -72,13 +82,22 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFec
     if (erroCasa) return setErro(erroCasa)
     setErro(null)
     const depois = depoisId
-    criarCasa(cartaoId, quadra.id, { rua, numero, descricao, depoisDe: depois }, casas)
+    const rodada = quadra.rodadaAtual?.numero
+    const registro = podeResultado && resultado !== 'pendente' && rodada !== undefined
+      ? { resultado: { status: resultado, usuario, ciclo: cartao.ciclo, rodada } }
+      : {}
+    criarCasa(cartaoId, quadra.id, { rua, numero, descricao, depoisDe: depois, ...registro }, casas)
       .then((id) => { if (depois !== undefined) setDepoisId((atual) => (atual === depois ? id : atual)) })
       .catch(() => setErro('Não foi possível salvar a casa. Tente de novo.'))
     if (fechar) return onFechar()
     setSalva({ rotulo: rotuloCasa({ numero, descricao }), rua, depois: depois !== undefined })
     setNumero('')
     setDescricao('')
+    setResultado('pendente')
+  }
+
+  function abrirNovaRodada() {
+    abrirRodada(cartaoId, quadra, usuario).catch(() => onErro?.())
   }
 
   return <div className="tela-sobre" role="dialog" aria-label="Nova casa">
@@ -127,6 +146,27 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, depoisDe, onFec
           <label htmlFor="casa-descricao">Descrição curta</label>
           <input id="casa-descricao" className="entrada" placeholder="Ex.: portão azul" value={descricao} onChange={(e) => { setDescricao(e.target.value); setErro(null) }} />
           <span className="dica">Obrigatória quando a casa não tem número. Ex.: ao lado da padaria.</span>
+        </div>
+        <div className="campo">
+          <span className="rotulo-campo" id="resultado-rotulo">O que aconteceu</span>
+          <div className="chips" role="radiogroup" aria-labelledby="resultado-rotulo">
+            {RESULTADOS.map((s) => {
+              const nome = classeStatus(s)
+              const marcado = podeResultado ? s === resultado : s === 'pendente'
+              return <button key={s} type="button" role="radio" aria-checked={marcado} aria-disabled={podeResultado ? undefined : true}
+                className="chip" style={{ ...(marcado && { borderColor: 'var(--cor-principal)', borderWidth: 3, fontWeight: 600 }), ...(podeResultado ? {} : { opacity: 0.6 }) }} onClick={() => { if (podeResultado) setResultado(s) }}>
+                <Icone nome={nome} className="ic ic-20" />{rotuloStatus(s)}
+              </button>
+            })}
+          </div>
+          {!podeResultado && <div className="aviso" role="status" style={{ margin: '10px 0 0', background: 'var(--superficie)' }}>
+            <Icone nome="info" />
+            <p>Abra a rodada para registrar o que aconteceu
+              {cartao.estado === 'aberto' && !quadra.rodadaAtual && <span className="acoes">
+                <button type="button" className="btn primario medio auto" onClick={abrirNovaRodada}>Abrir rodada</button>
+              </span>}
+            </p>
+          </div>}
         </div>
         {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
         <p style={{ color: 'var(--texto-suave)' }}>

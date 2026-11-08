@@ -4,6 +4,7 @@ import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
+import { quadrasParaVisitar } from '@/domain/rodada'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from './ConfirmarAbertura'
 import ImagemCartao from './ImagemCartao'
@@ -17,6 +18,7 @@ export default function CartaoPage() {
   const quadras = useQuadras(cartaoId)
   const { usuario, membro } = useSessao()
   const [confirmando, setConfirmando] = useState(false)
+  const [todas, setTodas] = useState(false)
   const ehAdmin = membro?.papel === 'admin'
   const online = useOnline()
 
@@ -39,6 +41,7 @@ export default function CartaoPage() {
   </>
 
   const fechado = cartao.estado !== 'aberto'
+  const visiveis = todas ? quadras : quadrasParaVisitar(quadras)
   return <>
     <Topo
       titulo={`Cartão ${cartao.numero}`}
@@ -76,10 +79,19 @@ export default function CartaoPage() {
         <h3 style={{ fontSize: 20, marginBottom: 8 }}>Nenhuma quadra ainda</h3>
         <p style={{ color: 'var(--texto-suave)' }}>O administrador cria as quadras e as ruas deste cartão.</p>
       </div>}
-      {quadras.map((q) => <Link key={q.id} className="linha-quadra simples" to={`/cartao/${cartao.id}/quadra/${q.id}`}>
-        <h3>{q.rotulo}</h3>
+      {visiveis.map((q) => <Link key={q.id} className="linha-quadra simples" to={`/cartao/${cartao.id}/quadra/${q.id}`}>
+        <div>
+          <h3>{q.rotulo}</h3>
+          {(q.totalCasas > 0 || q.rodadaAtual) && <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 14px', color: 'var(--texto-suave)' }}>
+            {q.totalCasas > 0 && <span>{Math.max(0, q.faltam)} para visitar</span>}
+            {q.rodadaAtual && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}><Icone nome="historico" className="ic ic-20" />Rodada aberta</span>}
+          </span>}
+        </div>
         <Icone nome="chev" className="ic chev" />
       </Link>)}
+      {quadras.length > 0 && (todas || visiveis.length < quadras.length) && <button type="button" className="btn secundario" onClick={() => setTodas((v) => !v)}>
+        {todas ? 'Mostrar só as que faltam' : 'Mostrar todas as quadras'}
+      </button>}
     </div>
     {confirmando && usuario && <ConfirmarAbertura cartao={cartao} uid={usuario.uid} nome={membro?.nome ?? usuario.nome} onFechar={() => setConfirmando(false)} />}
   </>

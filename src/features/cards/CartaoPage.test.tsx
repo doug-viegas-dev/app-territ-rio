@@ -6,6 +6,7 @@ import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { abrirCartaoManual, observarCartao } from '@/firebase/cards'
 import { observarQuadras } from '@/firebase/blocks'
+import { quadraDe } from '@/firebase/converters'
 import { urlDaImagem } from '@/firebase/storage'
 import type { Cartao, Quadra } from '@/domain/types'
 import CartaoPage from './CartaoPage'
@@ -20,6 +21,12 @@ const cartaoBase: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim das Acáci
 const quadras: Quadra[] = [
   { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
   { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
+]
+const comContadores: Quadra[] = [
+  { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1, totalCasas: 10, faltam: 4, rodadasTotal: 1, rodadaAtual: { id: 'r1', numero: 1, porNome: 'João', em: 1 } },
+  { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2, totalCasas: 8, faltam: 0, rodadasTotal: 1 },
+  { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua C'], ordem: 3, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
+  { id: 'q4', rotulo: 'Quadra 4', ruas: ['Rua D'], ordem: 4, totalCasas: 5, faltam: -2, rodadasTotal: 0 },
 ]
 
 function preparar(cartao: Cartao | null | 'carregando', lista: Quadra[] = quadras, papel: 'admin' | 'publicador' = 'publicador') {
@@ -88,6 +95,50 @@ describe('CartaoPage', () => {
     expect(screen.getByRole('link', { name: /Quadra 1/ })).toBeInTheDocument()
     await userEvent.setup().click(screen.getByRole('link', { name: /Quadra 2/ }))
     expect(screen.getByText('Tela da quadra')).toBeInTheDocument()
+  })
+
+  it('lista só as quadras com casas para visitar, com N para visitar', () => {
+    preparar(cartaoBase, comContadores)
+    renderPagina()
+    expect(screen.getByRole('link', { name: /Quadra 1/ })).toHaveTextContent('4 para visitar')
+    expect(screen.queryByRole('link', { name: /Quadra 2/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Quadra 4/ })).not.toBeInTheDocument()
+  })
+
+  it('quadra vazia continua aparecendo', () => {
+    preparar(cartaoBase, comContadores)
+    renderPagina()
+    expect(screen.getByRole('link', { name: /Quadra 3/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Quadra 3/ })).not.toHaveTextContent('para visitar')
+  })
+
+  it('quadra antiga sem contadores continua aparecendo', () => {
+    // Documento gravado antes dos contadores: o conversor preenche zeros.
+    const antiga = quadraDe('q9', { rotulo: 'Quadra 9', ruas: ['Rua Z'], ordem: 9 })
+    preparar(cartaoBase, [antiga, comContadores[1]])
+    renderPagina()
+    const link = screen.getByRole('link', { name: /Quadra 9/ })
+    expect(link).toBeInTheDocument()
+    expect(link).not.toHaveTextContent('NaN')
+    expect(link).not.toHaveTextContent('para visitar')
+  })
+
+  it('Mostrar todas as quadras revela as demais, com contador nunca negativo, e dá para voltar', async () => {
+    preparar(cartaoBase, comContadores)
+    const user = userEvent.setup()
+    renderPagina()
+    await user.click(screen.getByRole('button', { name: 'Mostrar todas as quadras' }))
+    expect(screen.getByRole('link', { name: /Quadra 2/ })).toHaveTextContent('0 para visitar')
+    expect(screen.getByRole('link', { name: /Quadra 4/ })).toHaveTextContent('0 para visitar')
+    await user.click(screen.getByRole('button', { name: 'Mostrar só as que faltam' }))
+    expect(screen.queryByRole('link', { name: /Quadra 2/ })).not.toBeInTheDocument()
+  })
+
+  it('mostra a etiqueta Rodada aberta só na quadra com rodada aberta', () => {
+    preparar(cartaoBase, comContadores)
+    renderPagina()
+    expect(screen.getByRole('link', { name: /Quadra 1/ })).toHaveTextContent('Rodada aberta')
+    expect(screen.getByRole('link', { name: /Quadra 3/ })).not.toHaveTextContent('Rodada aberta')
   })
 
   it('cartão sem quadras mostra "Nenhuma quadra ainda"', () => {
