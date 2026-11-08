@@ -1,5 +1,4 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { Icone } from '@/app/icones'
 import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -10,7 +9,7 @@ import { pdfParaImagem } from './pdfParaImagem'
 type Mapa = { arquivo: File; imagem: Blob; paginas: number }
 const tamanho = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
 
-export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: () => void; onCancelar?: () => void } = {}) {
+export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: (numero: string) => void; onCancelar?: () => void } = {}) {
   const emFolha = onCancelar !== undefined
   const { usuario, membro } = useSessao()
   const online = useOnline()
@@ -22,7 +21,6 @@ export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: () => 
   const [lendo, setLendo] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  const [criado, setCriado] = useState<{ id: string; numero: string } | null>(null)
   // Cartão já criado cujo mapa não subiu: a nova tentativa só envia o mapa, para não duplicar o cartão.
   const pendente = useRef<{ id: string; numero: string } | null>(null)
 
@@ -52,12 +50,11 @@ export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: () => 
       pendente.current = { id, numero: existente?.numero ?? numero.trim() }
       if (mapa) await atualizarCartao(id, await enviarArquivosDoCartao(id, { pdf: mapa.arquivo, imagem: mapa.imagem }))
       pendente.current = null
-      setCriado({ id, numero: existente?.numero ?? numero.trim() })
       setNumero('')
       setTitulo('')
       setMapsUrl('')
       setMapa(null)
-      onCriado?.()
+      onCriado?.(existente?.numero ?? numero.trim())
     } catch {
       setErro(pendente.current
         ? `O cartão ${pendente.current.numero} foi criado, mas o mapa não foi enviado. Confira a conexão e toque em Criar cartão de novo para enviar o mapa.`
@@ -69,10 +66,6 @@ export default function CartaoForm({ onCriado, onCancelar }: { onCriado?: () => 
 
   return <>
     {emFolha ? <h2>Novo cartão</h2> : <h2 className="titulo-secao divisor" id="cartoes">Novo cartão</h2>}
-    {criado && <div className="aviso" role="status" style={{ background: 'var(--superficie)', borderColor: 'var(--st-falado)' }}>
-      <Icone nome="falado" className="ic c-falado" />
-      <p><b>Cartão {criado.numero} criado</b>Ele começa fechado. Um administrador precisa abri-lo para registrar visitas. <Link className="btn link" style={{ minHeight: 40 }} to={`/cartao/${criado.id}`}>Ver cartão</Link></p>
-    </div>}
     <form className={emFolha ? undefined : 'painel-caixa'} onSubmit={(e) => void salvar(e)}>
       <div className="entrada-grupo" style={{ gridTemplateColumns: '96px 1fr' }}>
         <div className="campo"><label htmlFor="cartao-numero">Número</label><input id="cartao-numero" className="entrada" value={numero} onChange={(e) => setNumero(e.target.value)} /></div>

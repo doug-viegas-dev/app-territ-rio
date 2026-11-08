@@ -27,6 +27,7 @@ function LinhaCartao({ cartao }: { cartao: Cartao }) {
 export default function ListaCartoesAdmin() {
   const cartoes = useCartoes()
   const [aberta, setAberta] = useState(false)
+  const [criado, setCriado] = useState<string | null>(null)
   const botao = useRef<HTMLButtonElement>(null)
 
   function fechar() {
@@ -34,14 +35,24 @@ export default function ListaCartoesAdmin() {
     botao.current?.focus()
   }
 
+  function aoCriar(numero: string) {
+    setCriado(numero)
+    fechar()
+  }
+
   return <>
     <h2 className="titulo-secao">Cartões</h2>
-    <button ref={botao} type="button" className="btn primario" style={{ marginBottom: 14 }} onClick={() => setAberta(true)}><Icone nome="mais" className="ic ic-20" />Novo cartão</button>
+    {criado !== null && <div className="aviso" role="status" style={{ alignItems: 'center' }}>
+      <Icone nome="check" />
+      <p>Cartão {criado} criado.</p>
+      <button type="button" className="btn suave medio auto" style={{ minHeight: 48, minWidth: 48 }} aria-label="Fechar mensagem" onClick={() => setCriado(null)}><Icone nome="fechar" className="ic ic-20" /></button>
+    </div>}
+    <button ref={botao} type="button" className="btn primario" style={{ marginBottom: 14 }} onClick={() => { setCriado(null); setAberta(true) }}><Icone nome="mais" className="ic ic-20" />Novo cartão</button>
     {cartoes?.map((c) => <LinhaCartao key={c.id} cartao={c} />)}
     {cartoes?.length === 0 && <p style={{ color: 'var(--texto-suave)' }}>Nenhum cartão ainda.</p>}
     {aberta && <div className="veu">
       <div className="folha" role="dialog" aria-label="Novo cartão">
-        <CartaoForm onCriado={fechar} onCancelar={fechar} />
+        <CartaoForm onCriado={aoCriar} onCancelar={fechar} />
       </div>
     </div>}
   </>

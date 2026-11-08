@@ -86,6 +86,33 @@ describe('ListaCartoesAdmin', () => {
     expect(criarCartao).toHaveBeenCalledTimes(1)
   })
 
+  it('depois de criar, mostra "Cartão 14 criado." no topo e o botão de fechar a mensagem a remove', async () => {
+    renderLista()
+    const user = userEvent.setup()
+    expect(screen.queryByText(/criado\./)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Novo cartão' }))
+    await user.type(screen.getByLabelText('Número'), '14')
+    await user.type(screen.getByLabelText('Título'), 'Centro')
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    const aviso = await screen.findByRole('status')
+    expect(aviso).toHaveTextContent('Cartão 14 criado.')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(within(aviso).getByRole('button', { name: 'Fechar mensagem' }))
+    expect(screen.queryByText('Cartão 14 criado.')).not.toBeInTheDocument()
+  })
+
+  it('a mensagem de cartão criado some ao abrir a folha de novo', async () => {
+    renderLista()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Novo cartão' }))
+    await user.type(screen.getByLabelText('Número'), '14')
+    await user.type(screen.getByLabelText('Título'), 'Centro')
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    await screen.findByText('Cartão 14 criado.')
+    await user.click(screen.getByRole('button', { name: 'Novo cartão' }))
+    expect(screen.queryByText('Cartão 14 criado.')).not.toBeInTheDocument()
+  })
+
   it('se o mapa não sobe, a folha continua aberta com o aviso', async () => {
     const { pdfParaImagem } = await import('./pdfParaImagem')
     vi.mocked(pdfParaImagem).mockResolvedValue({ imagem: new Blob(['i']), paginas: 1 })

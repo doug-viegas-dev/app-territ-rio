@@ -67,14 +67,17 @@ describe('CartaoForm', () => {
     expect([...ordem].sort((a, b) => a - b)).toEqual(ordem)
   })
 
-  it('o cartão criado nasce fechado e a tela avisa que um administrador precisa abri-lo', async () => {
+  it('depois de criar, limpa os campos e não mostra mais o banner nem o link Ver cartão', async () => {
     renderForm()
     const user = userEvent.setup()
     await preencher(user, false)
     await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
-    expect(await screen.findByText(/Ele começa fechado\. Um administrador precisa abri-lo/)).toBeInTheDocument()
+    await waitFor(() => expect(criarCartao).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByLabelText('Número')).toHaveValue(''))
+    expect(screen.queryByText('Ver cartão')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Cartão 13 criado/)).not.toBeInTheDocument()
     expect(enviarArquivosDoCartao).not.toHaveBeenCalled()
-    expect(screen.getByLabelText('Número')).toHaveValue('')
   })
 
   it('se o mapa falha depois de criar o cartão, tentar de novo não cria um cartão duplicado', async () => {
@@ -104,6 +107,7 @@ describe('CartaoForm', () => {
     expect(onCriado).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
     await waitFor(() => expect(onCriado).toHaveBeenCalledTimes(1))
+    expect(onCriado).toHaveBeenCalledWith('13')
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(onCancelar).toHaveBeenCalledTimes(1)
   })
