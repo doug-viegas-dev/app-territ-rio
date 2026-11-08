@@ -75,7 +75,9 @@ service cloud.firestore {
         match /rodadas/{rodadaId} {
           allow read: if ehMembro();
           allow create: if ehMembro() && request.resource.data.abertaPorUid == request.auth.uid;
+          // encerra uma vez só: rodada já encerrada não muda mais
           allow update: if ehMembro()
+            && resource.data.get('encerradaPorUid', null) == null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['encerradaPorUid', 'encerradaPorNome', 'encerradaEm'])
             && request.resource.data.encerradaPorUid == request.auth.uid;
           allow delete: if false;

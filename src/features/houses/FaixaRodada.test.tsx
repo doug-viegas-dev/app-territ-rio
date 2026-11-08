@@ -64,6 +64,60 @@ describe('FaixaRodada', () => {
     await waitFor(() => expect(onErro).toHaveBeenCalledTimes(1))
   })
 
+  it('toque duplo em Abrir rodada grava uma vez só enquanto a escrita está pendente', async () => {
+    vi.mocked(abrirRodada).mockReturnValue(new Promise(() => {}))
+    renderFaixa(base)
+    const user = userEvent.setup()
+    const botao = screen.getByRole('button', { name: 'Abrir rodada' })
+    await user.click(botao)
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    await user.click(botao)
+    expect(abrirRodada).toHaveBeenCalledTimes(1)
+  })
+
+  it('toque duplo em Encerrar rodada grava uma vez só', async () => {
+    vi.mocked(encerrarRodada).mockReturnValue(new Promise(() => {}))
+    renderFaixa(comRodada(hoje()))
+    const user = userEvent.setup()
+    const botao = screen.getByRole('button', { name: 'Encerrar rodada' })
+    await user.click(botao)
+    await user.click(botao)
+    expect(encerrarRodada).toHaveBeenCalledTimes(1)
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('falha libera o botão de novo', async () => {
+    vi.mocked(abrirRodada).mockRejectedValueOnce(new Error('falhou'))
+    const onErro = renderFaixa(base)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    await waitFor(() => expect(onErro).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('button', { name: 'Abrir rodada' })).not.toHaveAttribute('aria-disabled')
+    await user.click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    expect(abrirRodada).toHaveBeenCalledTimes(2)
+  })
+
+  it('quando a rodada aberta chega pela quadra, Encerrar rodada já fica disponível', async () => {
+    vi.mocked(abrirRodada).mockReturnValue(new Promise(() => {}))
+    const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(hoje())} cartaoAberto onErro={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('usa a hora atual a cada render: rodada aberta depois da meia-noite não aparece como de outro dia', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(2026, 10, 8, 23, 50))
+      const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
+      vi.setSystemTime(new Date(2026, 10, 9, 0, 6))
+      rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(new Date(2026, 10, 9, 0, 5).getTime())} cartaoAberto onErro={vi.fn()} />)
+      expect(screen.getByText('Rodada 2 · aberta por Ana às 00:05')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('com o cartão fechado, Abrir rodada fica desativado e não grava', async () => {
     renderFaixa(base, false)
     const botao = screen.getByRole('button', { name: 'Abrir rodada' })

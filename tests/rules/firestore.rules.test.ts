@@ -176,6 +176,29 @@ describe('regras Firestore', () => {
     await assertSucceeds(updateDoc(ref, { encerradaPorUid: 'publisher', encerradaPorNome: 'Publicador', encerradaEm: 9 }))
   })
 
+  it('rodada já encerrada não é encerrada de novo', async () => {
+    await env.withSecurityRulesDisabled(async (context) => setDoc(doc(context.firestore(), 'cards/c1/blocks/b1/rodadas/r1'), { numero: 1, abertaPorUid: 'publisher', abertaPorNome: 'Publicador', abertaEm: 5 }))
+    const ref = doc(publisherDb(), 'cards/c1/blocks/b1/rodadas/r1')
+    await assertSucceeds(updateDoc(ref, { encerradaPorUid: 'publisher', encerradaPorNome: 'Publicador', encerradaEm: 9 }))
+    await assertFails(updateDoc(ref, { encerradaPorUid: 'publisher', encerradaPorNome: 'Publicador', encerradaEm: 12 }))
+    await assertFails(updateDoc(doc(adminDb(), 'cards/c1/blocks/b1/rodadas/r1'), { encerradaPorUid: 'admin', encerradaPorNome: 'admin', encerradaEm: 12 }))
+  })
+
+  it('publicador encerra a rodada mesmo com o cartão fechado', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      const f = context.firestore()
+      await updateDoc(doc(f, 'cards/c1'), { estado: 'fechado' })
+      await updateDoc(doc(f, 'cards/c1/blocks/b1'), { rodadaAtual, rodadasTotal: 1 })
+      await setDoc(doc(f, 'cards/c1/blocks/b1/rodadas/r1'), { numero: 1, abertaPorUid: 'publisher', abertaPorNome: 'Publicador', abertaEm: 5 })
+    })
+    const db = publisherDb()
+    const batch = writeBatch(db)
+    batch.update(doc(db, 'cards/c1/blocks/b1/rodadas/r1'), { encerradaPorUid: 'publisher', encerradaPorNome: 'Publicador', encerradaEm: 9 })
+    batch.update(doc(db, 'cards/c1/blocks/b1'), { rodadaAtual: deleteField() })
+    batch.set(doc(db, 'cards/c1/eventos/fim'), { tipo: 'rodada', motivo: 'rodada_encerrada', porUid: 'publisher', porNome: 'Publicador', em: 9, quadraId: 'b1', quadraRotulo: 'Quadra 1', rodada: 1 })
+    await assertSucceeds(batch.commit())
+  })
+
   it('publicador cria evento rodada_aberta com o próprio uid e é negado a criar fechamento_automatico ou fechado', async () => {
     const events = collection(publisherDb(), 'cards/c1/eventos')
     const base = { porNome: 'Publicador', em: 3, quadraId: 'b1', quadraRotulo: 'Quadra 1', rodada: 1 }
