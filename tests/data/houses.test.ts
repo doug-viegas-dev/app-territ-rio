@@ -164,6 +164,29 @@ describe('criarCasa com contadores da quadra', () => {
     expect(await quadraAtual(c.cartaoId, c.quadraId, (q) => q.totalCasas === 1)).toMatchObject({ totalCasas: 1, faltam: 0 })
   })
 
+  it('criarCasa com resultado nao_visitar conta como resolvida, não soma faltam e grava uma visita', async () => {
+    const c = await cenario()
+    const id = await novaCasa(c, { numero: '7', resultado: { status: 'nao_visitar', usuario: admin, ciclo: 1, rodada: 1 } })
+    const casa = (await casasDe(c.cartaoId, c.quadraId)).find((x) => x.id === id) as Casa
+    expect(casa).toMatchObject({ status: 'nao_visitar', ultimoPor: 'Admin' })
+    const v = await visitasDe(c.cartaoId, c.quadraId, id, (l) => l.length === 1)
+    expect(v).toHaveLength(1)
+    expect(v[0]).toMatchObject({ status: 'nao_visitar', ciclo: 1, rodada: 1 })
+    expect(await cartaoAtual(c.cartaoId, (x) => x.totalCasas === 1)).toMatchObject({ totalCasas: 1, resolvidas: 1 })
+    expect(await quadraAtual(c.cartaoId, c.quadraId, (q) => q.totalCasas === 1)).toMatchObject({ totalCasas: 1, faltam: 0 })
+  })
+
+  it('criarCasa com resultado pendente ou sem resultado não cria visita', async () => {
+    const c = await cenario()
+    const comPendente = await novaCasa(c, { numero: '8', resultado: { status: 'pendente', usuario: admin, ciclo: 1, rodada: 1 } })
+    const semResultado = await novaCasa(c, { numero: '9' })
+    // as duas casas já existem; a visita, se existisse, foi gravada no mesmo lote
+    expect(await visitasDe(c.cartaoId, c.quadraId, comPendente)).toEqual([])
+    expect(await visitasDe(c.cartaoId, c.quadraId, semResultado)).toEqual([])
+    expect(await cartaoAtual(c.cartaoId, (x) => x.totalCasas === 2)).toMatchObject({ totalCasas: 2, resolvidas: 0 })
+    expect(await quadraAtual(c.cartaoId, c.quadraId, (q) => q.totalCasas === 2)).toMatchObject({ totalCasas: 2, faltam: 2 })
+  })
+
   it('criarCasa com resultado sem_resposta soma faltam', async () => {
     const c = await cenario()
     await novaCasa(c, { numero: '6', resultado: { status: 'sem_resposta', usuario: admin, ciclo: 1, rodada: 1 } })

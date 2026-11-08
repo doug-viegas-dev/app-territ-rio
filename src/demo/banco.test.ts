@@ -172,6 +172,30 @@ describe('visitas, casas e fechamento na demonstração', () => {
     expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 1, faltam: q.faltam })
   })
 
+  it('criarCasa com resultado nao_visitar conta como resolvida, não soma faltam e grava uma visita', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '96', resultado: { status: 'nao_visitar', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    expect(casas(q.id).find((c) => c.id === id)).toMatchObject({ status: 'nao_visitar', ultimoPor: 'Visitante' })
+    const visitas = ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, id, cb))
+    expect(visitas).toHaveLength(1)
+    expect(visitas[0]).toMatchObject({ status: 'nao_visitar', rodada: 1, ciclo: antes.ciclo })
+    expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas + 1, resolvidas: antes.resolvidas + 1 })
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 1, faltam: q.faltam })
+  })
+
+  it('criarCasa com resultado pendente ou sem resultado não cria visita', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    const comPendente = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '95', resultado: { status: 'pendente', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    const semResultado = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '94' }, casas(q.id))
+    expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, comPendente, cb))).toEqual([])
+    expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, semResultado, cb))).toEqual([])
+    expect(cartao().resolvidas).toBe(antes.resolvidas)
+  })
+
   it('criarCasa com resultado sem_resposta soma faltam; criarCasa pendente soma totalCasas e faltam', async () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]

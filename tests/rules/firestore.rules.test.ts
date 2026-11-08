@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs'
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import {
   assertFails,
   assertSucceeds,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, increment, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 
 let env: RulesTestEnvironment
 const projectId = 'demo-meu-territorio'
@@ -216,6 +216,29 @@ describe('regras Firestore', () => {
     await assertFails(updateDoc(ref, { ciclo: 2 }))
     await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1'), { estado: 'fechado' }))
     await assertFails(updateDoc(ref, { estado: 'aberto' }))
+  })
+
+  it('publicador cria casas em faixa com os mesmos campos que criarCasasEmFaixa grava, e é permitido', async () => {
+    const db = publisherDb()
+    const antes = (await getDocs(collection(db, 'cards/c1/blocks/b1/houses'))).size
+    const batch = writeBatch(db)
+    ;['10', '12', '14'].forEach((numero, i) => batch.set(doc(collection(db, 'cards/c1/blocks/b1/houses')), { rua: 'Rua A', numero, ordem: 10 + i, status: 'pendente', criadoEm: 5 }))
+    batch.update(doc(db, 'cards/c1'), { totalCasas: increment(3), atualizadoEm: 6 })
+    batch.update(doc(db, 'cards/c1/blocks/b1'), { totalCasas: increment(3), faltam: increment(3) })
+    await assertSucceeds(batch.commit())
+    expect((await getDocs(collection(db, 'cards/c1/blocks/b1/houses'))).size).toBe(antes + 3)
+  })
+
+  it('publicador que tenta mudar o estado do cartão no mesmo lote da faixa é negado, e nada é gravado', async () => {
+    const db = publisherDb()
+    const antes = (await getDocs(collection(db, 'cards/c1/blocks/b1/houses'))).size
+    const batch = writeBatch(db)
+    batch.set(doc(collection(db, 'cards/c1/blocks/b1/houses')), { rua: 'Rua A', numero: '10', ordem: 10, status: 'pendente', criadoEm: 5 })
+    batch.update(doc(db, 'cards/c1'), { totalCasas: increment(1), atualizadoEm: 6, estado: 'fechado' })
+    batch.update(doc(db, 'cards/c1/blocks/b1'), { totalCasas: increment(1), faltam: increment(1) })
+    await assertFails(batch.commit())
+    expect((await getDocs(collection(db, 'cards/c1/blocks/b1/houses'))).size).toBe(antes)
+    expect((await getDoc(doc(db, 'cards/c1'))).data()?.estado).toBe('aberto')
   })
 
   it('publicador atualiza resolvidas, totalCasas e atualizadoEm do cartão', async () => {
