@@ -45,7 +45,7 @@ function semear(): Estado {
     e.rodadas[`${cartaoId}/${id}`] = []
     return id
   }
-  function casa(cartaoId: string, quadraId: string, rua: string, numero: string, status: Status, extra: { dias?: number; por?: string; obs?: string; descricao?: string } = {}) {
+  function casa(cartaoId: string, quadraId: string, rua: string, numero: string, status: Status, extra: { dias?: number; por?: string; obs?: string; descricao?: string; rodada?: number } = {}) {
     const lista = e.casas[`${cartaoId}/${quadraId}`]
     const id = novoId()
     const ordem = ordemFim(lista.filter((c) => c.rua === rua).map((c) => c.ordem))
@@ -57,11 +57,29 @@ function semear(): Estado {
       ...(status !== 'pendente' && { ultimaVisitaEm: em, ultimoPor: extra.por ?? 'Ana Souza' }),
     })
     if (status !== 'pendente') {
-      e.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em, porUid: 'u-demo', porNome: extra.por ?? 'Ana Souza', ciclo, ...(extra.obs && { obs: extra.obs }) }]
+      e.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em, porUid: 'u-demo', porNome: extra.por ?? 'Ana Souza', ciclo, ...(extra.rodada !== undefined && { rodada: extra.rodada }), ...(extra.obs && { obs: extra.obs }) }]
     }
   }
   function evento(cartaoId: string, tipo: EventoCartao['tipo'], motivo: EventoCartao['motivo'], dias: number, porNome: string) {
     e.eventos[cartaoId].push({ id: novoId(), tipo, motivo, em: agora - dias * DIA, porUid: 'u-demo', porNome })
+  }
+
+  /** Rodada de exemplo da quadra: encerrada se `fimDias` vier; senão fica aberta e vira a `rodadaAtual`. */
+  function rodada(cartaoId: string, quadraId: string, d: { inicioDias: number; fimDias?: number; por: string }) {
+    const q = e.quadras[cartaoId].find((x) => x.id === quadraId) as Quadra
+    const numero = q.rodadasTotal + 1
+    const id = novoId()
+    const abertaEm = agora - d.inicioDias * DIA
+    const encerradaEm = d.fimDias === undefined ? undefined : agora - d.fimDias * DIA
+    e.rodadas[`${cartaoId}/${quadraId}`].push({
+      id, numero, abertaPorUid: 'u-demo', abertaPorNome: d.por, abertaEm,
+      ...(encerradaEm !== undefined && { encerradaPorUid: 'u-demo', encerradaPorNome: d.por, encerradaEm }),
+    })
+    q.rodadasTotal = numero
+    if (encerradaEm === undefined) q.rodadaAtual = { id, numero, porNome: d.por, em: abertaEm }
+    const base = { quadraId, quadraRotulo: q.rotulo, rodada: numero, porUid: 'u-demo', porNome: d.por }
+    e.eventos[cartaoId].push({ id: novoId(), tipo: 'rodada', motivo: 'rodada_aberta', em: abertaEm, ...base })
+    if (encerradaEm !== undefined) e.eventos[cartaoId].push({ id: novoId(), tipo: 'rodada', motivo: 'rodada_encerrada', em: encerradaEm, ...base })
   }
 
   const c12 = cartao({ numero: '12', titulo: 'Jardim das Flores', estado: 'aberto', ciclo: 2, imagemPath: MAPA_PATH, abertoPorNome: 'Ana Souza', abertoEm: agora - 6 * DIA })
@@ -89,10 +107,12 @@ function semear(): Estado {
   const c13 = cartao({ numero: '13', titulo: 'Vila Nova', estado: 'aberto', ciclo: 1, abertoPorNome: 'Bruno Alves', abertoEm: agora - 3 * DIA })
   evento(c13, 'fechado', 'criacao', 30, 'Carlos Lima')
   evento(c13, 'aberto', 'abertura', 3, 'Bruno Alves')
-  const q13 = quadra(c13, 'A', ['Rua Sete de Setembro'])
-  casa(c13, q13, 'Rua Sete de Setembro', '10', 'falado', { dias: 2 })
-  casa(c13, q13, 'Rua Sete de Setembro', '12', 'falado', { dias: 2 })
-  casa(c13, q13, 'Rua Sete de Setembro', '14', 'falado', { dias: 1, por: 'Bruno Alves' })
+  const q13 = quadra(c13, 'Quadra A', ['Rua Sete de Setembro'])
+  rodada(c13, q13, { inicioDias: 2.5, fimDias: 1.5, por: 'Ana Souza' })
+  rodada(c13, q13, { inicioDias: 1 / 24, por: 'Bruno Alves' })
+  casa(c13, q13, 'Rua Sete de Setembro', '10', 'falado', { dias: 2, rodada: 1 })
+  casa(c13, q13, 'Rua Sete de Setembro', '12', 'falado', { dias: 2, rodada: 1 })
+  casa(c13, q13, 'Rua Sete de Setembro', '14', 'falado', { dias: 0.02, rodada: 2, por: 'Bruno Alves' })
   casa(c13, q13, 'Rua Sete de Setembro', '16', 'pendente', { descricao: 'casa de esquina' })
 
   const c14 = cartao({ numero: '14', titulo: 'Centro', estado: 'fechado', ciclo: 3 })

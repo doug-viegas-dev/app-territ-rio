@@ -25,6 +25,10 @@ export default defineConfig({
     timeout: 60_000,
     env: {
       VITE_USE_EMULATORS: 'true',
+      // Padrões do firebase.json; E2E_*_PORT troca quando elas já estão em uso.
+      VITE_FIRESTORE_EMULATOR_PORT: process.env.E2E_FIRESTORE_PORT ?? '8080',
+      VITE_AUTH_EMULATOR_PORT: process.env.E2E_AUTH_PORT ?? '9099',
+      VITE_STORAGE_EMULATOR_PORT: process.env.E2E_STORAGE_PORT ?? '9199',
       VITE_FIREBASE_API_KEY: 'demo-api-key',
       VITE_FIREBASE_AUTH_DOMAIN: 'demo-meu-territorio.firebaseapp.com',
       VITE_FIREBASE_PROJECT_ID: 'demo-meu-territorio',

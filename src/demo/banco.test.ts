@@ -63,6 +63,16 @@ describe('rodadas na demonstração', () => {
     return { cartao, quadras }
   }
 
+  it('a semente do cartão 13 traz uma rodada aberta e uma encerrada, com seus eventos', () => {
+    const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
+    const [q] = ler((cb: (q: Quadra[]) => void) => observarQuadras(cartao.id, cb))
+    expect(q).toMatchObject({ totalCasas: 4, faltam: 1, rodadasTotal: 2, rodadaAtual: { numero: 2, porNome: 'Bruno Alves' } })
+    const rodadas = ler<Rodada[]>((cb) => observarRodadas(cartao.id, q.id, cb))
+    expect(rodadas.map((r) => [r.numero, r.encerradaEm !== undefined])).toEqual([[2, false], [1, true]])
+    const eventos = ler<EventoCartao[]>((cb) => observarEventos(cartao.id, cb))
+    expect(eventos.filter((e) => e.tipo === 'rodada').map((e) => `${e.motivo}:${e.rodada}`).sort()).toEqual(['rodada_aberta:1', 'rodada_aberta:2', 'rodada_encerrada:1'])
+  })
+
   it('a semente traz contadores das quadras coerentes com as casas', () => {
     const { cartao, quadras } = cartaoQuadra()
     const [a, b] = quadras()

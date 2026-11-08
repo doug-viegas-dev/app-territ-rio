@@ -21,7 +21,9 @@ export const db = initializeFirestore(app, {
 export const storage = getStorage(app)
 
 if (import.meta.env.VITE_USE_EMULATORS === 'true') {
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
-  connectFirestoreEmulator(db, '127.0.0.1', 8080)
-  connectStorageEmulator(storage, '127.0.0.1', 9199)
+  // As portas podem ser trocadas por variáveis de ambiente quando as padrões já estão em uso.
+  const porta = (valor: string | undefined, padrao: number) => Number(valor) || padrao
+  connectAuthEmulator(auth, `http://127.0.0.1:${porta(import.meta.env.VITE_AUTH_EMULATOR_PORT, 9099)}`, { disableWarnings: true })
+  connectFirestoreEmulator(db, '127.0.0.1', porta(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT, 8080))
+  connectStorageEmulator(storage, '127.0.0.1', porta(import.meta.env.VITE_STORAGE_EMULATOR_PORT, 9199))
 }
