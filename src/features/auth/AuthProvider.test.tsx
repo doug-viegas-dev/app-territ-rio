@@ -10,7 +10,7 @@ vi.mock('@/firebase/auth', () => ({
   sair: vi.fn(),
   observarUsuario: vi.fn(),
 }))
-vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
+vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn(), verificarDeNovo: vi.fn() }))
 
 const usuario = { uid: 'u1', email: 'maria@example.com', nome: 'Maria' }
 

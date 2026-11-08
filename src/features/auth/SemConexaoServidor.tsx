@@ -1,4 +1,5 @@
 import { sair } from '@/firebase/auth'
+import { verificarDeNovo } from '@/firebase/members'
 import { Marca } from './LoginPage'
 
 export default function SemConexaoServidor({ email }: { email: string }) {
@@ -13,7 +14,7 @@ export default function SemConexaoServidor({ email }: { email: string }) {
       <p className="auth-nota esquerda">Confira a sua internet. Se usa bloqueador de anúncios ou VPN, desligue por um momento ou tente uma janela anônima. Depois toque em “Tentar de novo”.</p>
     </div>
     <footer className="auth-rodape auth-pilha">
-      <button className="auth-botao" type="button" onClick={() => window.location.reload()}>Tentar de novo</button>
+      <button className="auth-botao" type="button" onClick={() => void verificarDeNovo()}>Tentar de novo</button>
       <button className="auth-botao auth-secundario" type="button" onClick={() => void sair()}>Sair</button>
     </footer>
   </main>

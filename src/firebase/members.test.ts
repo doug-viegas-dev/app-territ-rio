@@ -7,11 +7,14 @@ vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   doc: vi.fn(),
   setDoc: vi.fn(),
+  terminate: vi.fn(() => Promise.resolve()),
+  clearIndexedDbPersistence: vi.fn(() => Promise.resolve()),
   onSnapshot: (_ref: unknown, ok: (s: Snap) => void) => { emitir = ok; return () => undefined },
 }))
 vi.mock('./app', () => ({ db: {} }))
 
-import { observarMembro } from './members'
+import { clearIndexedDbPersistence, terminate } from 'firebase/firestore'
+import { observarMembro, verificarDeNovo } from './members'
 
 const snap = (existe: boolean, fromCache: boolean): Snap => ({
   exists: () => existe,
@@ -61,5 +64,17 @@ describe('observarMembro, erros de leitura', () => {
   it('erro de conexão não significa e-mail não liberado', () => {
     falhar({ code: 'unavailable' })
     expect(cb).not.toHaveBeenCalled()
+  })
+})
+
+describe('verificarDeNovo', () => {
+  it('descarta o cache local do Firestore e recarrega a página', async () => {
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    await verificarDeNovo()
+    expect(terminate).toHaveBeenCalledOnce()
+    expect(clearIndexedDbPersistence).toHaveBeenCalledOnce()
+    expect(reload).toHaveBeenCalledOnce()
+    vi.unstubAllGlobals()
   })
 })
