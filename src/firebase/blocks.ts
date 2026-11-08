@@ -13,7 +13,7 @@ export function observarQuadras(cartaoId: string, cb: (q: Quadra[]) => void, onE
 
 export async function criarQuadra(cartaoId: string, d: { rotulo: string; ruas: string[] }): Promise<string> {
   if (demoAtivo()) return demo.criarQuadra(cartaoId, d)
-  const ref = await addDoc(collection(db, 'cards', cartaoId, 'blocks'), { rotulo: d.rotulo, ruas: d.ruas, ordem: Date.now() })
+  const ref = await addDoc(collection(db, 'cards', cartaoId, 'blocks'), { rotulo: d.rotulo, ruas: d.ruas, ordem: Date.now(), totalCasas: 0, faltam: 0, rodadasTotal: 0 })
   return ref.id
 }
 

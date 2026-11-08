@@ -110,7 +110,7 @@ describe('cartões', () => {
     }
     await espera()
     await abrirCartaoManual(await cartaoAtual(id), admin)
-    const e = await eventos(id)
+    const e = await proximo<EventoCartao[]>((cb) => observarEventos(id, cb, 10))
     expect(e).toHaveLength(10)
     expect(e[0].motivo).toBe('abertura')
     for (let i = 1; i < e.length; i++) expect(e[i - 1].em).toBeGreaterThanOrEqual(e[i].em)
@@ -122,7 +122,7 @@ describe('quadras e ruas', () => {
     const cartao = await criarCartao({ numero: '6', titulo: 'Quadras' }, admin)
     const id = await criarQuadra(cartao, { rotulo: 'Quadra 1', ruas: ['Rua A', 'Rua B'] })
     const q = await proximo((cb) => observarQuadras(cartao, cb), (l) => l.length > 0)
-    expect(q).toEqual([{ id, rotulo: 'Quadra 1', ruas: ['Rua A', 'Rua B'], ordem: expect.any(Number) }])
+    expect(q).toEqual([{ id, rotulo: 'Quadra 1', ruas: ['Rua A', 'Rua B'], ordem: expect.any(Number), totalCasas: 0, faltam: 0, rodadasTotal: 0 }])
   })
 
   it('atualiza quadra', async () => {

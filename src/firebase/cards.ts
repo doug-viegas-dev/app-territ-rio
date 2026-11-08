@@ -68,8 +68,8 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
   await batch.commit()
 }
 
-export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void): () => void {
-  if (demoAtivo()) return demo.observarEventos(cartaoId, cb)
-  const q = query(collection(db, 'cards', cartaoId, 'eventos'), orderBy('em', 'desc'), limit(10))
+export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void, limite = 50): () => void {
+  if (demoAtivo()) return demo.observarEventos(cartaoId, cb, limite)
+  const q = query(collection(db, 'cards', cartaoId, 'eventos'), orderBy('em', 'desc'), limit(limite))
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => eventoDe(d.id, d.data()))))
 }

@@ -1,8 +1,9 @@
 import { abrirCartao, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
-import { deltaResolvidas, isResolvida } from '@/domain/status'
-import type { Cartao, Casa, EventoCartao, Papel, Quadra, Status, Visita } from '@/domain/types'
+import { podeAbrirRodada, podeEncerrarRodada, proximoNumeroRodada } from '@/domain/rodada'
+import { deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
+import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
 import { MAPA_DEMO_URL } from './mapa'
 
 type Usuario = { uid: string; nome: string }
@@ -13,6 +14,7 @@ type Estado = {
   casas: Record<string, Casa[]>
   visitas: Record<string, Visita[]>
   eventos: Record<string, EventoCartao[]>
+  rodadas: Record<string, Rodada[]>
   membros: Membro[]
   arquivos: Record<string, string>
 }
@@ -27,7 +29,7 @@ const novoId = () => `demo-${++contador}`
 function semear(): Estado {
   contador = 0
   const agora = Date.now()
-  const e: Estado = { cartoes: [], quadras: {}, casas: {}, visitas: {}, eventos: {}, membros: [], arquivos: { [MAPA_PATH]: MAPA_DEMO_URL } }
+  const e: Estado = { cartoes: [], quadras: {}, casas: {}, visitas: {}, eventos: {}, rodadas: {}, membros: [], arquivos: { [MAPA_PATH]: MAPA_DEMO_URL } }
 
   function cartao(d: Pick<Cartao, 'numero' | 'titulo' | 'estado' | 'ciclo'> & Partial<Cartao>): string {
     const id = novoId()
@@ -40,6 +42,7 @@ function semear(): Estado {
     const id = novoId()
     e.quadras[cartaoId].push({ id, rotulo, ruas, ordem: e.quadras[cartaoId].length + 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 })
     e.casas[`${cartaoId}/${id}`] = []
+    e.rodadas[`${cartaoId}/${id}`] = []
     return id
   }
   function casa(cartaoId: string, quadraId: string, rua: string, numero: string, status: Status, extra: { dias?: number; por?: string; obs?: string; descricao?: string } = {}) {
@@ -101,7 +104,10 @@ function semear(): Estado {
   casa(c14, q14, 'Avenida Brasil', '204', 'falado', { dias: 13, por: 'Carla Dias' })
   casa(c14, q14, 'Avenida Brasil', '206', 'estudo', { dias: 12, por: 'Carla Dias' })
 
-  for (const c of e.cartoes) recontar(e, c.id)
+  for (const c of e.cartoes) {
+    recontar(e, c.id)
+    for (const q of e.quadras[c.id]) recontarQuadra(e, c.id, q.id)
+  }
   e.membros = [
     { email: 'visitante@demonstracao.app', nome: 'Visitante (demonstração)', papel: 'admin', ativo: true },
     { email: 'ana@exemplo.com', nome: 'Ana Souza', papel: 'publicador', ativo: true },
@@ -117,6 +123,14 @@ function recontar(e: Estado, cartaoId: string): void {
   const todas = Object.entries(e.casas).filter(([k]) => k.startsWith(`${cartaoId}/`)).flatMap(([, v]) => v)
   c.totalCasas = todas.length
   c.resolvidas = todas.filter((x) => isResolvida(x.status)).length
+}
+
+function recontarQuadra(e: Estado, cartaoId: string, quadraId: string): void {
+  const q = e.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (!q) return
+  const casas = e.casas[`${cartaoId}/${quadraId}`] ?? []
+  q.totalCasas = casas.length
+  q.faltam = casas.filter((x) => faltaVisitar(x.status)).length
 }
 
 // ---------- armazenamento e observadores ----------
@@ -145,8 +159,8 @@ function cartaoPorId(id: string): Cartao {
 const chaveCasas = (cartaoId: string, quadraId: string) => `${cartaoId}/${quadraId}`
 const listaCasas = (cartaoId: string, quadraId: string) => (estado.casas[chaveCasas(cartaoId, quadraId)] ??= [])
 const tocar = (c: Cartao) => { c.atualizadoEm = Date.now() }
-const registrarEvento = (cartaoId: string, tipo: EventoCartao['tipo'], motivo: EventoCartao['motivo'], u: Usuario) =>
-  (estado.eventos[cartaoId] ??= []).push({ id: novoId(), tipo, motivo, em: Date.now(), porUid: u.uid, porNome: u.nome })
+const registrarEvento = (cartaoId: string, tipo: EventoCartao['tipo'], motivo: EventoCartao['motivo'], u: Usuario, extra: Pick<EventoCartao, 'quadraId' | 'quadraRotulo' | 'rodada'> = {}) =>
+  (estado.eventos[cartaoId] ??= []).push({ id: novoId(), tipo, motivo, em: Date.now(), porUid: u.uid, porNome: u.nome, ...extra })
 const textoOuNada = (s?: string) => (s?.trim() ? s.trim() : undefined)
 
 // ---------- cartões ----------
@@ -198,8 +212,8 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
   mudou()
 }
 
-export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void): () => void {
-  return observar(() => [...(estado.eventos[cartaoId] ?? [])].sort((a, b) => b.em - a.em).slice(0, 10), cb)
+export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void, limite = 50): () => void {
+  return observar(() => [...(estado.eventos[cartaoId] ?? [])].sort((a, b) => b.em - a.em).slice(0, limite), cb)
 }
 
 // ---------- quadras ----------
@@ -212,6 +226,7 @@ export async function criarQuadra(cartaoId: string, d: { rotulo: string; ruas: s
   const id = novoId()
   ;(estado.quadras[cartaoId] ??= []).push({ id, rotulo: d.rotulo, ruas: [...d.ruas], ordem: Date.now(), totalCasas: 0, faltam: 0, rodadasTotal: 0 })
   estado.casas[chaveCasas(cartaoId, id)] = []
+  estado.rodadas[chaveCasas(cartaoId, id)] = []
   mudou()
   return id
 }
@@ -229,6 +244,42 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
   const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
   if (q.ruas.some((r) => chave(r) === chave(nome))) return
   q.ruas.push(nome)
+  mudou()
+}
+
+// ---------- rodadas ----------
+
+export function observarRodadas(cartaoId: string, quadraId: string, cb: (r: Rodada[]) => void): () => void {
+  return observar(() => (estado.rodadas[chaveCasas(cartaoId, quadraId)] ?? []).map((r) => ({ ...r })).sort((a, b) => b.numero - a.numero), cb)
+}
+
+function quadraPorId(cartaoId: string, quadraId: string): Quadra {
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (!q) throw new Error('Quadra não encontrada')
+  return q
+}
+
+export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
+  const q = quadraPorId(cartaoId, quadra.id)
+  if (!podeAbrirRodada(q)) throw new Error('A quadra já tem uma rodada aberta')
+  const numero = proximoNumeroRodada(q)
+  const id = novoId()
+  const agora = Date.now()
+  ;(estado.rodadas[chaveCasas(cartaoId, q.id)] ??= []).push({ id, numero, abertaPorUid: usuario.uid, abertaPorNome: usuario.nome, abertaEm: agora })
+  q.rodadaAtual = { id, numero, porNome: usuario.nome, em: agora }
+  q.rodadasTotal = numero
+  registrarEvento(cartaoId, 'rodada', 'rodada_aberta', usuario, { quadraId: q.id, quadraRotulo: q.rotulo, rodada: numero })
+  mudou()
+}
+
+export async function encerrarRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
+  const q = quadraPorId(cartaoId, quadra.id)
+  const atual = q.rodadaAtual
+  if (!podeEncerrarRodada(q) || !atual) throw new Error('A quadra não tem rodada aberta')
+  const r = (estado.rodadas[chaveCasas(cartaoId, q.id)] ?? []).find((x) => x.id === atual.id)
+  if (r) Object.assign(r, { encerradaPorUid: usuario.uid, encerradaPorNome: usuario.nome, encerradaEm: Date.now() })
+  delete q.rodadaAtual
+  registrarEvento(cartaoId, 'rodada', 'rodada_encerrada', usuario, { quadraId: q.id, quadraRotulo: q.rotulo, rodada: atual.numero })
   mudou()
 }
 
