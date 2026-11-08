@@ -184,6 +184,17 @@ describe('EstadoCartao', () => {
     expect(screen.queryByText('Os contadores parecem errados')).not.toBeInTheDocument()
   })
 
+  it('quadra sem contadores mostra o aviso para recalcular', () => {
+    renderEstado(aberto, [{ ...quadras[0], semContadores: true }, quadras[1]])
+    const aviso = screen.getByText('Recalcule os contadores: algumas quadras ainda não têm a contagem de casas.')
+    expect(aviso.closest('[role="status"]')).not.toBeNull()
+  })
+
+  it('sem quadras sem contadores não mostra o aviso de recalcular', () => {
+    renderEstado(aberto)
+    expect(screen.queryByText(/Recalcule os contadores/)).not.toBeInTheDocument()
+  })
+
   it('recalcular chama recalcularContadores', async () => {
     renderEstado(aberto)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Recalcular contadores' }))

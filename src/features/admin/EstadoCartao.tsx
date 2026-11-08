@@ -78,6 +78,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
   return <>
     {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p><b>Não foi possível salvar</b>Tente de novo.</p></div>}
     {contadoresSuspeitos(cartao) && <div className="aviso" role="status"><Icone nome="aviso" className="ic ic-28" /><p><b>Os contadores parecem errados</b>O total ou as casas resolvidas não batem. Use “Recalcular contadores”, com internet.</p></div>}
+    {quadras?.some((q) => q.semContadores) && <div className="aviso" role="status"><Icone nome="aviso" className="ic ic-28" /><p>Recalcule os contadores: algumas quadras ainda não têm a contagem de casas.</p></div>}
     <div className="painel-caixa">
       <p style={{ marginBottom: 14 }}>
         <span className="estado">

@@ -177,8 +177,15 @@ describe('QuadraPage', () => {
     await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: cartaoAberto, quadraId: 'q3', rodada: 2, casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' },
+      cartao: cartaoAberto, quadraId: 'q3', rodada: 2, casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
     })
+  })
+
+  it('quadra sem contadores registra avisando para não mexer nos contadores da quadra', async () => {
+    preparar([casa({ numero: '1' })], { quadra: { ...quadra, semContadores: true } })
+    renderPagina()
+    await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
+    expect(vi.mocked(registrarVisita).mock.calls[0][0].quadraSemContadores).toBe(true)
   })
 
   it('os quatro botões têm altura mínima de 48px', () => {

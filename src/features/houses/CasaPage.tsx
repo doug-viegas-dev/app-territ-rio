@@ -92,7 +92,7 @@ export default function CasaPage() {
     const rodada = quadra?.rodadaAtual?.numero
     if (!cartao || !casa || !usuario || !quadra || rodada === undefined || !podeRegistrarNaQuadra(cartao, quadra)) return
     setFalha(null)
-    registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
+    registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra.semContadores === true })
       .catch(() => setFalha({ casa, novoStatus, obs: texto }))
   }
 
@@ -111,7 +111,7 @@ export default function CasaPage() {
   /** Não espera a escrita: offline ela só resolve com rede. */
   function excluir() {
     if (!casa) return
-    excluirCasa(cartaoId, quadraId, casa).catch(() => {})
+    excluirCasa(cartaoId, quadraId, casa, { quadraSemContadores: quadra?.semContadores === true }).catch(() => {})
     navigate(voltar.voltarPara, { replace: true })
   }
 

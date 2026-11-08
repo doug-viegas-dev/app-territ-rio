@@ -33,4 +33,10 @@ describe('rodada', () => {
     const faltando = { totalCasas: 5, faltam: 1 }
     expect(quadrasParaVisitar([vazia, faltando, { totalCasas: 5, faltam: 0 }])).toEqual([vazia, faltando])
   })
+  it('quadrasParaVisitar mantém quadra sem contadores e quadra com rodada aberta, mesmo com faltam 0', () => {
+    const semContadores = { totalCasas: 1, faltam: 0, semContadores: true }
+    const comRodada = { totalCasas: 5, faltam: 0, rodadaAtual }
+    const pronta = { totalCasas: 5, faltam: 0 }
+    expect(quadrasParaVisitar([semContadores, comRodada, pronta])).toEqual([semContadores, comRodada])
+  })
 })

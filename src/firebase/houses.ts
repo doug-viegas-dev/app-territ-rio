@@ -11,6 +11,8 @@ import { demoAtivo } from '@/demo/modo'
 import { casaDe, paraTimestamp, visitaDe } from './converters'
 
 type Usuario = { uid: string; nome: string }
+/** `quadraSemContadores`: a quadra ainda não tem totalCasas/faltam; somar criaria números errados, então só o cartão é atualizado. */
+export type OpcoesQuadra = { quadraSemContadores?: boolean }
 
 const casasRef = (cartaoId: string, quadraId: string) => collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses')
 const cartaoRef = (cartaoId: string) => doc(db, 'cards', cartaoId)
@@ -44,8 +46,9 @@ export async function criarCasa(
   quadraId: string,
   d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
   existentes: Casa[],
+  op: OpcoesQuadra = {},
 ): Promise<string> {
-  if (demoAtivo()) return demo.criarCasa(cartaoId, quadraId, d, existentes)
+  if (demoAtivo()) return demo.criarCasa(cartaoId, quadraId, d, existentes, op)
   exigirValida(d)
   const daRua = ordenarCasas(existentes.filter((c) => c.rua === d.rua))
   let ordem: number
@@ -79,13 +82,13 @@ export async function criarCasa(
   }
   const resolvida = deltaResolvidas('pendente', status)
   batch.update(cartaoRef(cartaoId), { totalCasas: increment(1), ...(resolvida !== 0 && { resolvidas: increment(resolvida) }), atualizadoEm: agora })
-  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(1), ...(faltaVisitar(status) && { faltam: increment(1) }) })
+  if (!op.quadraSemContadores) batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(1), ...(faltaVisitar(status) && { faltam: increment(1) }) })
   await batch.commit()
   return ref.id
 }
 
-export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: { rua: string; numeros: string[] }, existentes: Casa[]): Promise<void> {
-  if (demoAtivo()) return demo.criarCasasEmFaixa(cartaoId, quadraId, d, existentes)
+export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: { rua: string; numeros: string[] }, existentes: Casa[], op: OpcoesQuadra = {}): Promise<void> {
+  if (demoAtivo()) return demo.criarCasasEmFaixa(cartaoId, quadraId, d, existentes, op)
   const numeros = d.numeros.map((n) => n.trim()).filter(Boolean)
   if (!numeros.length) return
   const inicio = ordemFim(existentes.filter((c) => c.rua === d.rua).map((c) => c.ordem))
@@ -95,7 +98,7 @@ export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: {
     batch.set(doc(casasRef(cartaoId, quadraId)), { rua: d.rua, numero, ordem: inicio + i, status: 'pendente', criadoEm: agora })
   })
   batch.update(cartaoRef(cartaoId), { totalCasas: increment(numeros.length), atualizadoEm: agora })
-  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(numeros.length), faltam: increment(numeros.length) })
+  if (!op.quadraSemContadores) batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(numeros.length), faltam: increment(numeros.length) })
   await batch.commit()
 }
 
@@ -134,8 +137,8 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
 }
 
 /** Apaga a casa e ajusta os contadores do cartão e da quadra. O histórico de visitas fica sem uso (as regras não permitem apagá-lo). */
-export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
-  if (demoAtivo()) return demo.excluirCasa(cartaoId, quadraId, casa)
+export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa, op: OpcoesQuadra = {}): Promise<void> {
+  if (demoAtivo()) return demo.excluirCasa(cartaoId, quadraId, casa, op)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.delete(doc(casasRef(cartaoId, quadraId), casa.id))
@@ -144,11 +147,11 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
     ...(isResolvida(casa.status) && { resolvidas: increment(-1) }),
     atualizadoEm: agora,
   })
-  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(-1), ...(faltaVisitar(casa.status) && { faltam: increment(-1) }) })
+  if (!op.quadraSemContadores) batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(-1), ...(faltaVisitar(casa.status) && { faltam: increment(-1) }) })
   await batch.commit()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   if (demoAtivo()) return demo.registrarVisita(a)
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
@@ -168,7 +171,7 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rod
   })
   batch.update(doc(casasRef(cartao.id, quadraId), casa.id), { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
   batch.update(cartaoRef(cartao.id), { resolvidas: increment(delta), atualizadoEm: agora })
-  if (faltam !== 0) batch.update(quadraRef(cartao.id, quadraId), { faltam: increment(faltam) })
+  if (faltam !== 0 && !a.quadraSemContadores) batch.update(quadraRef(cartao.id, quadraId), { faltam: increment(faltam) })
   await batch.commit()
 }
 
@@ -196,8 +199,9 @@ export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quad
     atualizadoEm: agora,
   })
   for (const q of quadras) {
-    // depois do reinício só ficam sem falta as casas de Não visitar
-    ultimo.update(quadraRef(cartao.id, q.id), { faltam: casas.filter((c) => c.quadraId === q.id && c.status !== 'nao_visitar').length })
+    // depois do reinício só ficam sem falta as casas de Não visitar; gravar totalCasas também conserta quadras antigas, sem contadores
+    const daQuadra = casas.filter((c) => c.quadraId === q.id)
+    ultimo.update(quadraRef(cartao.id, q.id), { totalCasas: daQuadra.length, faltam: daQuadra.filter((c) => c.status !== 'nao_visitar').length })
   }
   ultimo.set(doc(collection(cartaoRef(cartao.id), 'eventos')), { tipo: 'fechado', motivo: 'fechamento_reinicio', em: agora, porUid: usuario.uid, porNome: usuario.nome })
   for (const batch of lotes) await batch.commit()

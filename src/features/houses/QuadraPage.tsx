@@ -73,7 +73,7 @@ export default function QuadraPage() {
     if (mover) setFocoId(proximaDoTrabalho(ordenadas, casa)?.id ?? casa.id)
     setFalha(null)
     try {
-      await registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
+      await registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra.semContadores === true })
     } catch {
       setFalha({ casa, novoStatus })
     }

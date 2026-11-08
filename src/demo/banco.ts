@@ -7,6 +7,7 @@ import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita 
 import { MAPA_DEMO_URL } from './mapa'
 
 type Usuario = { uid: string; nome: string }
+type OpcoesQuadra = { quadraSemContadores?: boolean }
 type Membro = { email: string; nome: string; papel: Papel; ativo: boolean }
 type Estado = {
   cartoes: Cartao[]
@@ -324,6 +325,7 @@ export async function criarCasa(
   quadraId: string,
   d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
   existentes: Casa[],
+  op: OpcoesQuadra = {},
 ): Promise<string> {
   exigirValida(d)
   const lista = listaCasas(cartaoId, quadraId)
@@ -347,14 +349,16 @@ export async function criarCasa(
   const quadra = quadraPorId(cartaoId, quadraId)
   cartao.totalCasas += 1
   cartao.resolvidas += deltaResolvidas('pendente', status)
-  quadra.totalCasas += 1
-  if (faltaVisitar(status)) quadra.faltam += 1
+  if (!op.quadraSemContadores) {
+    quadra.totalCasas += 1
+    if (faltaVisitar(status)) quadra.faltam += 1
+  }
   tocar(cartao)
   mudou()
   return id
 }
 
-export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: { rua: string; numeros: string[] }, existentes: Casa[]): Promise<void> {
+export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: { rua: string; numeros: string[] }, existentes: Casa[], op: OpcoesQuadra = {}): Promise<void> {
   const numeros = d.numeros.map((n) => n.trim()).filter(Boolean)
   if (!numeros.length) return
   const inicio = ordemFim(existentes.filter((c) => c.rua === d.rua).map((c) => c.ordem))
@@ -363,8 +367,10 @@ export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: {
   const cartao = cartaoPorId(cartaoId)
   const quadra = quadraPorId(cartaoId, quadraId)
   cartao.totalCasas += numeros.length
-  quadra.totalCasas += numeros.length
-  quadra.faltam += numeros.length
+  if (!op.quadraSemContadores) {
+    quadra.totalCasas += numeros.length
+    quadra.faltam += numeros.length
+  }
   tocar(cartao)
   mudou()
 }
@@ -405,19 +411,21 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
   mudou()
 }
 
-export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
+export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa, op: OpcoesQuadra = {}): Promise<void> {
   estado.casas[chaveCasas(cartaoId, quadraId)] = listaCasas(cartaoId, quadraId).filter((c) => c.id !== casa.id)
   const cartao = cartaoPorId(cartaoId)
   const quadra = quadraPorId(cartaoId, quadraId)
   cartao.totalCasas -= 1
   if (isResolvida(casa.status)) cartao.resolvidas -= 1
-  quadra.totalCasas -= 1
-  if (faltaVisitar(casa.status)) quadra.faltam -= 1
+  if (!op.quadraSemContadores) {
+    quadra.totalCasas -= 1
+    if (faltaVisitar(casa.status)) quadra.faltam -= 1
+  }
   tocar(cartao)
   mudou()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   const { quadraId, casa, novoStatus, usuario } = a
   const cartao = cartaoPorId(a.cartao.id)
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
@@ -431,7 +439,7 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rod
   ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada, ...(obs && { obs }) })
   Object.assign(alvo, { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
   cartao.resolvidas += delta
-  quadraPorId(cartao.id, quadraId).faltam += faltam
+  if (!a.quadraSemContadores) quadraPorId(cartao.id, quadraId).faltam += faltam
   tocar(cartao)
   mudou()
 }
@@ -447,7 +455,10 @@ export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quad
   }
   Object.assign(atual, estadoAposFecharEReiniciar(atual))
   atual.resolvidas = casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length
-  for (const q of quadras) quadraPorId(cartao.id, q.id).faltam = casas.filter((c) => c.quadraId === q.id && c.status !== 'nao_visitar').length
+  for (const q of quadras) {
+    const daQuadra = casas.filter((c) => c.quadraId === q.id)
+    Object.assign(quadraPorId(cartao.id, q.id), { totalCasas: daQuadra.length, faltam: daQuadra.filter((c) => c.status !== 'nao_visitar').length })
+  }
   tocar(atual)
   registrarEvento(cartao.id, 'fechado', 'fechamento_reinicio', usuario)
   mudou()

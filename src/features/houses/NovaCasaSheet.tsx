@@ -61,6 +61,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
   const [novaRua, setNovaRua] = useState(false)
   const [resultado, setResultado] = useState<Status>('pendente')
   const podeResultado = podeRegistrarNaQuadra(cartao, quadra)
+  const opQuadra = { quadraSemContadores: quadra.semContadores === true }
 
   const repetido = numero.trim() !== '' && casas.some((c) => c.rua === rua && c.numero?.trim() === numero.trim())
 
@@ -86,7 +87,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     const registro = podeResultado && resultado !== 'pendente' && rodada !== undefined
       ? { resultado: { status: resultado, usuario, ciclo: cartao.ciclo, rodada } }
       : {}
-    criarCasa(cartaoId, quadra.id, { rua, numero, descricao, depoisDe: depois, ...registro }, casas)
+    criarCasa(cartaoId, quadra.id, { rua, numero, descricao, depoisDe: depois, ...registro }, casas, opQuadra)
       .then((id) => { if (depois !== undefined) setDepoisId((atual) => (atual === depois ? id : atual)) })
       .catch(() => setErro('Não foi possível salvar a casa. Tente de novo.'))
     if (fechar) return onFechar()
@@ -179,7 +180,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
           </div>
         </div>
       </> : <FaixaForm rua={rua} onCriar={(numeros) => {
-        criarCasasEmFaixa(cartaoId, quadra.id, { rua, numeros }, casas).catch(() => onErro?.())
+        criarCasasEmFaixa(cartaoId, quadra.id, { rua, numeros }, casas, opQuadra).catch(() => onErro?.())
         onFechar()
       }} />}
     </div>

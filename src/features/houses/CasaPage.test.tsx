@@ -25,9 +25,9 @@ const visitas: Visita[] = [
   { id: 'v1', status: 'falado', em: new Date(2026, 8, 18).getTime(), porUid: 'u8', porNome: 'Ana P.', ciclo: 1, obs: 'Pediu para voltar à tarde.' },
 ]
 
-function preparar(casa: Casa, opcoes: { cartao?: Cartao; papel?: 'admin' | 'publicador'; visitas?: Visita[] } = {}) {
+function preparar(casa: Casa, opcoes: { cartao?: Cartao; papel?: 'admin' | 'publicador'; visitas?: Visita[]; quadra?: Quadra } = {}) {
   vi.mocked(observarCartao).mockImplementation((_id, cb) => { cb(opcoes.cartao ?? aberto); return () => {} })
-  vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([quadra]); return () => {} })
+  vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([opcoes.quadra ?? quadra]); return () => {} })
   vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([casa]); return () => {} })
   vi.mocked(observarVisitas).mockImplementation((_c, _q, _h, cb) => { cb(opcoes.visitas ?? visitas); return () => {} })
   vi.mocked(useSessao).mockReturnValue({
@@ -94,7 +94,7 @@ describe('CasaPage', () => {
     await user.click(screen.getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: aberto, quadraId: 'q3', rodada: 2, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' },
+      cartao: aberto, quadraId: 'q3', rodada: 2, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
     })
     expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
   })
@@ -167,7 +167,19 @@ describe('CasaPage', () => {
     expect(excluirCasa).not.toHaveBeenCalled()
     const folha = screen.getByRole('dialog', { name: 'Excluir casa' })
     await user.click(within(folha).getByRole('button', { name: 'Excluir casa' }))
-    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero)
+    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: false })
+  })
+
+  it('quadra sem contadores: registrar e excluir avisam para não mexer nos contadores da quadra', async () => {
+    preparar(casaComNumero, { papel: 'admin', quadra: { ...quadra, semContadores: true } })
+    vi.mocked(excluirCasa).mockResolvedValue()
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Conversado' }))
+    expect(vi.mocked(registrarVisita).mock.calls[0][0].quadraSemContadores).toBe(true)
+    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: true })
   })
 
   it('cancelar a confirmação não exclui', async () => {

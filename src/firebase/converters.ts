@@ -43,6 +43,8 @@ export function quadraDe(id: string, d: Dados): Quadra {
     faltam: Number(d.faltam ?? 0),
     rodadasTotal: Number(d.rodadasTotal ?? 0),
     ...(rodadaAtual && { rodadaAtual }),
+    // quadra de antes dos contadores por quadra: os números não valem até recalcular
+    ...((typeof d.totalCasas !== 'number' || typeof d.faltam !== 'number') && { semContadores: true }),
   }
 }
 

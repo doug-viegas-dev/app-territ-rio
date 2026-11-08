@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { connectAuthEmulator, GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
-import { connectFirestoreEmulator, doc, setDoc } from 'firebase/firestore'
+import { connectFirestoreEmulator, doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db } from '@/firebase/app'
 import { abrirCartaoManual, criarCartao, observarCartao, observarEventos } from '@/firebase/cards'
 import { criarQuadra, observarQuadras } from '@/firebase/blocks'
@@ -471,5 +471,71 @@ describe('recalcularContadores', () => {
     await recalcularContadores(c.cartaoId)
     expect(await quadraAtual(c.cartaoId, c.quadraId, (q) => q.totalCasas === 2)).toMatchObject({ totalCasas: 2, faltam: 1 })
     expect(await quadraAtual(c.cartaoId, q2, (q) => q.totalCasas === 2)).toMatchObject({ totalCasas: 2, faltam: 1 })
+  })
+})
+
+describe('quadra antiga, sem contadores', () => {
+  /** Quadra criada antes dos contadores por quadra: sem totalCasas nem faltam no documento. */
+  async function antiga() {
+    const c = await cenario()
+    const quadraId = 'antiga'
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `cards/${c.cartaoId}/blocks/${quadraId}`), { rotulo: 'Antiga', ruas: ['Rua A'], ordem: 0, rodadasTotal: 0 })
+    })
+    const quadra = await quadraAtual(c.cartaoId, quadraId)
+    return { cartaoId: c.cartaoId, quadraId, quadra }
+  }
+  const camposDaQuadra = async (cartaoId: string, quadraId: string) => {
+    let dados: Record<string, unknown> = {}
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      dados = (await getDoc(doc(ctx.firestore(), `cards/${cartaoId}/blocks/${quadraId}`))).data() ?? {}
+    })
+    return dados
+  }
+  const semContadores = (d: Record<string, unknown>) => !('totalCasas' in d) && !('faltam' in d)
+
+  it('quadraDe marca a quadra como semContadores', async () => {
+    const a = await antiga()
+    expect(a.quadra.semContadores).toBe(true)
+  })
+
+  it('criarCasa, criarCasasEmFaixa, registrarVisita e excluirCasa não criam contadores na quadra e atualizam o cartão', async () => {
+    const a = await antiga()
+    const op = { quadraSemContadores: true }
+    const id = await criarCasa(a.cartaoId, a.quadraId, { rua: 'Rua A', numero: '1' }, [], op)
+    await cartaoAtual(a.cartaoId, (x) => x.totalCasas === 1)
+    expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
+
+    await criarCasasEmFaixa(a.cartaoId, a.quadraId, { rua: 'Rua A', numeros: ['3', '5'] }, await casasDe(a.cartaoId, a.quadraId, (l) => l.length === 1), op)
+    await cartaoAtual(a.cartaoId, (x) => x.totalCasas === 3)
+    expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
+
+    const casa = (await casasDe(a.cartaoId, a.quadraId, (l) => l.length === 3)).find((x) => x.id === id) as Casa
+    await registrarVisita({ cartao: await cartaoAtual(a.cartaoId), quadraId: a.quadraId, rodada: 1, casa, novoStatus: 'falado', usuario: admin, quadraSemContadores: true })
+    expect((await cartaoAtual(a.cartaoId, (x) => x.resolvidas === 1)).resolvidas).toBe(1)
+    expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
+
+    const falado = (await casasDe(a.cartaoId, a.quadraId, (l) => l.find((x) => x.id === id)?.status === 'falado')).find((x) => x.id === id) as Casa
+    await excluirCasa(a.cartaoId, a.quadraId, falado, op)
+    expect(await cartaoAtual(a.cartaoId, (x) => x.totalCasas === 2)).toMatchObject({ totalCasas: 2, resolvidas: 0 })
+    expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
+    expect((await quadraAtual(a.cartaoId, a.quadraId)).semContadores).toBe(true)
+  })
+
+  it('fecharEReiniciarCartao grava totalCasas e faltam na quadra antiga', async () => {
+    const a = await antiga()
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const f = ctx.firestore()
+      const base = `cards/${a.cartaoId}/blocks/${a.quadraId}/houses`
+      await setDoc(doc(f, `${base}/a`), { rua: 'Rua A', numero: '1', ordem: 1, status: 'falado', criadoEm: new Date(1) })
+      await setDoc(doc(f, `${base}/b`), { rua: 'Rua A', numero: '2', ordem: 2, status: 'nao_visitar', criadoEm: new Date(2) })
+      await setDoc(doc(f, `${base}/c`), { rua: 'Rua A', numero: '3', ordem: 3, status: 'pendente', criadoEm: new Date(3) })
+    })
+    const casas = await casasDe(a.cartaoId, a.quadraId, (l) => l.length === 3)
+    const quadras = await quadrasDe(a.cartaoId, (l) => l.length === 2)
+    await fecharEReiniciarCartao(await cartaoAtual(a.cartaoId), casas, quadras, admin)
+    const q = await quadraAtual(a.cartaoId, a.quadraId, (x) => !x.semContadores)
+    expect(q).toMatchObject({ totalCasas: 3, faltam: 2 })
+    expect(q.semContadores).toBeUndefined()
   })
 })

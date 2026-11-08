@@ -56,7 +56,7 @@ describe('NovaCasaSheet', () => {
     const { user } = abrir()
     await user.type(campoDescricao(), 'portão azul')
     await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
-    expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numero: '', descricao: 'portão azul', depoisDe: undefined }, [casaA, casaB])
+    expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numero: '', descricao: 'portão azul', depoisDe: undefined }, [casaA, casaB], { quadraSemContadores: false })
   })
 
   it('número já existente na rua mostra o aviso, mas ainda salva', async () => {
@@ -99,7 +99,7 @@ describe('NovaCasaSheet', () => {
     const { user } = abrir({ depoisDe: casaA })
     await user.type(campoNumero(), '122')
     await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
-    expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numero: '122', descricao: '', depoisDe: 'h1' }, [casaA, casaB])
+    expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numero: '122', descricao: '', depoisDe: 'h1' }, [casaA, casaB], { quadraSemContadores: false })
     await waitFor(() => expect(campoNumero()).toHaveValue(''))
     await user.type(campoNumero(), '123')
     await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
@@ -124,7 +124,7 @@ describe('NovaCasaSheet', () => {
       expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', {
         rua: 'Rua das Acácias', numero: '130', descricao: '', depoisDe: undefined,
         resultado: { status: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, ciclo: 2, rodada: 3 },
-      }, [casaA, casaB])
+      }, [casaA, casaB], { quadraSemContadores: false })
     })
 
     it('Pendente salva sem resultado', async () => {
@@ -230,8 +230,20 @@ describe('NovaCasaSheet', () => {
       await user.click(screen.getByRole('radio', { name: 'Pares' }))
       expect(screen.getByText('4 casas serão criadas')).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: 'Criar 4 casas' }))
-      expect(criarCasasEmFaixa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numeros: ['100', '102', '104', '106'] }, [casaA, casaB])
+      expect(criarCasasEmFaixa).toHaveBeenCalledWith('c12', 'q3', { rua: 'Rua das Acácias', numeros: ['100', '102', '104', '106'] }, [casaA, casaB], { quadraSemContadores: false })
       expect(onFechar).toHaveBeenCalled()
+    })
+
+    it('quadra sem contadores: a casa e a faixa avisam para não mexer nos contadores da quadra', async () => {
+      const { user } = abrir({ quadra: { ...quadra, semContadores: true } })
+      await user.type(campoNumero(), '7')
+      await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
+      expect(vi.mocked(criarCasa).mock.calls[0][4]).toEqual({ quadraSemContadores: true })
+      await user.click(screen.getByRole('tab', { name: 'Faixa' }))
+      await user.type(screen.getByLabelText('Início'), '1')
+      await user.type(screen.getByLabelText('Fim'), '3')
+      await user.click(screen.getByRole('button', { name: 'Criar 3 casas' }))
+      expect(vi.mocked(criarCasasEmFaixa).mock.calls[0][4]).toEqual({ quadraSemContadores: true })
     })
 
     it('faixa inválida desativa o botão e não cria', async () => {

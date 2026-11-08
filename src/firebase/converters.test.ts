@@ -18,6 +18,16 @@ describe('conversores', () => {
     expect(q).toMatchObject({ totalCasas: 10, faltam: 4, rodadasTotal: 2, rodadaAtual: { id: 'r2', numero: 2, porNome: 'Ana', em: 5000 } })
   })
 
+  it('quadraDe marca semContadores quando falta totalCasas ou faltam', () => {
+    expect(quadraDe('b1', { rotulo: 'Quadra 1', ruas: [], ordem: 1 }).semContadores).toBe(true)
+    expect(quadraDe('b1', { totalCasas: 3 }).semContadores).toBe(true)
+    expect(quadraDe('b1', { faltam: 2 }).semContadores).toBe(true)
+    expect(quadraDe('b1', { totalCasas: '3', faltam: 1 }).semContadores).toBe(true)
+    const completa = quadraDe('b1', { totalCasas: 0, faltam: 0 })
+    expect(completa.semContadores).toBeFalsy()
+    expect('semContadores' in completa).toBe(false)
+  })
+
   it('quadraDe ignora rodadaAtual inválida', () => {
     expect(quadraDe('b1', { rodadaAtual: 'x' }).rodadaAtual).toBeUndefined()
     expect(quadraDe('b1', { rodadaAtual: { numero: 1 } }).rodadaAtual).toBeUndefined()

@@ -238,6 +238,32 @@ describe('visitas, casas e fechamento na demonstração', () => {
     expect(cartao()).toMatchObject({ estado: 'aberto', ciclo: antes.ciclo })
   })
 
+  it('com quadraSemContadores, criar, criar em faixa, registrar e excluir não mexem nos contadores da quadra, mas atualizam o cartão', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    const op = { quadraSemContadores: true }
+    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '90' }, casas(q.id), op)
+    await criarCasasEmFaixa(antes.id, q.id, { rua: 'Rua dos Ipês', numeros: ['92', '94'] }, casas(q.id), op)
+    expect(cartao().totalCasas).toBe(antes.totalCasas + 3)
+    const nova = casas(q.id).find((c) => c.id === id) as Casa
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: nova, novoStatus: 'falado', usuario, quadraSemContadores: true })
+    expect(cartao().resolvidas).toBe(antes.resolvidas + 1)
+    await excluirCasa(antes.id, q.id, casas(q.id).find((c) => c.id === id) as Casa, op)
+    expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas + 2, resolvidas: antes.resolvidas })
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas, faltam: q.faltam })
+  })
+
+  it('fecharEReiniciarCartao grava totalCasas de cada quadra a partir das casas', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    // contador da quadra defasado de propósito (como numa quadra antiga)
+    await criarCasasEmFaixa(cartao().id, q.id, { rua: 'Rua dos Ipês', numeros: ['92', '94'] }, casas(q.id), { quadraSemContadores: true })
+    expect(quadras()[0].totalCasas).toBe(q.totalCasas)
+    await fecharEReiniciarCartao(cartao(), quadras().flatMap((x) => casas(x.id)), quadras(), usuario)
+    for (const x of quadras()) expect(x.totalCasas).toBe(casas(x.id).length)
+  })
+
   it('recalcularContadores mantém totalCasas e faltam da quadra coerentes com as casas', async () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
