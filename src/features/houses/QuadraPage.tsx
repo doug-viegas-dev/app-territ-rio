@@ -13,6 +13,7 @@ import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
+import AvisoNaoEnviado from './AvisoNaoEnviado'
 import FaixaRodada from './FaixaRodada'
 import CasaLinha, { CasaAtencao } from './CasaLinha'
 import NovaCasaSheet from './NovaCasaSheet'
@@ -114,10 +115,7 @@ export default function QuadraPage() {
       <Icone nome="aviso" />
       <p><b>Não foi possível salvar</b>A última alteração não foi aceita. Confira o que aparece na lista e tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroEscrita(false)}>Entendi</button></p>
     </div>}
-    {falha && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>A última anotação não foi enviada</b>Ela está guardada neste aparelho. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => void enviar(falha.casa, falha.novoStatus, false)}>Tentar de novo</button></p>
-    </div>}
+    {falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => void enviar(falha.casa, falha.novoStatus, false)} />}
     {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />

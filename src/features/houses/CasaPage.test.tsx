@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,7 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import { observarQuadras } from '@/firebase/blocks'
 import { observarCartao } from '@/firebase/cards'
 import { editarCasa, excluirCasa, observarCasas, observarVisitas, registrarVisita } from '@/firebase/houses'
+import { abrirRodada } from '@/firebase/rodadas'
 import type { Cartao, Casa, Quadra, Visita } from '@/domain/types'
 import CasaPage from './CasaPage'
 
@@ -15,6 +16,7 @@ vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), registrarVisita: vi.fn(), editarCasa: vi.fn(), excluirCasa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
+vi.mock('@/firebase/rodadas', () => ({ abrirRodada: vi.fn(), encerrarRodada: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 0, atualizadoEm: 0 }
 const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 2, rodadaAtual: { id: 'r2', numero: 2, porNome: 'Ana', em: Date.now() } }
@@ -97,6 +99,35 @@ describe('CasaPage', () => {
       cartao: aberto, quadraId: 'q3', rodada: 2, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
     })
     expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
+  })
+
+  it('mostra a faixa da rodada; sem rodada, "Nenhuma rodada aberta" e o botão "Abrir rodada"', async () => {
+    vi.mocked(abrirRodada).mockResolvedValue()
+    const semRodada = { ...quadra, rodadaAtual: undefined }
+    preparar(casaComNumero, { quadra: semRodada })
+    renderPagina()
+    expect(screen.getByText('Nenhuma rodada aberta')).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    expect(abrirRodada).toHaveBeenCalledWith('c12', semRodada, { uid: 'u1', nome: 'Maria S.' })
+    cleanup()
+    preparar(casaComNumero)
+    renderPagina()
+    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toBeInTheDocument()
+  })
+
+  it('se a rodada encerra depois da falha, troca "Tentar de novo" por uma explicação', async () => {
+    vi.mocked(registrarVisita).mockRejectedValueOnce(new Error('falhou'))
+    let emitir: (q: Quadra[]) => void = () => {}
+    preparar(casaComNumero)
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { emitir = cb; cb([quadra]); return () => {} })
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Conversado' }))
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+    act(() => emitir([{ ...quadra, rodadaAtual: undefined }]))
+    expect(screen.getByText('A última anotação não foi enviada')).toBeInTheDocument()
+    expect(screen.getByText('A rodada foi encerrada. Abra a rodada para registrar de novo.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
+    await waitFor(() => expect(registrarVisita).toHaveBeenCalledTimes(1))
   })
 
   it('registrar sem observação não envia obs', async () => {

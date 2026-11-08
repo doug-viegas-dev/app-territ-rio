@@ -11,6 +11,8 @@ import type { Casa, Status, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { editarCasa, excluirCasa, observarVisitas, registrarVisita } from '@/firebase/houses'
+import AvisoNaoEnviado from './AvisoNaoEnviado'
+import FaixaRodada from './FaixaRodada'
 import HistoricoVisitas from './HistoricoVisitas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasas } from './useCasas'
@@ -66,6 +68,7 @@ export default function CasaPage() {
   const [obs, setObs] = useState('')
   const [editando, setEditando] = useState(false)
   const [erroEdicao, setErroEdicao] = useState(false)
+  const [erroRodada, setErroRodada] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
   const navigate = useNavigate()
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status; obs: string } | null>(null)
@@ -118,14 +121,16 @@ export default function CasaPage() {
   const nome = classeStatus(casa.status)
   return <>
     <Topo titulo="Casa" {...voltar} sub={`${quadra?.rotulo ?? 'Quadra'} · ${casa.rua}`} naoEnviado={falha !== null} />
-    {falha && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>A última anotação não foi enviada</b>Ela está guardada neste aparelho. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => enviar(falha.novoStatus, falha.obs)}>Tentar de novo</button></p>
-    </div>}
+    {falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => enviar(falha.novoStatus, falha.obs)} />}
     {erroEdicao && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
       <p><b>Não foi possível salvar a edição</b>O número e a descrição voltaram ao que estava. Tente de novo.</p>
     </div>}
+    {erroRodada && <div className="aviso faixa erro" role="alert">
+      <Icone nome="aviso" />
+      <p><b>Não foi possível salvar</b>A rodada não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroRodada(false)}>Entendi</button></p>
+    </div>}
+    {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={() => setErroRodada(true)} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />
       <p>

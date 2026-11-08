@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -261,6 +261,33 @@ describe('QuadraPage', () => {
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     expect(registrarVisita).toHaveBeenCalledTimes(2)
     await waitFor(() => expect(screen.queryByText('A última anotação não foi enviada')).not.toBeInTheDocument())
+  })
+
+  it('se a rodada encerra depois da falha, troca "Tentar de novo" por uma explicação', async () => {
+    vi.mocked(registrarVisita).mockRejectedValueOnce(new Error('falhou'))
+    let emitir: (q: Quadra[]) => void = () => {}
+    preparar([casa({ numero: '1' })])
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { emitir = cb; cb([quadra]); return () => {} })
+    renderPagina()
+    await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+    act(() => emitir([quadraSemRodada]))
+    expect(screen.getByText('A última anotação não foi enviada')).toBeInTheDocument()
+    expect(screen.getByText('A rodada foi encerrada. Abra a rodada para registrar de novo.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
+  })
+
+  it('se o cartão fecha depois da falha, explica em vez de oferecer "Tentar de novo"', async () => {
+    vi.mocked(registrarVisita).mockRejectedValueOnce(new Error('falhou'))
+    let emitir: (c: Cartao | null) => void = () => {}
+    preparar([casa({ numero: '1' })])
+    vi.mocked(observarCartao).mockImplementation((_id, cb) => { emitir = cb; cb(cartaoAberto); return () => {} })
+    renderPagina()
+    await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+    act(() => emitir({ ...cartaoAberto, estado: 'fechado' }))
+    expect(screen.getByText('O cartão foi fechado. Um administrador precisa abri-lo para registrar de novo.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
   })
 
   it('sem internet mostra a faixa de aviso', () => {
