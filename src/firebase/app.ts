@@ -14,6 +14,8 @@ const app = getApps().length ? getApp() : initializeApp({
 
 export const auth = getAuth(app)
 export const db = initializeFirestore(app, {
+  // Redes que bloqueiam QUIC/WebChannel derrubam o Firestore: troca sozinho para long polling.
+  experimentalAutoDetectLongPolling: true,
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 })
 export const storage = getStorage(app)

@@ -9,6 +9,8 @@ export type MembroObservado = { papel: Papel; ativo: boolean; nome: string }
 export function observarMembro(email: string, cb: (membro: MembroObservado | null) => void): () => void {
   if (demoAtivo()) return demo.observarMembroDemo(email, cb)
   return onSnapshot(doc(db, 'members', email.toLowerCase()), (snapshot) => {
+    // Cache vazio não prova que o e-mail não foi liberado (a conexão pode ter falhado): espera o servidor.
+    if (!snapshot.exists() && snapshot.metadata.fromCache) return
     const data = snapshot.data()
     cb(snapshot.exists() && (data?.papel === 'admin' || data?.papel === 'publicador')
       ? { papel: data.papel, ativo: data.ativo === true, nome: typeof data.nome === 'string' ? data.nome : email }
