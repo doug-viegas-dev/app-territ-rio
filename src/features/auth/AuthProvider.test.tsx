@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { entrarComGoogle, observarUsuario, sair } from '@/firebase/auth'
@@ -84,6 +84,24 @@ describe('RequerMembro', () => {
     vi.mocked(observarMembro).mockImplementation(() => () => {})
     renderProtegido()
     expect(screen.getByRole('status', { name: 'Carregando' })).toBeInTheDocument()
+  })
+
+  it('depois de um tempo sem resposta do servidor, avisa que não conseguiu conectar em vez de carregar para sempre', () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(observarUsuario).mockImplementation((cb) => {
+        cb(usuario)
+        return () => {}
+      })
+      vi.mocked(observarMembro).mockImplementation(() => () => {})
+      renderProtegido()
+      expect(screen.getByRole('status', { name: 'Carregando' })).toBeInTheDocument()
+      act(() => { vi.advanceTimersByTime(20_000) })
+      expect(screen.getByRole('heading', { name: 'Sem conexão com o servidor' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Aguardando liberação' })).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('inicia a autenticação ao tocar em Entrar com Google', async () => {
