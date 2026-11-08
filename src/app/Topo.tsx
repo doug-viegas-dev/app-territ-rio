@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icone } from './icones'
+import Logo from './Logo'
 import { Progresso } from './Progresso'
 import { useSincronizando } from '@/pwa/useSincronizando'
 import { useOnline } from './useOnline'
@@ -31,7 +32,7 @@ export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, prog
     <header className={progresso || sub ? 'topo' : 'topo simples'}>
       <div className="topo-linha">
         {voltarPara && <Link className="voltar" to={voltarPara} aria-label={voltarRotulo ?? 'Voltar'}><Icone nome="voltar" className="ic ic-28" /></Link>}
-        {logo && <svg width="36" height="36" viewBox="0 0 192 192" aria-hidden="true" style={{ flex: 'none' }}><use href="#i-logo" /></svg>}
+        {logo && <Logo tamanho={36} />}
         <h1>{titulo}</h1>
         <Conexao naoEnviado={naoEnviado} />
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
+import Logo from '@/app/Logo'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
@@ -131,7 +132,7 @@ export default function QuadraPage() {
 
     {vazia && !semCache && <div className="rolagem">
       <div className="sem-casas" style={{ paddingTop: 48 }}>
-        <svg width="72" height="72" viewBox="0 0 192 192" aria-hidden="true" style={{ margin: '0 auto 14px', display: 'block' }}><use href="#i-logo" /></svg>
+        <Logo tamanho={72} className="logo-vazio" />
         <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhuma casa nesta quadra</h2>
         <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
         {aberto && <button type="button" className="btn primario" style={{ maxWidth: 260, margin: '0 auto' }} onClick={() => setNovaCasa({})}><Icone nome="mais" />Cadastrar a primeira casa</button>}

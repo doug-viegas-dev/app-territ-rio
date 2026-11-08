@@ -1,4 +1,5 @@
 import Carregando from '@/app/Carregando'
+import Logo from '@/app/Logo'
 import Topo from '@/app/Topo'
 import AvisoInstalar from '@/pwa/AvisoInstalar'
 import CartaoResumo from './CartaoResumo'
@@ -16,7 +17,7 @@ export default function CartoesPage() {
       {cartoes !== null && cartoes.length > 0 && <AvisoInstalar />}
       {cartoes === null && <Carregando />}
       {cartoes?.length === 0 && <div className="sem-casas">
-        <svg width="72" height="72" viewBox="0 0 192 192" aria-hidden="true" style={{ margin: '0 auto 14px', display: 'block' }}><use href="#i-logo" /></svg>
+        <Logo tamanho={72} className="logo-vazio" />
         <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhum cartão ainda</h2>
         <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 20px' }}>O administrador cria os cartões. Quando houver algum, ele aparece aqui.</p>
       </div>}

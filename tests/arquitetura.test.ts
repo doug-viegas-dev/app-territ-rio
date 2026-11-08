@@ -16,3 +16,10 @@ test('acesso ao Firebase fica em src/firebase', () => {
     .map((file) => relative('.', file))
   expect(arquivosQueImportamFirebase).toEqual([])
 })
+
+test('nenhum arquivo de src usa o símbolo antigo #i-logo', () => {
+  const comSimboloAntigo = arquivos('src')
+    .filter((file) => readFileSync(file, 'utf8').includes('i-logo'))
+    .map((file) => relative('.', file))
+  expect(comSimboloAntigo).toEqual([])
+})

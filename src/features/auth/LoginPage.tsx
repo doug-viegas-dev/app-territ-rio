@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { entrarNaDemo } from '@/demo/modo'
 import { entrarComGoogle } from '@/firebase/auth'
-import marca from '@/assets/icone.svg'
+import Logo from '@/app/Logo'
 
 export function Marca() {
-  return <img className="auth-marca" src={marca} alt="" />
+  return <Logo tamanho={104} className="auth-marca" />
 }
 
 function GoogleG() {

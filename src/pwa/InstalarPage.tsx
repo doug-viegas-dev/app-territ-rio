@@ -1,9 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Icone } from '@/app/icones'
+import Logo from '@/app/Logo'
 import { dispensarAviso, ehIos, ehSafariIos } from './plataforma'
 import { useInstalacao } from './useInstalacao'
 
-const Logo = () => <svg width="64" height="64" viewBox="0 0 192 192" aria-hidden="true" style={{ flex: 'none' }}><use href="#i-logo" /></svg>
 const Dentro = ({ nome }: { nome: string }) => <span className="dentro"><Icone nome={nome} /></span>
 
 export default function InstalarPage() {
@@ -31,7 +31,7 @@ export default function InstalarPage() {
 
       {!instalado && !iphone && <div>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 20 }}>
-          <Logo />
+          <Logo tamanho={64} />
           <p style={{ fontSize: 18, lineHeight: 1.5 }}>Instale em um toque. O app vai para a tela inicial e funciona sem internet.</p>
         </div>
         <p style={{ color: 'var(--texto-suave)' }}>O Chrome vai pedir uma confirmação. Toque em <b>Instalar</b>.</p>
@@ -44,7 +44,7 @@ export default function InstalarPage() {
 
       {!instalado && iphone && safari && <div>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 20 }}>
-          <Logo />
+          <Logo tamanho={64} />
           <p style={{ fontSize: 18, lineHeight: 1.5 }}>Fica na tela inicial, abre mais rápido e funciona sem internet.</p>
         </div>
         <ol className="passos">
@@ -57,7 +57,7 @@ export default function InstalarPage() {
 
       {!instalado && iphone && !safari && <div>
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 20 }}>
-          <Logo />
+          <Logo tamanho={64} />
           <p style={{ fontSize: 18, lineHeight: 1.5 }}>Para instalar no iPhone, abra este endereço no Safari.</p>
         </div>
         <p style={{ color: 'var(--texto-suave)' }}>Em outros navegadores o iPhone não mostra a opção de adicionar à tela inicial.</p>
