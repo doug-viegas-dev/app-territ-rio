@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Cartao, Casa, EventoCartao, Quadra, Rodada } from '@/domain/types'
-import { abrirRodada, criarQuadra, encerrarRodada, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, registrarVisita, reiniciarBanco } from './banco'
+import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
+import { abrirRodada, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -23,7 +23,7 @@ describe('banco de demonstração', () => {
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const casas = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb))
     const pendente = casas.find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
     const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
     expect(depois.resolvidas).toBe(cartao.resolvidas + 1)
   })
@@ -32,7 +32,7 @@ describe('banco de demonstração', () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const pendente = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb)).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
     const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
     expect(depois.estado).toBe('aberto')
     expect(depois.ciclo).toBe(cartao.ciclo)
@@ -42,14 +42,14 @@ describe('banco de demonstração', () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.estado === 'fechado') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const casa = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb))[0]
-    await expect(registrarVisita({ cartao, quadraId: quadra.id, casa, novoStatus: 'falado', usuario })).rejects.toThrow('Cartão fechado')
+    await expect(registrarVisita({ cartao, quadraId: quadra.id, casa, novoStatus: 'falado', rodada: 1, usuario })).rejects.toThrow('Cartão fechado')
   })
 
   it('reiniciar o banco devolve os dados de exemplo', async () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const pendente = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb)).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
     reiniciarBanco()
     expect(ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13')?.estado).toBe('aberto')
   })
@@ -120,5 +120,118 @@ describe('rodadas na demonstração', () => {
     await criarQuadra(cartao.id, { rotulo: 'C', ruas: ['Rua X'] })
     expect(quadras().find((q) => q.rotulo === 'C')).toMatchObject({ totalCasas: 0, faltam: 0, rodadasTotal: 0 })
     expect(ler<EventoCartao[]>((cb) => observarEventos(cartao.id, cb, 2))).toHaveLength(2)
+  })
+})
+
+describe('visitas, casas e fechamento na demonstração', () => {
+  beforeEach(reiniciarBanco)
+  const cenario = (numero = '12') => {
+    const cartao = () => ler<Cartao[]>(observarCartoes).find((c) => c.numero === numero) as Cartao
+    const quadras = () => ler<Quadra[]>((cb) => observarQuadras(cartao().id, cb))
+    const casas = (quadraId: string) => ler<Casa[]>((cb) => observarCasas(cartao().id, quadraId, cb))
+    return { cartao, quadras, casas }
+  }
+
+  it('registrarVisita grava a rodada na visita', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const pendente = casas(q.id).find((c) => c.status === 'pendente') as Casa
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 3, casa: pendente, novoStatus: 'falado', usuario })
+    const [v] = ler<Visita[]>((cb) => observarVisitas(cartao().id, q.id, pendente.id, cb))
+    expect(v).toMatchObject({ status: 'falado', rodada: 3, ciclo: cartao().ciclo })
+  })
+
+  it('registrarVisita ajusta faltam da quadra', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const pendente = casas(q.id).find((c) => c.status === 'pendente') as Casa
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: pendente, novoStatus: 'falado', usuario })
+    expect(quadras()[0].faltam).toBe(q.faltam - 1)
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: { ...pendente, status: 'falado' }, novoStatus: 'sem_resposta', usuario })
+    expect(quadras()[0].faltam).toBe(q.faltam)
+  })
+
+  it('criarCasa com resultado falado grava casa e visita, com resolvidas +1 e faltam inalterado', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '99', resultado: { status: 'falado', usuario, ciclo: antes.ciclo, rodada: 2 } }, casas(q.id))
+    expect(casas(q.id).find((c) => c.id === id)).toMatchObject({ status: 'falado', ultimoPor: 'Visitante' })
+    expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, id, cb))[0]).toMatchObject({ status: 'falado', rodada: 2, ciclo: antes.ciclo })
+    expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas + 1, resolvidas: antes.resolvidas + 1 })
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 1, faltam: q.faltam })
+  })
+
+  it('criarCasa com resultado sem_resposta soma faltam; criarCasa pendente soma totalCasas e faltam', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '98', resultado: { status: 'sem_resposta', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 1, faltam: q.faltam + 1 })
+    expect(cartao().resolvidas).toBe(antes.resolvidas)
+    await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '97' }, casas(q.id))
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 2, faltam: q.faltam + 2 })
+    expect(cartao().totalCasas).toBe(antes.totalCasas + 2)
+  })
+
+  it('criarCasasEmFaixa soma o tamanho da faixa em totalCasas e faltam', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    await criarCasasEmFaixa(cartao().id, q.id, { rua: 'Rua dos Ipês', numeros: ['30', '32', '34'] }, casas(q.id))
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 3, faltam: q.faltam + 3 })
+  })
+
+  it('excluirCasa de casa que falta reduz faltam e totalCasas; de casa resolvida reduz resolvidas', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const antes = cartao()
+    await excluirCasa(antes.id, q.id, casas(q.id).find((c) => c.status === 'pendente') as Casa)
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas - 1, faltam: q.faltam - 1 })
+    await excluirCasa(antes.id, q.id, casas(q.id).find((c) => c.status === 'falado') as Casa)
+    expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas - 2, faltam: q.faltam - 1 })
+    expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas - 2, resolvidas: antes.resolvidas - 1 })
+  })
+
+  it('fecharCartaoManual lança erro com rodada aberta e não sobe o ciclo', async () => {
+    const { cartao, quadras } = cenario()
+    const antes = cartao()
+    await abrirRodada(antes.id, quadras()[0], usuario)
+    await expect(fecharCartaoManual(antes, usuario, quadras())).rejects.toThrow('Rodada aberta')
+    expect(cartao().estado).toBe('aberto')
+    await encerrarRodada(antes.id, quadras()[0], usuario)
+    await fecharCartaoManual(antes, usuario, quadras())
+    expect(cartao()).toMatchObject({ estado: 'fechado', ciclo: antes.ciclo })
+    expect(ler<EventoCartao[]>((cb) => observarEventos(antes.id, cb)).find((e) => e.motivo === 'fechamento_manual')).toMatchObject({ tipo: 'fechado' })
+  })
+
+  it('fecharEReiniciarCartao deixa o cartão fechado, ciclo +1, casas Pendente menos Não visitar, faltam por quadra e um evento', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const antes = cartao()
+    const todas = quadras().flatMap((q) => casas(q.id))
+    await fecharEReiniciarCartao(antes, todas, quadras(), usuario)
+    expect(cartao()).toMatchObject({ estado: 'fechado', ciclo: antes.ciclo + 1, resolvidas: 1 })
+    for (const q of quadras()) {
+      const lista = casas(q.id)
+      expect(lista.every((c) => c.status === 'pendente' || c.status === 'nao_visitar')).toBe(true)
+      expect(q.faltam).toBe(lista.filter((c) => c.status === 'pendente').length)
+    }
+    const ev = ler<EventoCartao[]>((cb) => observarEventos(antes.id, cb)).filter((e) => e.motivo === 'fechamento_reinicio')
+    expect(ev).toHaveLength(1)
+    expect(ev[0]).toMatchObject({ tipo: 'fechado', porNome: 'Visitante' })
+  })
+
+  it('fecharEReiniciarCartao lança erro com rodada aberta', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const antes = cartao()
+    await abrirRodada(antes.id, quadras()[1], usuario)
+    await expect(fecharEReiniciarCartao(antes, quadras().flatMap((q) => casas(q.id)), quadras(), usuario)).rejects.toThrow('Rodada aberta')
+    expect(cartao()).toMatchObject({ estado: 'aberto', ciclo: antes.ciclo })
+  })
+
+  it('recalcularContadores mantém totalCasas e faltam da quadra coerentes com as casas', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    await recalcularContadores(cartao().id)
+    expect(quadras()[0]).toMatchObject({ totalCasas: casas(q.id).length, faltam: casas(q.id).filter((c) => c.status === 'pendente' || c.status === 'sem_resposta').length })
   })
 })

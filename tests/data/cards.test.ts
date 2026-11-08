@@ -84,14 +84,22 @@ describe('cartões', () => {
     expect(e[0]).toMatchObject({ tipo: 'aberto', motivo: 'abertura', porNome: 'Admin' })
   })
 
-  it('fecha manualmente, soma 1 ao ciclo e grava o evento', async () => {
+  it('fecharCartaoManual não sobe o ciclo e grava o evento', async () => {
     const id = await criarCartao({ numero: '3', titulo: 'Fechar' }, admin)
     await abrirCartaoManual(await cartaoAtual(id), admin)
     await espera()
-    await fecharCartaoManual(await cartaoAtual(id), admin)
+    await fecharCartaoManual(await cartaoAtual(id), admin, [])
     const c = await cartaoAtual(id)
-    expect(c).toMatchObject({ estado: 'fechado', ciclo: 2 })
+    expect(c).toMatchObject({ estado: 'fechado', ciclo: 1 })
     expect((await eventos(id))[0]).toMatchObject({ tipo: 'fechado', motivo: 'fechamento_manual' })
+  })
+
+  it('fecharCartaoManual lança erro com rodada aberta e não grava nada', async () => {
+    const id = await criarCartao({ numero: '3b', titulo: 'Rodada aberta' }, admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin)
+    const aberta = { rodadaAtual: { id: 'r1', numero: 1, porNome: 'Ana', em: 1 } }
+    await expect(fecharCartaoManual(await cartaoAtual(id), admin, [aberta])).rejects.toThrow('Rodada aberta')
+    expect((await cartaoAtual(id)).estado).toBe('aberto')
   })
 
   it('atualiza campos editáveis', async () => {
@@ -106,7 +114,7 @@ describe('cartões', () => {
       await espera()
       await abrirCartaoManual(await cartaoAtual(id), admin)
       await espera()
-      await fecharCartaoManual(await cartaoAtual(id), admin)
+      await fecharCartaoManual(await cartaoAtual(id), admin, [])
     }
     await espera()
     await abrirCartaoManual(await cartaoAtual(id), admin)

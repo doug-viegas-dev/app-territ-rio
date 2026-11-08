@@ -89,7 +89,7 @@ export default function CasaPage() {
   function enviar(novoStatus: Status, texto: string) {
     if (!cartao || !casa || !usuario || !podeRegistrar(cartao)) return
     setFalha(null)
-    registrarVisita({ cartao, quadraId, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
+    registrarVisita({ cartao, quadraId, rodada: quadra?.rodadaAtual?.numero ?? 0 /* ajustado na Tarefa 7 */, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } })
       .catch(() => setFalha({ casa, novoStatus, obs: texto }))
   }
 

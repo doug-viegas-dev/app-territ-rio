@@ -1,9 +1,10 @@
 import { collection, deleteField, doc, getDocsFromServer, increment, onSnapshot, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
-import { estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
+import { estadoAposFecharEReiniciar, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
-import { deltaResolvidas, isResolvida } from '@/domain/status'
-import type { Cartao, Casa, Status, Visita } from '@/domain/types'
+import { podeFecharCartao } from '@/domain/rodada'
+import { deltaFaltam, deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
+import type { Cartao, Casa, Quadra, Status, Visita } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
@@ -13,6 +14,7 @@ type Usuario = { uid: string; nome: string }
 
 const casasRef = (cartaoId: string, quadraId: string) => collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses')
 const cartaoRef = (cartaoId: string) => doc(db, 'cards', cartaoId)
+const quadraRef = (cartaoId: string, quadraId: string) => doc(db, 'cards', cartaoId, 'blocks', quadraId)
 
 /** `semDados` é verdadeiro quando a lista veio vazia só do cache: sem rede, isso não prova que a quadra não tem casas. */
 export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[], semDados?: boolean) => void, onErro?: (e: Error) => void): () => void {
@@ -40,7 +42,7 @@ const textoOuNada = (s?: string) => (s?.trim() ? { valor: s.trim() } : null)
 export async function criarCasa(
   cartaoId: string,
   quadraId: string,
-  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string },
+  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
   existentes: Casa[],
 ): Promise<string> {
   if (demoAtivo()) return demo.criarCasa(cartaoId, quadraId, d, existentes)
@@ -61,15 +63,23 @@ export async function criarCasa(
     daRua.forEach((c, k) => batch.update(doc(casasRef(cartaoId, quadraId), c.id), { ordem: k <= i ? k + 1 : k + 2 }))
     ordem = i + 2
   }
+  const r = d.resultado && d.resultado.status !== 'pendente' ? d.resultado : undefined
+  const status: Status = r ? r.status : 'pendente'
   batch.set(ref, {
     rua: d.rua,
     ...(numero && { numero: numero.valor }),
     ...(descricao && { descricao: descricao.valor }),
     ordem,
-    status: 'pendente',
+    status,
     criadoEm: agora,
+    ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }),
   })
-  batch.update(cartaoRef(cartaoId), { totalCasas: increment(1), atualizadoEm: agora })
+  if (r) {
+    batch.set(doc(collection(ref, 'visits')), { status, em: agora, porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada })
+  }
+  const resolvida = deltaResolvidas('pendente', status)
+  batch.update(cartaoRef(cartaoId), { totalCasas: increment(1), ...(resolvida !== 0 && { resolvidas: increment(resolvida) }), atualizadoEm: agora })
+  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(1), ...(faltaVisitar(status) && { faltam: increment(1) }) })
   await batch.commit()
   return ref.id
 }
@@ -85,6 +95,7 @@ export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: {
     batch.set(doc(casasRef(cartaoId, quadraId)), { rua: d.rua, numero, ordem: inicio + i, status: 'pendente', criadoEm: agora })
   })
   batch.update(cartaoRef(cartaoId), { totalCasas: increment(numeros.length), atualizadoEm: agora })
+  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(numeros.length), faltam: increment(numeros.length) })
   await batch.commit()
 }
 
@@ -122,7 +133,7 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
   })
 }
 
-/** Apaga a casa e ajusta os contadores do cartão. O histórico de visitas fica sem uso (as regras não permitem apagá-lo). */
+/** Apaga a casa e ajusta os contadores do cartão e da quadra. O histórico de visitas fica sem uso (as regras não permitem apagá-lo). */
 export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
   if (demoAtivo()) return demo.excluirCasa(cartaoId, quadraId, casa)
   const agora = paraTimestamp(Date.now())
@@ -133,15 +144,17 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
     ...(isResolvida(casa.status) && { resolvidas: increment(-1) }),
     atualizadoEm: agora,
   })
+  batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(-1), ...(faltaVisitar(casa.status) && { faltam: increment(-1) }) })
   await batch.commit()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
   if (demoAtivo()) return demo.registrarVisita(a)
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
   const agora = paraTimestamp(Date.now())
   const delta = deltaResolvidas(casa.status, novoStatus)
+  const faltam = deltaFaltam(casa.status, novoStatus)
   const obs = a.obs?.trim()
   const batch = writeBatch(db)
   batch.set(doc(collection(casasRef(cartao.id, quadraId), casa.id, 'visits')), {
@@ -150,27 +163,21 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; cas
     porUid: usuario.uid,
     porNome: usuario.nome,
     ciclo: cartao.ciclo,
+    rodada: a.rodada,
     ...(obs && { obs }),
   })
   batch.update(doc(casasRef(cartao.id, quadraId), casa.id), { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  const fecha = false as boolean // provisório: Tarefa 5
-  batch.update(cartaoRef(cartao.id), { resolvidas: increment(delta), atualizadoEm: agora, ...(fecha && fecharCartao(cartao)) })
-  if (fecha) {
-    batch.set(doc(collection(cartaoRef(cartao.id), 'eventos')), {
-      tipo: 'fechado',
-      motivo: 'fechamento_automatico',
-      em: agora,
-      porUid: usuario.uid,
-      porNome: usuario.nome,
-    })
-  }
+  batch.update(cartaoRef(cartao.id), { resolvidas: increment(delta), atualizadoEm: agora })
+  if (faltam !== 0) batch.update(quadraRef(cartao.id, quadraId), { faltam: increment(faltam) })
   await batch.commit()
 }
 
 const LOTE = 400
 
-export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Usuario): Promise<void> {
-  if (demoAtivo()) return demo.reiniciarCartao(cartao, casas, usuario)
+/** Fecha o cartão e começa o ciclo seguinte: as casas voltam a Pendente (menos Não visitar) e o cartão fica fechado até um administrador abri-lo. */
+export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quadras: Quadra[], usuario: Usuario): Promise<void> {
+  if (!podeFecharCartao(quadras)) throw new Error('Rodada aberta')
+  if (demoAtivo()) return demo.fecharEReiniciarCartao(cartao, casas, quadras, usuario)
   const ids = new Set(idsParaReiniciar(casas))
   const alvo = casas.filter((c) => ids.has(c.id))
   if (alvo.some((c) => !c.quadraId)) throw new Error('Casa sem quadra: use as casas lidas por observarCasas')
@@ -184,13 +191,15 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
   const ultimo = lotes.length ? lotes[lotes.length - 1] : writeBatch(db)
   if (!lotes.length) lotes.push(ultimo)
   ultimo.update(cartaoRef(cartao.id), {
-    ...estadoAposFecharEReiniciar(cartao), // provisório: Tarefa 5
+    ...estadoAposFecharEReiniciar(cartao),
     resolvidas: casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length,
     atualizadoEm: agora,
-    abertoPorNome: usuario.nome,
-    abertoEm: agora,
   })
-  ultimo.set(doc(collection(cartaoRef(cartao.id), 'eventos')), { tipo: 'aberto', motivo: 'reinicio', em: agora, porUid: usuario.uid, porNome: usuario.nome })
+  for (const q of quadras) {
+    // depois do reinício só ficam sem falta as casas de Não visitar
+    ultimo.update(quadraRef(cartao.id, q.id), { faltam: casas.filter((c) => c.quadraId === q.id && c.status !== 'nao_visitar').length })
+  }
+  ultimo.set(doc(collection(cartaoRef(cartao.id), 'eventos')), { tipo: 'fechado', motivo: 'fechamento_reinicio', em: agora, porUid: usuario.uid, porNome: usuario.nome })
   for (const batch of lotes) await batch.commit()
 }
 
@@ -198,14 +207,20 @@ export async function recalcularContadores(cartaoId: string): Promise<void> {
   if (demoAtivo()) return demo.recalcularContadores(cartaoId)
   // Só do servidor: o cache pode ter quadras ou casas faltando e gravaria contadores errados.
   const quadras = await getDocsFromServer(collection(db, 'cards', cartaoId, 'blocks'))
+  const batch = writeBatch(db)
   let total = 0
   let resolvidas = 0
   for (const q of quadras.docs) {
     const casas = await getDocsFromServer(casasRef(cartaoId, q.id))
+    let faltam = 0
     for (const c of casas.docs) {
-      total++
-      if (isResolvida(casaDe(c.id, q.id, c.data()).status)) resolvidas++
+      const status = casaDe(c.id, q.id, c.data()).status
+      if (isResolvida(status)) resolvidas++
+      if (faltaVisitar(status)) faltam++
     }
+    total += casas.size
+    batch.update(q.ref, { totalCasas: casas.size, faltam })
   }
-  await updateDoc(cartaoRef(cartaoId), { totalCasas: total, resolvidas, atualizadoEm: paraTimestamp(Date.now()) })
+  batch.update(cartaoRef(cartaoId), { totalCasas: total, resolvidas, atualizadoEm: paraTimestamp(Date.now()) })
+  await batch.commit()
 }

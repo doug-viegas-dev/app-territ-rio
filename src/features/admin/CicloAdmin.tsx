@@ -9,7 +9,7 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from '@/features/cards/ConfirmarAbertura'
 import { useQuadras } from '@/features/cards/useCartao'
 import { fecharCartaoManual } from '@/firebase/cards'
-import { observarCasas, recalcularContadores, reiniciarCartao } from '@/firebase/houses'
+import { fecharEReiniciarCartao, observarCasas, recalcularContadores } from '@/firebase/houses'
 
 /** Casas de todas as quadras do cartão, na ordem das quadras. */
 function useCasasDoCartao(cartaoId: string): Casa[] {
@@ -58,6 +58,7 @@ function ConfirmarReinicio({ cartao, casas, onFechar, onConfirmar }: { cartao: C
 export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
   const { usuario, membro } = useSessao()
   const casas = useCasasDoCartao(cartao.id)
+  const quadras = useQuadras(cartao.id) // ajustado na Tarefa 10
   const [folha, setFolha] = useState<'abrir' | 'reiniciar' | null>(null)
   const [erro, setErro] = useState(false)
   const online = useOnline()
@@ -86,7 +87,7 @@ export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
       </Link>
       <div className="pilha">
         <button type="button" className="btn secundario" aria-disabled={aberto ? undefined : true}
-          onClick={() => { if (aberto && quem) gravar(fecharCartaoManual(cartao, quem)) }}>Fechar cartão</button>
+          onClick={() => { if (aberto && quem) gravar(fecharCartaoManual(cartao, quem, quadras)) }}>Fechar cartão</button>
         <button type="button" className="btn secundario" aria-disabled={aberto ? true : undefined}
           onClick={() => { if (!aberto) setFolha('abrir') }}>Abrir cartão</button>
         {aberto && <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Só administradores abrem cartões. Abrir só fica disponível com o cartão fechado, e fica registrado quem abriu.</p>}
@@ -99,6 +100,6 @@ export default function CicloAdmin({ cartao }: { cartao: Cartao }) {
 
     {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} onFechar={() => setFolha(null)} />}
     {folha === 'reiniciar' && quem && <ConfirmarReinicio cartao={cartao} casas={casas} onFechar={() => setFolha(null)}
-      onConfirmar={() => { setFolha(null); gravar(reiniciarCartao(cartao, casas, quem)) }} />}
+      onConfirmar={() => { setFolha(null); gravar(fecharEReiniciarCartao(cartao, casas, quadras, quem)) }} />}
   </>
 }

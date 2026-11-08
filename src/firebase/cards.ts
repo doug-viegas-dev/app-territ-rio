@@ -1,6 +1,7 @@
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore'
 import { abrirCartao, fecharCartao } from '@/domain/ciclo'
-import type { Cartao, EventoCartao } from '@/domain/types'
+import { podeFecharCartao } from '@/domain/rodada'
+import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
@@ -50,8 +51,9 @@ export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numer
   await updateDoc(doc(db, 'cards', id), { ...d, atualizadoEm: paraTimestamp(Date.now()) })
 }
 
-export async function fecharCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
-  if (demoAtivo()) return demo.fecharCartaoManual(c, usuario)
+export async function fecharCartaoManual(c: Cartao, usuario: Usuario, quadras: Pick<Quadra, 'rodadaAtual'>[]): Promise<void> {
+  if (!podeFecharCartao(quadras)) throw new Error('Rodada aberta')
+  if (demoAtivo()) return demo.fecharCartaoManual(c, usuario, quadras)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.update(doc(db, 'cards', c.id), { ...fecharCartao(c), atualizadoEm: agora })

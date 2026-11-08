@@ -7,7 +7,7 @@ import { AuthProvider, RequerMembro } from '@/features/auth/AuthProvider'
 import { observarUsuario } from '@/firebase/auth'
 import { observarQuadras } from '@/firebase/blocks'
 import { abrirCartaoManual, fecharCartaoManual } from '@/firebase/cards'
-import { observarCasas, recalcularContadores, reiniciarCartao } from '@/firebase/houses'
+import { fecharEReiniciarCartao, observarCasas, recalcularContadores } from '@/firebase/houses'
 import { observarMembro } from '@/firebase/members'
 import CicloAdmin from './CicloAdmin'
 
@@ -15,7 +15,7 @@ vi.mock('@/firebase/auth', () => ({ entrarComGoogle: vi.fn(), sair: vi.fn(), obs
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
 vi.mock('@/firebase/cards', () => ({ abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn() }))
-vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), reiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
+vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), fecharEReiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 1, atualizadoEm: 0 }
 const fechado: Cartao = { ...aberto, estado: 'fechado', ciclo: 3, resolvidas: 3 }
@@ -48,7 +48,7 @@ describe('CicloAdmin', () => {
     vi.mocked(observarCasas).mockImplementation((_c, q, cb) => { cb(casasPorQuadra[q]); return () => {} })
     vi.mocked(abrirCartaoManual).mockResolvedValue()
     vi.mocked(fecharCartaoManual).mockResolvedValue()
-    vi.mocked(reiniciarCartao).mockResolvedValue()
+    vi.mocked(fecharEReiniciarCartao).mockResolvedValue()
     vi.mocked(recalcularContadores).mockResolvedValue()
   })
   afterEach(cleanup)
@@ -87,7 +87,7 @@ describe('CicloAdmin', () => {
   it('fechar chama fecharCartaoManual com o usuário', async () => {
     renderCiclo(aberto)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Fechar cartão' }))
-    expect(fecharCartaoManual).toHaveBeenCalledWith(aberto, { uid: 'u1', nome: 'Maria S.' })
+    expect(fecharCartaoManual).toHaveBeenCalledWith(aberto, { uid: 'u1', nome: 'Maria S.' }, quadras)
   })
 
   it('"Reiniciar território" não reinicia sem marcar a caixa', async () => {
@@ -99,7 +99,7 @@ describe('CicloAdmin', () => {
     const confirmar = within(folha).getByRole('button', { name: 'Reiniciar território' })
     expect(confirmar).toHaveAttribute('aria-disabled', 'true')
     await user.click(confirmar)
-    expect(reiniciarCartao).not.toHaveBeenCalled()
+    expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
   it('confirmando, reinicia com as casas de todas as quadras e o usuário', async () => {
@@ -109,7 +109,7 @@ describe('CicloAdmin', () => {
     const folha = screen.getByRole('alertdialog', { name: 'Reiniciar território' })
     await user.click(within(folha).getByRole('checkbox', { name: 'Entendo que o cartão começa um novo ciclo.' }))
     await user.click(within(folha).getByRole('button', { name: 'Reiniciar território' }))
-    expect(reiniciarCartao).toHaveBeenCalledWith(aberto, [...casasPorQuadra.q1, ...casasPorQuadra.q2], { uid: 'u1', nome: 'Maria S.' })
+    expect(fecharEReiniciarCartao).toHaveBeenCalledWith(aberto, [...casasPorQuadra.q1, ...casasPorQuadra.q2], quadras, { uid: 'u1', nome: 'Maria S.' })
   })
 
   it('cancelar fecha a confirmação sem reiniciar', async () => {
@@ -118,7 +118,7 @@ describe('CicloAdmin', () => {
     await user.click(screen.getByRole('button', { name: 'Reiniciar território' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(reiniciarCartao).not.toHaveBeenCalled()
+    expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
   it('não reinicia com casas faltando (quadra ainda não carregada)', async () => {
@@ -130,7 +130,7 @@ describe('CicloAdmin', () => {
     expect(within(folha).getByText(/ainda estamos carregando todas as casas/)).toBeInTheDocument()
     await user.click(within(folha).getByRole('checkbox', { name: 'Entendo que o cartão começa um novo ciclo.' }))
     await user.click(within(folha).getByRole('button', { name: 'Reiniciar território' }))
-    expect(reiniciarCartao).not.toHaveBeenCalled()
+    expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
   it('avisa quando os contadores parecem errados', () => {

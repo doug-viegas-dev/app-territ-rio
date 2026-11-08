@@ -1,8 +1,8 @@
 import { abrirCartao, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
-import { podeAbrirRodada, podeEncerrarRodada, proximoNumeroRodada } from '@/domain/rodada'
-import { deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
+import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
+import { deltaFaltam, deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
 import { MAPA_DEMO_URL } from './mapa'
 
@@ -85,7 +85,7 @@ function semear(): Estado {
   casa(c12, qb, 'Rua das Acácias', '44', 'pendente')
   casa(c12, qb, 'Rua das Acácias', '46', 'pendente')
 
-  // Falta uma casa: ao registrar a visita, o cartão fecha sozinho.
+  // Falta uma casa: registrar a visita não fecha o cartão; só um administrador fecha.
   const c13 = cartao({ numero: '13', titulo: 'Vila Nova', estado: 'aberto', ciclo: 1, abertoPorNome: 'Bruno Alves', abertoEm: agora - 3 * DIA })
   evento(c13, 'fechado', 'criacao', 30, 'Carlos Lima')
   evento(c13, 'aberto', 'abertura', 3, 'Bruno Alves')
@@ -194,7 +194,8 @@ export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numer
   mudou()
 }
 
-export async function fecharCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
+export async function fecharCartaoManual(c: Cartao, usuario: Usuario, quadras: Pick<Quadra, 'rodadaAtual'>[]): Promise<void> {
+  if (!podeFecharCartao(quadras)) throw new Error('Rodada aberta')
   const atual = cartaoPorId(c.id)
   Object.assign(atual, fecharCartao(atual))
   tocar(atual)
@@ -301,7 +302,7 @@ function exigirValida(d: { numero?: string; descricao?: string }): void {
 export async function criarCasa(
   cartaoId: string,
   quadraId: string,
-  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string },
+  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
   existentes: Casa[],
 ): Promise<string> {
   exigirValida(d)
@@ -317,9 +318,18 @@ export async function criarCasa(
   const id = novoId()
   const numero = textoOuNada(d.numero)
   const descricao = textoOuNada(d.descricao)
-  lista.push({ id, quadraId, rua: d.rua, ...(numero && { numero }), ...(descricao && { descricao }), ordem, status: 'pendente', criadoEm: Date.now() })
-  recontar(estado, cartaoId)
-  tocar(cartaoPorId(cartaoId))
+  const r = d.resultado && d.resultado.status !== 'pendente' ? d.resultado : undefined
+  const status: Status = r ? r.status : 'pendente'
+  const agora = Date.now()
+  lista.push({ id, quadraId, rua: d.rua, ...(numero && { numero }), ...(descricao && { descricao }), ordem, status, criadoEm: agora, ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }) })
+  if (r) estado.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em: agora, porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada }]
+  const cartao = cartaoPorId(cartaoId)
+  const quadra = quadraPorId(cartaoId, quadraId)
+  cartao.totalCasas += 1
+  cartao.resolvidas += deltaResolvidas('pendente', status)
+  quadra.totalCasas += 1
+  if (faltaVisitar(status)) quadra.faltam += 1
+  tocar(cartao)
   mudou()
   return id
 }
@@ -330,8 +340,12 @@ export async function criarCasasEmFaixa(cartaoId: string, quadraId: string, d: {
   const inicio = ordemFim(existentes.filter((c) => c.rua === d.rua).map((c) => c.ordem))
   const lista = listaCasas(cartaoId, quadraId)
   numeros.forEach((numero, k) => lista.push({ id: novoId(), quadraId, rua: d.rua, numero, ordem: inicio + k, status: 'pendente', criadoEm: Date.now() }))
-  recontar(estado, cartaoId)
-  tocar(cartaoPorId(cartaoId))
+  const cartao = cartaoPorId(cartaoId)
+  const quadra = quadraPorId(cartaoId, quadraId)
+  cartao.totalCasas += numeros.length
+  quadra.totalCasas += numeros.length
+  quadra.faltam += numeros.length
+  tocar(cartao)
   mudou()
 }
 
@@ -373,12 +387,17 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
 
 export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa): Promise<void> {
   estado.casas[chaveCasas(cartaoId, quadraId)] = listaCasas(cartaoId, quadraId).filter((c) => c.id !== casa.id)
-  recontar(estado, cartaoId)
-  tocar(cartaoPorId(cartaoId))
+  const cartao = cartaoPorId(cartaoId)
+  const quadra = quadraPorId(cartaoId, quadraId)
+  cartao.totalCasas -= 1
+  if (isResolvida(casa.status)) cartao.resolvidas -= 1
+  quadra.totalCasas -= 1
+  if (faltaVisitar(casa.status)) quadra.faltam -= 1
+  tocar(cartao)
   mudou()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario }): Promise<void> {
   const { quadraId, casa, novoStatus, usuario } = a
   const cartao = cartaoPorId(a.cartao.id)
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
@@ -386,21 +405,19 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; cas
   if (!alvo) throw new Error('Casa não encontrada')
   const agora = Date.now()
   const delta = deltaResolvidas(alvo.status, novoStatus)
+  const faltam = deltaFaltam(alvo.status, novoStatus)
   const obs = a.obs?.trim()
   const chave = `${cartao.id}/${quadraId}/${casa.id}`
-  ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, ...(obs && { obs }) })
+  ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada, ...(obs && { obs }) })
   Object.assign(alvo, { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  const fecha = false as boolean // provisório: Tarefa 5
   cartao.resolvidas += delta
+  quadraPorId(cartao.id, quadraId).faltam += faltam
   tocar(cartao)
-  if (fecha) {
-    Object.assign(cartao, fecharCartao(cartao))
-    registrarEvento(cartao.id, 'fechado', 'fechamento_automatico', usuario)
-  }
   mudou()
 }
 
-export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Usuario): Promise<void> {
+export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quadras: Quadra[], usuario: Usuario): Promise<void> {
+  if (!podeFecharCartao(quadras)) throw new Error('Rodada aberta')
   const ids = new Set(idsParaReiniciar(casas))
   const atual = cartaoPorId(cartao.id)
   for (const c of casas) {
@@ -408,17 +425,17 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
     const real = listaCasas(cartao.id, c.quadraId).find((x) => x.id === c.id)
     if (real) real.status = 'pendente'
   }
-  Object.assign(atual, estadoAposFecharEReiniciar(atual)) // provisório: Tarefa 5
+  Object.assign(atual, estadoAposFecharEReiniciar(atual))
   atual.resolvidas = casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length
+  for (const q of quadras) quadraPorId(cartao.id, q.id).faltam = casas.filter((c) => c.quadraId === q.id && c.status !== 'nao_visitar').length
   tocar(atual)
-  atual.abertoPorNome = usuario.nome
-  atual.abertoEm = Date.now()
-  registrarEvento(cartao.id, 'aberto', 'reinicio', usuario)
+  registrarEvento(cartao.id, 'fechado', 'fechamento_reinicio', usuario)
   mudou()
 }
 
 export async function recalcularContadores(cartaoId: string): Promise<void> {
   recontar(estado, cartaoId)
+  for (const q of estado.quadras[cartaoId] ?? []) recontarQuadra(estado, cartaoId, q.id)
   tocar(cartaoPorId(cartaoId))
   mudou()
 }

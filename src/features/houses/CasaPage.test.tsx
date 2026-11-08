@@ -84,7 +84,7 @@ describe('CasaPage', () => {
     await user.click(screen.getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: aberto, quadraId: 'q3', casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' },
+      cartao: aberto, quadraId: 'q3', rodada: 0, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' },
     })
     expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
   })
