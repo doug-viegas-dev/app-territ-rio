@@ -18,8 +18,8 @@ vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 
 const cartaoBase: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim das Acácias', estado: 'aberto', ciclo: 1, totalCasas: 30, resolvidas: 12, atualizadoEm: 0 }
 const quadras: Quadra[] = [
-  { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1 },
-  { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2 },
+  { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
+  { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
 ]
 
 function preparar(cartao: Cartao | null | 'carregando', lista: Quadra[] = quadras, papel: 'admin' | 'publicador' = 'publicador') {

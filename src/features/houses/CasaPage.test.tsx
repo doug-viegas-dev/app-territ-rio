@@ -17,7 +17,7 @@ vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 0, atualizadoEm: 0 }
-const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1 }
+const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 }
 const casaComNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', numero: '112', descricao: 'muro baixo', ordem: 1, status: 'pendente', criadoEm: 1 }
 const casaSemNumero: Casa = { id: 'h1', rua: 'Rua das Acácias', descricao: 'Casa verde, ao lado da padaria', ordem: 1, status: 'sem_resposta', ultimaVisitaEm: new Date(2026, 10, 2).getTime(), ultimoPor: 'Marcos S.', criadoEm: 1 }
 const visitas: Visita[] = [

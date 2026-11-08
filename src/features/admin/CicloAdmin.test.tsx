@@ -20,8 +20,8 @@ vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), reiniciarCartao: v
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 1, atualizadoEm: 0 }
 const fechado: Cartao = { ...aberto, estado: 'fechado', ciclo: 3, resolvidas: 3 }
 const quadras: Quadra[] = [
-  { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1 },
-  { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2 },
+  { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
+  { id: 'q2', rotulo: 'Quadra 2', ruas: ['Rua B'], ordem: 2, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
 ]
 const casasPorQuadra: Record<string, Casa[]> = {
   q1: [

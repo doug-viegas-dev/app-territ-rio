@@ -1,5 +1,5 @@
 import { collection, deleteField, doc, getDocsFromServer, increment, onSnapshot, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
-import { deveFecharAuto, fecharCartao, idsParaReiniciar, podeRegistrar, reiniciarCartaoEstado } from '@/domain/ciclo'
+import { estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
 import { deltaResolvidas, isResolvida } from '@/domain/status'
@@ -153,7 +153,7 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; cas
     ...(obs && { obs }),
   })
   batch.update(doc(casasRef(cartao.id, quadraId), casa.id), { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  const fecha = deveFecharAuto({ estado: cartao.estado, totalCasas: cartao.totalCasas, resolvidas: cartao.resolvidas + delta })
+  const fecha = false as boolean // provisório: Tarefa 5
   batch.update(cartaoRef(cartao.id), { resolvidas: increment(delta), atualizadoEm: agora, ...(fecha && fecharCartao(cartao)) })
   if (fecha) {
     batch.set(doc(collection(cartaoRef(cartao.id), 'eventos')), {
@@ -184,7 +184,7 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
   const ultimo = lotes.length ? lotes[lotes.length - 1] : writeBatch(db)
   if (!lotes.length) lotes.push(ultimo)
   ultimo.update(cartaoRef(cartao.id), {
-    ...reiniciarCartaoEstado(cartao),
+    ...estadoAposFecharEReiniciar(cartao), // provisório: Tarefa 5
     resolvidas: casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length,
     atualizadoEm: agora,
     abertoPorNome: usuario.nome,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Cartao, Casa, EventoCartao } from '@/domain/types'
-import { observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, registrarVisita, reiniciarBanco } from './banco'
+import type { Cartao, Casa } from '@/domain/types'
+import { observarCartao, observarCartoes, observarCasas, observarQuadras, registrarVisita, reiniciarBanco } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -28,15 +28,14 @@ describe('banco de demonstração', () => {
     expect(depois.resolvidas).toBe(cartao.resolvidas + 1)
   })
 
-  it('fecha o cartão sozinho quando a última casa é resolvida', async () => {
+  it('não fecha o cartão sozinho quando a última casa é resolvida', async () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const pendente = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb)).find((c) => c.status === 'pendente') as Casa
     await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', usuario })
     const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
-    expect(depois.estado).toBe('fechado')
-    expect(depois.ciclo).toBe(cartao.ciclo + 1)
-    expect(ler<EventoCartao[]>((cb) => observarEventos(cartao.id, cb))[0].motivo).toBe('fechamento_automatico')
+    expect(depois.estado).toBe('aberto')
+    expect(depois.ciclo).toBe(cartao.ciclo)
   })
 
   it('não registra visita em cartão fechado', async () => {

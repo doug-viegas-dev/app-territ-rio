@@ -25,7 +25,7 @@ export function cartaoDe(id: string, d: Dados): Cartao {
 }
 
 export function quadraDe(id: string, d: Dados): Quadra {
-  return { id, rotulo: String(d.rotulo ?? ''), ruas: Array.isArray(d.ruas) ? d.ruas.map(String) : [], ordem: Number(d.ordem ?? 0) }
+  return { id, rotulo: String(d.rotulo ?? ''), ruas: Array.isArray(d.ruas) ? d.ruas.map(String) : [], ordem: Number(d.ordem ?? 0), totalCasas: Number(d.totalCasas ?? 0), faltam: Number(d.faltam ?? 0), rodadasTotal: Number(d.rodadasTotal ?? 0) }
 }
 
 const STATUS: Status[] = ['pendente', 'sem_resposta', 'falado', 'estudo', 'nao_visitar']

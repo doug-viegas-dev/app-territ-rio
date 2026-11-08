@@ -12,7 +12,7 @@ vi.mock('@/firebase/blocks', () => ({ adicionarRua: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ criarCasa: vi.fn(), criarCasasEmFaixa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 
-const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1 }
+const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 }
 const casaA: Casa = { id: 'h1', rua: 'Rua das Acácias', numero: '120', ordem: 1, status: 'pendente', criadoEm: 1 }
 const casaB: Casa = { id: 'h2', rua: 'Rua das Acácias', numero: '124', ordem: 2, status: 'pendente', criadoEm: 2 }
 

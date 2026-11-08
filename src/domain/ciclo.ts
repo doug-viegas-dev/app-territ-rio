@@ -1,22 +1,20 @@
 import { ordenarCasas } from './ordem'
 import type { Casa, Cartao } from './types'
 
-export function deveFecharAuto(c: Pick<Cartao, 'estado' | 'totalCasas' | 'resolvidas'>): boolean {
-  return c.estado === 'aberto' && c.totalCasas > 0 && c.resolvidas === c.totalCasas
-}
-export function fecharCartao(c: Cartao): Pick<Cartao, 'estado' | 'ciclo'> {
-  return { estado: 'fechado', ciclo: c.ciclo + 1 }
+/** Fechar não sobe o ciclo: quem sobe é o fechamento com reinício. */
+export function fecharCartao(c: Cartao): Pick<Cartao, 'estado'> {
+  void c
+  return { estado: 'fechado' }
 }
 export function abrirCartao(c: Cartao): Pick<Cartao, 'estado' | 'ciclo'> {
   return { estado: 'aberto', ciclo: c.ciclo }
 }
-/** Reiniciar sempre começa um ciclo novo: cartão fechado já subiu o ciclo ao fechar; cartão aberto sobe agora. */
-export function reiniciarCartaoEstado(c: Pick<Cartao, 'estado' | 'ciclo'>): Pick<Cartao, 'estado' | 'ciclo'> {
-  return { estado: 'aberto', ciclo: c.estado === 'aberto' ? c.ciclo + 1 : c.ciclo }
+export function estadoAposFecharEReiniciar(c: Pick<Cartao, 'ciclo'>): Pick<Cartao, 'estado' | 'ciclo'> {
+  return { estado: 'fechado', ciclo: c.ciclo + 1 }
 }
-/** Contadores que não batem com o que o fechamento automático garante: pedem "Recalcular contadores". */
+/** Contadores fora do intervalo possível: pedem "Recalcular contadores". */
 export function contadoresSuspeitos(c: Pick<Cartao, 'estado' | 'totalCasas' | 'resolvidas'>): boolean {
-  return c.resolvidas > c.totalCasas || c.resolvidas < 0 || (c.estado === 'aberto' && c.totalCasas > 0 && c.resolvidas === c.totalCasas)
+  return c.resolvidas > c.totalCasas || c.resolvidas < 0
 }
 export function podeRegistrar(c: Pick<Cartao, 'estado'>): boolean { return c.estado === 'aberto' }
 export function listaDeTrabalho(casas: Casa[]): { pendentes: Casa[]; destacadas: Casa[] } {

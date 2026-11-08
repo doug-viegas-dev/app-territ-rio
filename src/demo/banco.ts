@@ -1,4 +1,4 @@
-import { abrirCartao, deveFecharAuto, fecharCartao, idsParaReiniciar, podeRegistrar, reiniciarCartaoEstado } from '@/domain/ciclo'
+import { abrirCartao, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
 import { deltaResolvidas, isResolvida } from '@/domain/status'
@@ -38,7 +38,7 @@ function semear(): Estado {
   }
   function quadra(cartaoId: string, rotulo: string, ruas: string[]): string {
     const id = novoId()
-    e.quadras[cartaoId].push({ id, rotulo, ruas, ordem: e.quadras[cartaoId].length + 1 })
+    e.quadras[cartaoId].push({ id, rotulo, ruas, ordem: e.quadras[cartaoId].length + 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 })
     e.casas[`${cartaoId}/${id}`] = []
     return id
   }
@@ -210,7 +210,7 @@ export function observarQuadras(cartaoId: string, cb: (q: Quadra[]) => void): ()
 
 export async function criarQuadra(cartaoId: string, d: { rotulo: string; ruas: string[] }): Promise<string> {
   const id = novoId()
-  ;(estado.quadras[cartaoId] ??= []).push({ id, rotulo: d.rotulo, ruas: [...d.ruas], ordem: Date.now() })
+  ;(estado.quadras[cartaoId] ??= []).push({ id, rotulo: d.rotulo, ruas: [...d.ruas], ordem: Date.now(), totalCasas: 0, faltam: 0, rodadasTotal: 0 })
   estado.casas[chaveCasas(cartaoId, id)] = []
   mudou()
   return id
@@ -339,7 +339,7 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; cas
   const chave = `${cartao.id}/${quadraId}/${casa.id}`
   ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, ...(obs && { obs }) })
   Object.assign(alvo, { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  const fecha = deveFecharAuto({ estado: cartao.estado, totalCasas: cartao.totalCasas, resolvidas: cartao.resolvidas + delta })
+  const fecha = false as boolean // provisório: Tarefa 5
   cartao.resolvidas += delta
   tocar(cartao)
   if (fecha) {
@@ -357,7 +357,7 @@ export async function reiniciarCartao(cartao: Cartao, casas: Casa[], usuario: Us
     const real = listaCasas(cartao.id, c.quadraId).find((x) => x.id === c.id)
     if (real) real.status = 'pendente'
   }
-  Object.assign(atual, reiniciarCartaoEstado(atual))
+  Object.assign(atual, estadoAposFecharEReiniciar(atual)) // provisório: Tarefa 5
   atual.resolvidas = casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length
   tocar(atual)
   atual.abertoPorNome = usuario.nome

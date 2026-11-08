@@ -17,7 +17,7 @@ vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 
 const cartaoAberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 1, totalCasas: 8, resolvidas: 3, atualizadoEm: 0 }
-const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1 }
+const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 }
 let n = 0
 const casa = (p: Partial<Casa> & { status?: Status }): Casa => ({
   id: `h${++n}`, rua: 'Rua das Acácias', ordem: n, status: 'pendente', criadoEm: n, ...p,

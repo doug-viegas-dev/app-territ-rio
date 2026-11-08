@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deltaResolvidas, isResolvida } from './status'
+import { deltaFaltam, deltaResolvidas, faltaVisitar, isResolvida } from './status'
 
 describe('status', () => {
   it('identifica casas resolvidas', () => {
@@ -11,5 +11,13 @@ describe('status', () => {
     expect(deltaResolvidas('pendente', 'falado')).toBe(1)
     expect(deltaResolvidas('falado', 'sem_resposta')).toBe(-1)
     expect(deltaResolvidas('falado', 'estudo')).toBe(0)
+  })
+  it('faltaVisitar é verdadeiro só para pendente e sem_resposta', () => {
+    expect((['pendente', 'sem_resposta', 'falado', 'estudo', 'nao_visitar'] as const).map(faltaVisitar)).toEqual([true, true, false, false, false])
+  })
+  it('calcula a variação de faltam', () => {
+    expect(deltaFaltam('pendente', 'falado')).toBe(-1)
+    expect(deltaFaltam('falado', 'sem_resposta')).toBe(1)
+    expect(deltaFaltam('pendente', 'sem_resposta')).toBe(0)
   })
 })
