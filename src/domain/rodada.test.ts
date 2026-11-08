@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia } from './rodada'
+import { contadoresDaQuadraSuspeitos, podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia } from './rodada'
 
 const rodadaAtual = { id: 'r1', numero: 1, porNome: 'Ana', em: new Date(2026, 10, 8, 10).getTime() }
+
+describe('contadoresDaQuadraSuspeitos', () => {
+  it('é verdadeiro com faltam negativo, faltam maior que o total ou total negativo', () => {
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 4, faltam: -1 })).toBe(true)
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 4, faltam: 5 })).toBe(true)
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: -1, faltam: 0 })).toBe(true)
+  })
+  it('é falso com contagem normal, inclusive vazia ou completa', () => {
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 4, faltam: 2 })).toBe(false)
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 4, faltam: 4 })).toBe(false)
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 4, faltam: 0 })).toBe(false)
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 0, faltam: 0 })).toBe(false)
+  })
+  it('quadra semContadores não conta como suspeita aqui', () => {
+    expect(contadoresDaQuadraSuspeitos({ totalCasas: 0, faltam: -3, semContadores: true })).toBe(false)
+  })
+})
 
 describe('rodada', () => {
   it('só abre rodada quando não há uma aberta, e só encerra quando há', () => {

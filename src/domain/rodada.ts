@@ -1,5 +1,9 @@
 import type { Cartao, Quadra, RodadaAtual } from './types'
 
+/** Quadra com contadores, mas com números impossíveis: pede "Recalcular contadores". `semContadores` é outro caso. */
+export function contadoresDaQuadraSuspeitos(q: Pick<Quadra, 'totalCasas' | 'faltam' | 'semContadores'>): boolean {
+  return !q.semContadores && (q.faltam < 0 || q.faltam > q.totalCasas || q.totalCasas < 0)
+}
 export function podeAbrirRodada(q: Pick<Quadra, 'rodadaAtual'>): boolean { return !q.rodadaAtual }
 export function podeEncerrarRodada(q: Pick<Quadra, 'rodadaAtual'>): boolean { return !!q.rodadaAtual }
 export function proximoNumeroRodada(q: Pick<Quadra, 'rodadasTotal'>): number { return q.rodadasTotal + 1 }

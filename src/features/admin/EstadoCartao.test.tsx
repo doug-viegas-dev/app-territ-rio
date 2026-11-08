@@ -190,6 +190,17 @@ describe('EstadoCartao', () => {
     expect(aviso.closest('[role="status"]')).not.toBeNull()
   })
 
+  it('quadra com contagem impossível mostra o aviso de recalcular', () => {
+    renderEstado(aberto, [{ ...quadras[0], totalCasas: 3, faltam: 5 }, quadras[1]])
+    expect(screen.getByText(/Recalcule os contadores/).closest('[role="status"]')).not.toBeNull()
+  })
+
+  it('quadra com contagem impossível e outra sem contadores mostram um aviso só', () => {
+    renderEstado(aberto, [{ ...quadras[0], totalCasas: 3, faltam: 5 }, { ...quadras[1], semContadores: true }])
+    expect(screen.getAllByText(/Recalcule os contadores/)).toHaveLength(1)
+    expect(screen.getByText(/Recalcule os contadores/).closest('[role="status"]')).not.toBeNull()
+  })
+
   it('sem quadras sem contadores não mostra o aviso de recalcular', () => {
     renderEstado(aberto)
     expect(screen.queryByText(/Recalcule os contadores/)).not.toBeInTheDocument()
