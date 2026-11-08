@@ -24,12 +24,13 @@ function useCasasDoCartao(cartaoId: string, quadras: Quadra[]): Casa[] {
   return quadras.flatMap((q) => porQuadra[q.id] ?? [])
 }
 
-function ConfirmarReinicio({ cartao, casas, onFechar, onConfirmar }: { cartao: Cartao; casas: Casa[]; onFechar: () => void; onConfirmar: () => void }) {
+function ConfirmarReinicio({ cartao, casas, podeFechar, onFechar, onConfirmar }: { cartao: Cartao; casas: Casa[]; podeFechar: boolean; onFechar: () => void; onConfirmar: () => void }) {
   const [entendi, setEntendi] = useState(false)
   // Só reinicia com todas as casas na mão: uma lista parcial deixaria quadras sem reiniciar e o contador errado.
   const carregando = casas.length < cartao.totalCasas
   const naoVisitar = casas.filter((c) => c.status === 'nao_visitar').length
   const reiniciadas = casas.length - naoVisitar
+  const liberado = entendi && !carregando && podeFechar
 
   return <div className="veu">
     <div className="folha" role="alertdialog" aria-label="Fechar e reiniciar">
@@ -41,13 +42,14 @@ function ConfirmarReinicio({ cartao, casas, onFechar, onConfirmar }: { cartao: C
         {' '}O histórico de visitas continua guardado. Esta ação não tem desfazer.
       </p>
       <p>O cartão fica <b>fechado</b> depois de reiniciar. Para registrar visitas de novo, um administrador precisa abri-lo.</p>
+      {!podeFechar && <p role="status" style={{ color: 'var(--texto-suave)' }}>Encerre as rodadas abertas antes de fechar.</p>}
       {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({casas.length} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem. Se o total estiver errado, use “Recalcular contadores”.</p>}
       <button type="button" role="checkbox" aria-checked={entendi} className="caixa-ok" onClick={() => setEntendi(!entendi)}>
         <span className={entendi ? 'marca' : 'marca vazia'}>{entendi && <Icone nome="check" className="ic ic-20" />}</span>
         <span>Entendo que o cartão começa um novo ciclo.</span>
       </button>
       <div className="pilha">
-        <button type="button" className="btn perigo" aria-disabled={entendi && !carregando ? undefined : true} onClick={() => { if (entendi && !carregando) onConfirmar() }}>Fechar e reiniciar</button>
+        <button type="button" className="btn perigo" aria-disabled={liberado ? undefined : true} onClick={() => { if (liberado) onConfirmar() }}>Fechar e reiniciar</button>
         <button type="button" className="btn secundario" onClick={onFechar}>Cancelar</button>
       </div>
     </div>
@@ -100,7 +102,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
     </div>
 
     {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} onFechar={() => setFolha(null)} />}
-    {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} casas={casas} onFechar={() => setFolha(null)}
+    {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} casas={casas} podeFechar={podeFechar} onFechar={() => setFolha(null)}
       onConfirmar={() => { setFolha(null); gravar(fecharEReiniciarCartao(cartao, casas, quadras, quem)) }} />}
   </>
 }

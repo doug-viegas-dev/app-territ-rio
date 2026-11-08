@@ -32,13 +32,15 @@ const casasPorQuadra: Record<string, Casa[]> = {
 const usuario = { uid: 'u1', nome: 'Maria S.' }
 const AVISO = 'Encerre as rodadas abertas antes de fechar.'
 
+const arvore = (cartao: Cartao, qs: Quadra[] | null) => (
+  <MemoryRouter>
+    <AuthProvider><RequerMembro papel="admin"><EstadoCartao cartao={cartao} quadras={qs} /></RequerMembro></AuthProvider>
+  </MemoryRouter>
+)
+
 function renderEstado(cartao: Cartao, qs: Quadra[] | null = quadras, papel: 'admin' | 'publicador' = 'admin') {
   vi.mocked(observarMembro).mockImplementation((_email, cb) => { cb({ papel, ativo: true, nome: 'Maria S.' }); return () => {} })
-  return render(
-    <MemoryRouter>
-      <AuthProvider><RequerMembro papel="admin"><EstadoCartao cartao={cartao} quadras={qs} /></RequerMembro></AuthProvider>
-    </MemoryRouter>,
-  )
+  return render(arvore(cartao, qs))
 }
 
 async function abrirReinicio(user: ReturnType<typeof userEvent.setup>) {
@@ -81,6 +83,20 @@ describe('EstadoCartao', () => {
     await user.click(within(folha).getByRole('button', { name: 'Fechar e reiniciar' }))
     expect(fecharEReiniciarCartao).toHaveBeenCalledWith(aberto, [...casasPorQuadra.q1, ...casasPorQuadra.q2], quadras, usuario)
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('com a folha aberta, uma rodada aberta depois bloqueia a confirmação e mostra o aviso', async () => {
+    const { rerender } = renderEstado(aberto)
+    const user = userEvent.setup()
+    const folha = await abrirReinicio(user)
+    await user.click(within(folha).getByRole('checkbox', { name: 'Entendo que o cartão começa um novo ciclo.' }))
+    expect(within(folha).queryByText(AVISO)).not.toBeInTheDocument()
+    rerender(arvore(aberto, comRodadaAberta))
+    const confirmar = within(screen.getByRole('alertdialog', { name: 'Fechar e reiniciar' })).getByRole('button', { name: 'Fechar e reiniciar' })
+    expect(confirmar).toHaveAttribute('aria-disabled', 'true')
+    expect(within(screen.getByRole('alertdialog')).getByText(AVISO)).toBeInTheDocument()
+    await user.click(confirmar)
+    expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
   it('cancelar fecha a confirmação sem reiniciar', async () => {
