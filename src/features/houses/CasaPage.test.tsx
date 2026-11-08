@@ -223,6 +223,29 @@ describe('CasaPage', () => {
     expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: true })
   })
 
+  it('sem a quadra carregada, Excluir casa fica desativado e não abre a confirmação nem grava', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([]); return () => {} })
+    renderPagina()
+    const botao = screen.getByRole('button', { name: 'Excluir casa' })
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.setup().click(botao)
+    expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
+    expect(excluirCasa).not.toHaveBeenCalled()
+  })
+
+  it('se a quadra some com a confirmação aberta, confirmar a exclusão não grava', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    let enviarQuadras: (q: Quadra[]) => void = () => {}
+    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { enviarQuadras = cb; cb([quadra]); return () => {} })
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    act(() => enviarQuadras([]))
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).not.toHaveBeenCalled()
+  })
+
   it('cancelar a confirmação não exclui', async () => {
     preparar(casaComNumero, { papel: 'admin' })
     renderPagina()

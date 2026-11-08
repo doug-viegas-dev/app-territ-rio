@@ -113,8 +113,9 @@ export default function CasaPage() {
 
   /** Não espera a escrita: offline ela só resolve com rede. */
   function excluir() {
-    if (!casa) return
-    excluirCasa(cartaoId, quadraId, casa, { quadraSemContadores: quadra?.semContadores === true }).catch(() => {})
+    // Sem a quadra não dá para saber se ela tem contadores: não apaga a casa às cegas.
+    if (!casa || !quadra) return
+    excluirCasa(cartaoId, quadraId, casa, { quadraSemContadores: quadra.semContadores === true }).catch(() => {})
     navigate(voltar.voltarPara, { replace: true })
   }
 
@@ -182,7 +183,7 @@ export default function CasaPage() {
       <HistoricoVisitas visitas={visitas} />
 
       {ehAdmin && aberto && <div style={{ marginTop: 28 }}>
-        <button type="button" className="btn perigo" onClick={() => setExcluindo(true)}>Excluir casa</button>
+        <button type="button" className="btn perigo" aria-disabled={quadra ? undefined : true} onClick={() => { if (quadra) setExcluindo(true) }}>Excluir casa</button>
       </div>}
     </div>
 
