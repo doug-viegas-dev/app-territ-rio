@@ -5,6 +5,7 @@
   --cor-principal: #5662B5;
   --cor-secundaria: #E6E9F8;
   --cor-destaque: #E5AD50;
+  --altura-barra: 224px;
   --cor-fundo: #F5F7FD;
   --cor-texto: #232A40;
   --cor-fundo-escuro: #171C28;
@@ -98,7 +99,7 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 }
 .rolagem { flex: 1; overflow-y: auto; padding: 16px var(--gutter) 24px; }
 .rolagem.com-nav { padding-bottom: 24px; }
-.rolagem.com-barra { padding-bottom: 280px; }
+.rolagem.com-barra { padding-bottom: calc(var(--altura-barra) + 56px + 32px); }
 .rolagem.centro { display: flex; flex-direction: column; justify-content: center; }
 
 /* ---------- ícones ---------- */
@@ -217,12 +218,13 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 
 /* ---------- botão flutuante + casa ---------- */
 .fab {
-  position: absolute; right: 16px; bottom: 16px; min-height: 56px; padding: 0 22px 0 16px; border-radius: 28px;
-  background: var(--cor-destaque); color: #252C3B; font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 8px; z-index: 3;
-  box-shadow: 0 8px 20px rgba(150, 100, 20, .30);
+  position: absolute; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--cor-destaque); color: #252C3B; display: flex; align-items: center; justify-content: center; z-index: 3;
+  box-shadow: 0 8px 20px rgba(150, 100, 20, .30), 0 0 0 3px var(--cor-fundo);
 }
 .fab .ic { color: #252C3B; }
-.fab.sobre-barra { bottom: 208px; }
+/* acima da barra de status (altura aproximada em --altura-barra) */
+.fab.sobre-barra { bottom: calc(var(--altura-barra) + 16px); }
 
 /* ---------- listas ---------- */
 .titulo-secao { font-size: 18px; font-weight: 600; margin: 24px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }

@@ -168,7 +168,7 @@ export default function QuadraPage() {
         </div>)}
       </div>
 
-      {aberto && <button type="button" className="fab sobre-barra" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="mais" />casa</button>}
+      {aberto && <button type="button" className="fab sobre-barra" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-28" /></button>}
 
       <section className="barra-fixa" aria-label="Registrar visita">
         <div className="quem">

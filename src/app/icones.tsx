@@ -15,6 +15,7 @@ const simbolos =
   `<symbol id="i-voltar" viewBox="0 0 24 24"><path ${forma} d="M15 5l-7 7 7 7"/></symbol>` +
   `<symbol id="i-chev" viewBox="0 0 24 24"><path ${forma} d="M9 5l7 7-7 7"/></symbol>` +
   `<symbol id="i-mais" viewBox="0 0 24 24"><path ${forma} stroke-width="2.6" d="M12 5v14M5 12h14"/></symbol>` +
+  `<symbol id="i-casa-mais" viewBox="0 0 24 24"><path ${forma} d="M3 11.5L11 4l8 7.5M5.5 10v9.5h5M16.5 13.5v7M13 17h7"/></symbol>` +
   `<symbol id="i-fechar" viewBox="0 0 24 24"><path ${forma} d="M6 6l12 12M18 6L6 18"/></symbol>` +
   `<symbol id="i-check" viewBox="0 0 24 24"><path ${forma} stroke-width="2.6" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>` +
   `<symbol id="i-ordem" viewBox="0 0 24 24"><path ${forma} d="M8 4v16M8 4L4.5 7.5M8 4l3.5 3.5M16 20V4m0 16l-3.5-3.5M16 20l3.5-3.5"/></symbol>` +

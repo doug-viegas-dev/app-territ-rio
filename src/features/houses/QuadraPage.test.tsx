@@ -77,6 +77,14 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
   })
 
+  it('o botão de adicionar casa mostra só o ícone e tem nome acessível', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const botao = screen.getByRole('button', { name: 'Adicionar casa' })
+    expect(botao.textContent).toBe('')
+    expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
+  })
+
   it('só existe alça de arrastar depois de tocar em "Reordenar"; "Concluir" volta à quadra', async () => {
     preparar([casa({ numero: '100' }), casa({ numero: '104' })])
     renderPagina()
