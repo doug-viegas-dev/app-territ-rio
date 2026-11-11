@@ -1,4 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { USUARIO_DEMO } from '@/demo/modo'
+import { lerSessaoSalva, limparSessaoSalva, salvarSessao } from './sessaoSalva'
 import { observarUsuario, type UsuarioAutenticado } from '@/firebase/auth'
 import { observarMembro, type MembroObservado } from '@/firebase/members'
 import type { Papel } from '@/domain/types'
@@ -14,12 +16,22 @@ type Sessao = { carregando: boolean; semResposta?: boolean; usuario: UsuarioAute
 const SessaoContext = createContext<Sessao | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [usuario, setUsuario] = useState<UsuarioAutenticado | null>(null)
-  const [membro, setMembro] = useState<MembroObservado | null>(null)
-  const [carregando, setCarregando] = useState(true)
+  // Com sessão salva o app abre na hora (sem esqueleto); a resposta do servidor corrige depois.
+  const [salva] = useState(lerSessaoSalva)
+  const [usuario, setUsuario] = useState<UsuarioAutenticado | null>(salva?.usuario ?? null)
+  const [membro, setMembro] = useState<MembroObservado | null>(salva?.membro ?? null)
+  const [carregando, setCarregando] = useState(!salva)
   const [semResposta, setSemResposta] = useState(false)
+  const uidAtual = useRef<string | null>(salva?.usuario.uid ?? null)
 
   useEffect(() => observarUsuario((atual) => {
+    if (atual && atual.uid === uidAtual.current) {
+      // Mesmo usuário que já está na tela (sessão salva confirmada): não volta ao esqueleto.
+      setUsuario(atual)
+      return
+    }
+    uidAtual.current = atual?.uid ?? null
+    if (!atual) limparSessaoSalva()
     setUsuario(atual)
     setMembro(null)
     setCarregando(Boolean(atual))
@@ -35,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!usuario?.email) return
-    return observarMembro(usuario.email, (atual) => {
+    const dono = usuario
+    return observarMembro(dono.email, (atual) => {
+      if (dono.uid !== USUARIO_DEMO.uid) salvarSessao(dono, atual)
       setMembro(atual)
       setCarregando(false)
       setSemResposta(false)

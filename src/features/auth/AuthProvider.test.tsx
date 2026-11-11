@@ -34,6 +34,7 @@ describe('RequerMembro', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    window.localStorage.clear()
     vi.mocked(observarUsuario).mockImplementation((cb) => {
       cb(null)
       return () => {}
@@ -102,6 +103,42 @@ describe('RequerMembro', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('abre na hora, sem esqueleto, com a sessão salva e o servidor ainda sem responder', () => {
+    prepararSessao({ papel: 'publicador', ativo: true, nome: 'Maria' })
+    renderProtegido()
+    cleanup()
+    vi.mocked(observarUsuario).mockImplementation(() => () => {})
+    vi.mocked(observarMembro).mockImplementation(() => () => {})
+    renderProtegido()
+    expect(screen.getByText('Conteúdo protegido')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Carregando' })).not.toBeInTheDocument()
+  })
+
+  it('com sessão salva, a confirmação do mesmo usuário não volta ao esqueleto', () => {
+    prepararSessao({ papel: 'publicador', ativo: true, nome: 'Maria' })
+    renderProtegido()
+    cleanup()
+    let confirmar: (u: typeof usuario | null) => void = () => {}
+    vi.mocked(observarUsuario).mockImplementation((cb) => { confirmar = cb; return () => {} })
+    vi.mocked(observarMembro).mockImplementation(() => () => {})
+    renderProtegido()
+    act(() => confirmar(usuario))
+    expect(screen.getByText('Conteúdo protegido')).toBeInTheDocument()
+  })
+
+  it('com sessão salva, se o servidor disser que não há usuário, volta ao login', () => {
+    prepararSessao({ papel: 'publicador', ativo: true, nome: 'Maria' })
+    renderProtegido()
+    cleanup()
+    let confirmar: (u: typeof usuario | null) => void = () => {}
+    vi.mocked(observarUsuario).mockImplementation((cb) => { confirmar = cb; return () => {} })
+    vi.mocked(observarMembro).mockImplementation(() => () => {})
+    renderProtegido()
+    act(() => confirmar(null))
+    expect(screen.getByRole('button', { name: 'Entrar com Google' })).toBeInTheDocument()
+    expect(window.localStorage.length).toBe(0)
   })
 
   it('inicia a autenticação ao tocar em Entrar com Google', async () => {
