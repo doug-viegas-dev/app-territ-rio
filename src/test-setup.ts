@@ -6,3 +6,4 @@ beforeEach(() => { window.localStorage.clear() })
 
 // As telas só observam a fila de escritas; nos testes de tela não há Firestore.
 vi.mock('@/firebase/sincronia', () => ({ observarSincronizando: () => () => {} }))
+vi.mock('@/firebase/offline', () => ({ baixarTudo: () => Promise.resolve() }))

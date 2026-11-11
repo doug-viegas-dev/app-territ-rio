@@ -3,6 +3,7 @@ import { USUARIO_DEMO } from '@/demo/modo'
 import { lerSessaoSalva, limparSessaoSalva, salvarSessao } from './sessaoSalva'
 import { observarUsuario, type UsuarioAutenticado } from '@/firebase/auth'
 import { observarMembro, type MembroObservado } from '@/firebase/members'
+import { baixarTudo } from '@/firebase/offline'
 import type { Papel } from '@/domain/types'
 import LoginPage from './LoginPage'
 import { TelaCarregando } from '@/app/Carregando'
@@ -55,6 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSemResposta(false)
     })
   }, [usuario?.email])
+
+  // Com acesso liberado e rede, guarda tudo no aparelho para o app abrir completo sem internet.
+  const ativo = membro?.ativo === true
+  const admin = membro?.papel === 'admin'
+  useEffect(() => {
+    if (!ativo) return
+    const baixar = (forcar = false) => { if (navigator.onLine) void baixarTudo({ admin }, forcar) }
+    baixar()
+    const aoVoltar = () => baixar(true)
+    const aoMostrar = () => { if (document.visibilityState === 'visible') baixar() }
+    window.addEventListener('online', aoVoltar)
+    document.addEventListener('visibilitychange', aoMostrar)
+    return () => {
+      window.removeEventListener('online', aoVoltar)
+      document.removeEventListener('visibilitychange', aoMostrar)
+    }
+  }, [ativo, admin])
 
   return <SessaoContext.Provider value={{ carregando, semResposta, usuario, membro }}>{children}</SessaoContext.Provider>
 }

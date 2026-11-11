@@ -1,4 +1,4 @@
-import { collection, deleteField, doc, getDocsFromServer, increment, onSnapshot, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
+import { collection, deleteField, doc, getDocsFromServer, increment, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
 import { estadoAposFecharEReiniciar, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
@@ -8,6 +8,7 @@ import type { Cartao, Casa, Quadra, Status, Visita } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
+import { ouvirComCache } from './cache'
 import { casaDe, paraTimestamp, visitaDe } from './converters'
 
 type Usuario = { uid: string; nome: string }
@@ -21,7 +22,7 @@ const quadraRef = (cartaoId: string, quadraId: string) => doc(db, 'cards', carta
 /** `semDados` é verdadeiro quando a lista veio vazia só do cache: sem rede, isso não prova que a quadra não tem casas. */
 export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[], semDados?: boolean) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarCasas(cartaoId, quadraId, cb)
-  return onSnapshot(
+  return ouvirComCache(
     casasRef(cartaoId, quadraId),
     (snap) => cb(ordenarCasas(snap.docs.map((d) => casaDe(d.id, quadraId, d.data()))), snap.empty && snap.metadata.fromCache),
     onErro,
@@ -31,7 +32,7 @@ export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[]
 export function observarVisitas(cartaoId: string, quadraId: string, casaId: string, cb: (v: Visita[]) => void): () => void {
   if (demoAtivo()) return demo.observarVisitas(cartaoId, quadraId, casaId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses', casaId, 'visits'), orderBy('em', 'desc'))
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => visitaDe(d.id, d.data()))))
+  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => visitaDe(d.id, d.data()))))
 }
 
 function exigirValida(d: { numero?: string; descricao?: string }): void {

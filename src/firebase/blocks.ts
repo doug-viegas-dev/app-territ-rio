@@ -1,14 +1,15 @@
-import { arrayUnion, collection, doc, getDoc, onSnapshot, orderBy, query, addDoc, updateDoc } from 'firebase/firestore'
+import { arrayUnion, collection, doc, getDoc, orderBy, query, addDoc, updateDoc } from 'firebase/firestore'
 import type { Quadra } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
+import { ouvirComCache } from './cache'
 import { quadraDe } from './converters'
 
 export function observarQuadras(cartaoId: string, cb: (q: Quadra[]) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarQuadras(cartaoId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks'), orderBy('ordem'))
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => quadraDe(d.id, d.data()))), onErro)
+  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => quadraDe(d.id, d.data()))), onErro)
 }
 
 export async function criarQuadra(cartaoId: string, d: { rotulo: string; ruas: string[] }): Promise<string> {

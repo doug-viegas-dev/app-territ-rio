@@ -1,9 +1,10 @@
-import { collection, deleteField, doc, onSnapshot, orderBy, query, writeBatch } from 'firebase/firestore'
+import { collection, deleteField, doc, orderBy, query, writeBatch } from 'firebase/firestore'
 import { podeAbrirRodada, podeEncerrarRodada, proximoNumeroRodada } from '@/domain/rodada'
 import type { Quadra, Rodada } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
+import { ouvirComCache } from './cache'
 import { paraTimestamp, rodadaDe } from './converters'
 
 type Usuario = { uid: string; nome: string }
@@ -11,7 +12,7 @@ type Usuario = { uid: string; nome: string }
 export function observarRodadas(cartaoId: string, quadraId: string, cb: (r: Rodada[]) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarRodadas(cartaoId, quadraId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks', quadraId, 'rodadas'), orderBy('numero', 'desc'))
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => rodadaDe(d.id, d.data()))), onErro)
+  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => rodadaDe(d.id, d.data()))), onErro)
 }
 
 export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
