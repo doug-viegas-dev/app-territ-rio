@@ -1,17 +1,17 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, EventoCartao } from '@/domain/types'
 import { AuthProvider, RequerMembro } from '@/features/auth/AuthProvider'
 import { observarUsuario } from '@/firebase/auth'
-import { observarCartoes, observarEventos } from '@/firebase/cards'
+import { editarEvento, excluirEvento, observarCartoes, observarEventos } from '@/firebase/cards'
 import { observarMembro } from '@/firebase/members'
 import HistoricoCartaoPage from './HistoricoCartaoPage'
 
 vi.mock('@/firebase/auth', () => ({ entrarComGoogle: vi.fn(), sair: vi.fn(), observarUsuario: vi.fn() }))
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
-vi.mock('@/firebase/cards', () => ({ observarCartoes: vi.fn(), observarEventos: vi.fn() }))
+vi.mock('@/firebase/cards', () => ({ observarCartoes: vi.fn(), observarEventos: vi.fn(), editarEvento: vi.fn(), excluirEvento: vi.fn() }))
 
 const cartao = (id: string, numero: string, titulo: string): Cartao => ({ id, numero, titulo, estado: 'aberto', ciclo: 1, totalCasas: 0, resolvidas: 0, atualizadoEm: 0 })
 const cartoes = [cartao('c12', '12', 'Jardim das Acácias'), cartao('c5', '5', 'Parque Ipê')]
@@ -53,7 +53,7 @@ describe('HistoricoCartaoPage', () => {
   it('mostra o título, o aviso sem limite de 10 e os eventos na ordem recebida', () => {
     renderPagina()
     expect(screen.getByRole('heading', { name: 'Histórico', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('Mostra quem abriu ou fechou o cartão e quando.')).toBeInTheDocument()
+    expect(screen.getByText(/Mostra quem abriu ou fechou o cartão e quando\./)).toBeInTheDocument()
     expect(screen.queryByText(/Só os últimos 10/)).not.toBeInTheDocument()
     const itens = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getAllByRole('listitem')
     expect(itens).toHaveLength(10)
@@ -147,6 +147,50 @@ describe('HistoricoCartaoPage', () => {
     renderPagina()
     expect(screen.getByText('Nenhum registro ainda')).toBeInTheDocument()
     expect(screen.getByText('Este cartão ainda não foi fechado nem reaberto.')).toBeInTheDocument()
+  })
+
+  it('edita a data e o nome de um registro', async () => {
+    const user = userEvent.setup()
+    vi.mocked(editarEvento).mockResolvedValue()
+    renderPagina()
+    await user.click(screen.getAllByRole('button', { name: /^Editar registro/ })[0])
+    const quem = screen.getByLabelText('Quem fez')
+    await user.clear(quem)
+    await user.type(quem, 'Ana Souza')
+    fireEvent.change(screen.getByLabelText('Data e hora'), { target: { value: '2026-10-20T08:30' } })
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(editarEvento).toHaveBeenCalledWith('c12', 'e0', { em: new Date(2026, 9, 20, 8, 30).getTime(), porNome: 'Ana Souza' })
+    expect(screen.queryByRole('dialog', { name: 'Editar registro' })).not.toBeInTheDocument()
+  })
+
+  it('não salva a edição sem nome', async () => {
+    const user = userEvent.setup()
+    renderPagina()
+    await user.click(screen.getAllByRole('button', { name: /^Editar registro/ })[0])
+    await user.clear(screen.getByLabelText('Quem fez'))
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe o nome de quem fez.')
+    expect(editarEvento).not.toHaveBeenCalled()
+  })
+
+  it('exclui um registro só depois de confirmar', async () => {
+    const user = userEvent.setup()
+    vi.mocked(excluirEvento).mockResolvedValue()
+    renderPagina()
+    await user.click(screen.getAllByRole('button', { name: /^Excluir registro/ })[1])
+    expect(excluirEvento).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Excluir este registro?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Excluir registro' }))
+    expect(excluirEvento).toHaveBeenCalledWith('c12', 'e1')
+  })
+
+  it('cancelar a exclusão não apaga nada', async () => {
+    const user = userEvent.setup()
+    renderPagina()
+    await user.click(screen.getAllByRole('button', { name: /^Excluir registro/ })[0])
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(excluirEvento).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('carregando mostra o esqueleto', () => {

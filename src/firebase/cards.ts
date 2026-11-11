@@ -1,4 +1,4 @@
-import { collection, doc, limit, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, doc, limit, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore'
 import { abrirCartao, fecharCartao } from '@/domain/ciclo'
 import { podeFecharCartao } from '@/domain/rodada'
 import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
@@ -69,6 +69,17 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
   batch.update(doc(db, 'cards', c.id), { ...abrirCartao(c), atualizadoEm: agora, abertoPorNome: usuario.nome, abertoEm: agora })
   batch.set(doc(collection(db, 'cards', c.id, 'eventos')), { tipo: 'aberto', motivo: 'abertura', em: agora, porUid: usuario.uid, porNome: usuario.nome })
   await batch.commit()
+}
+
+/** Só o administrador (regras do servidor): corrige quando e por quem o registro foi feito. */
+export async function editarEvento(cartaoId: string, eventoId: string, d: { em: number; porNome: string }): Promise<void> {
+  if (demoAtivo()) return demo.editarEvento(cartaoId, eventoId, d)
+  await updateDoc(doc(db, 'cards', cartaoId, 'eventos', eventoId), { em: paraTimestamp(d.em), porNome: d.porNome.trim() })
+}
+
+export async function excluirEvento(cartaoId: string, eventoId: string): Promise<void> {
+  if (demoAtivo()) return demo.excluirEvento(cartaoId, eventoId)
+  await deleteDoc(doc(db, 'cards', cartaoId, 'eventos', eventoId))
 }
 
 export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void, limite = 50): () => void {

@@ -1,4 +1,4 @@
-import { arrayUnion, collection, doc, getDocFromCache, orderBy, query, addDoc, updateDoc } from 'firebase/firestore'
+import { arrayUnion, collection, doc, getDoc, getDocFromCache, orderBy, query, addDoc, updateDoc } from 'firebase/firestore'
 import type { Quadra } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
@@ -28,8 +28,12 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
   const nome = rua.trim()
   if (!nome) return
   const ref = doc(db, 'cards', cartaoId, 'blocks', quadraId)
-  // Do cache: não espera a rede para saber se a rua já existe (o servidor ainda recebe o arrayUnion).
-  const ruas = (await getDocFromCache(ref).catch(() => null))?.data()?.ruas
+  // Do cache; sem ele, espera o servidor no máximo 2 s (o arrayUnion abaixo já não repete a mesma grafia).
+  const snap = await getDocFromCache(ref).catch(() => Promise.race([
+    getDoc(ref),
+    new Promise<null>((resolver) => setTimeout(() => resolver(null), 2_000)),
+  ]))
+  const ruas = snap?.data()?.ruas
   const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
   if (Array.isArray(ruas) && ruas.some((r) => chave(String(r)) === chave(nome))) return
   await updateDoc(ref, { ruas: arrayUnion(nome) })

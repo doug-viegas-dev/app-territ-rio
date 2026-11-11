@@ -100,8 +100,10 @@ describe('regras Firestore', () => {
     const admin = adminDb()
     await assertSucceeds(getDocs(collection(admin, 'cards/c1/eventos')))
     await assertSucceeds(setDoc(doc(admin, 'cards/c1/eventos/manual'), { tipo: 'aberto', motivo: 'abertura', porUid: 'admin', porNome: 'admin', em: 4 }))
-    await assertFails(updateDoc(doc(admin, 'cards/c1/eventos/manual'), { porNome: 'Alterado' }))
-    await assertFails(deleteDoc(doc(admin, 'cards/c1/eventos/manual')))
+    // o administrador corrige o histórico: muda quando e por quem, e apaga; tipo e motivo ficam como estão
+    await assertSucceeds(updateDoc(doc(admin, 'cards/c1/eventos/manual'), { porNome: 'Alterado', em: 5 }))
+    await assertFails(updateDoc(doc(admin, 'cards/c1/eventos/manual'), { motivo: 'fechamento_manual' }))
+    await assertSucceeds(deleteDoc(doc(admin, 'cards/c1/eventos/manual')))
   })
 
   it('permite ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  administraÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o gerir membros e cartÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes e remover casas', async () => {

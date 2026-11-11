@@ -46,7 +46,10 @@ service cloud.firestore {
           && request.resource.data.motivo in ['rodada_aberta', 'rodada_encerrada']
           && request.resource.data.porUid == request.auth.uid
         );
-        allow update, delete: if false;
+        // O administrador corrige o histórico: muda quando e por quem, ou apaga o registro. Tipo e motivo não mudam.
+        allow update: if ehAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['em', 'porNome']);
+        allow delete: if ehAdmin();
       }
 
       match /blocks/{blockId} {

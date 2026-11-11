@@ -6,6 +6,8 @@ import type { EventoCartao } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartoes } from '@/features/cards/useCartoes'
 import { observarEventos } from '@/firebase/cards'
+import { EditarEvento } from './EditarEvento'
+import { ExcluirEvento } from './ExcluirEvento'
 import { dataHora, diaEHora, iconeEvento, textoEvento, tituloEvento } from './textoEvento'
 
 /** `undefined` enquanto carrega. */
@@ -36,6 +38,8 @@ function rodadasPorQuadra(eventos: EventoCartao[]): { chave: string; rotulo: str
 
 function Eventos({ cartaoId }: { cartaoId: string }) {
   const eventos = useEventos(cartaoId)
+  const [editando, setEditando] = useState<EventoCartao | null>(null)
+  const [excluindo, setExcluindo] = useState<EventoCartao | null>(null)
 
   if (eventos === undefined) return <div role="status" aria-label="Carregando" style={{ marginTop: 14 }}>
     {[0, 1, 2, 3].map((i) => <div key={i} className="esqueleto" style={{ height: 56, marginBottom: 14 }} />)}
@@ -68,9 +72,15 @@ function Eventos({ cartaoId }: { cartaoId: string }) {
           <b>{tituloEvento(e)}</b>
           <div className="quando">{dataHora(e.em)}</div>
           <div className="quem">{textoEvento(e)}</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button type="button" className="btn secundario auto" aria-label={`Editar registro: ${tituloEvento(e)}, ${dataHora(e.em)}`} onClick={() => setEditando(e)}>Editar</button>
+            <button type="button" className="btn perigo auto" aria-label={`Excluir registro: ${tituloEvento(e)}, ${dataHora(e.em)}`} onClick={() => setExcluindo(e)}>Excluir</button>
+          </div>
         </div>
       </li>)}
     </ol>
+    {editando && <EditarEvento cartaoId={cartaoId} evento={editando} onFechar={() => setEditando(null)} />}
+    {excluindo && <ExcluirEvento cartaoId={cartaoId} evento={excluindo} onFechar={() => setExcluindo(null)} />}
   </>
 }
 
@@ -91,7 +101,7 @@ export default function HistoricoCartaoPage() {
       : <div className="rolagem com-nav">
         <div className="aviso" role="note" style={{ marginTop: 14 }}>
           <Icone nome="info" />
-          <p>Mostra quem abriu ou fechou o cartão e quando.</p>
+          <p>Mostra quem abriu ou fechou o cartão e quando. Você pode corrigir a data e o nome, ou excluir um registro.</p>
         </div>
         {cartao && <h2 className="titulo-secao">Cartão {cartao.numero} · {cartao.titulo}</h2>}
         <Eventos key={cartaoId} cartaoId={cartaoId} />

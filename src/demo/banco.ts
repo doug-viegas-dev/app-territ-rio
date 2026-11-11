@@ -234,6 +234,19 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
   mudou()
 }
 
+export async function editarEvento(cartaoId: string, eventoId: string, d: { em: number; porNome: string }): Promise<void> {
+  const e = (estado.eventos[cartaoId] ?? []).find((x) => x.id === eventoId)
+  if (!e) throw new Error('Registro não encontrado')
+  e.em = d.em
+  e.porNome = d.porNome.trim()
+  mudou()
+}
+
+export async function excluirEvento(cartaoId: string, eventoId: string): Promise<void> {
+  estado.eventos[cartaoId] = (estado.eventos[cartaoId] ?? []).filter((x) => x.id !== eventoId)
+  mudou()
+}
+
 export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void, limite = 50): () => void {
   return observar(() => [...(estado.eventos[cartaoId] ?? [])].sort((a, b) => b.em - a.em).slice(0, limite), cb)
 }
