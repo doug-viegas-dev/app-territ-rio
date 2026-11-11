@@ -8,16 +8,19 @@ import { connectStorageEmulator, getStorage } from 'firebase/storage'
  * Em rede "fantasma" (Wi-Fi sem internet) a chamada fica pendurada ~30 s e o app inteiro espera.
  * Essas consultas de renovação passam a falhar rápido: o Auth trata como falta de rede e mantém o usuário salvo.
  */
-const LIMITE_RENOVACAO_MS = 2_000
+const LIMITE_ABERTURA_MS = 1_000
+const LIMITE_DEPOIS_MS = 15_000
+let iniciando = true
 const ehRenovacaoDeSessao = (url: string) => /accounts:lookup|securetoken\.googleapis\.com/.test(url)
 if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
   const fetchOriginal = window.fetch.bind(window)
   window.fetch = (entrada, init) => {
     const url = typeof entrada === 'string' ? entrada : entrada instanceof URL ? entrada.href : entrada.url
     if (!ehRenovacaoDeSessao(url)) return fetchOriginal(entrada, init)
+    if (iniciando && navigator.onLine === false) return Promise.reject(new TypeError('Failed to fetch'))
     return new Promise<Response>((resolver, rejeitar) => {
       const controle = new AbortController()
-      const timer = setTimeout(() => { controle.abort(); rejeitar(new TypeError('Failed to fetch')) }, LIMITE_RENOVACAO_MS)
+      const timer = setTimeout(() => { controle.abort(); rejeitar(new TypeError('Failed to fetch')) }, iniciando ? LIMITE_ABERTURA_MS : LIMITE_DEPOIS_MS)
       init?.signal?.addEventListener('abort', () => controle.abort())
       fetchOriginal(entrada, { ...init, signal: controle.signal }).then(
         (r) => { clearTimeout(timer); resolver(r) },
@@ -37,6 +40,8 @@ const app = getApps().length ? getApp() : initializeApp({
 })
 
 export const auth = getAuth(app)
+// Passada a abertura, renovar a sessão em rede lenta pode demorar mais sem atrasar a tela.
+void auth.authStateReady().finally(() => { iniciando = false })
 export const db = initializeFirestore(app, {
   // Redes que bloqueiam QUIC/WebChannel derrubam o Firestore: troca sozinho para long polling.
   experimentalAutoDetectLongPolling: true,
