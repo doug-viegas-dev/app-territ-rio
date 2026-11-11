@@ -12,7 +12,7 @@ type Usuario = { uid: string; nome: string }
 
 export function observarCartoes(cb: (c: Cartao[]) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarCartoes(cb)
-  return ouvirComCache(collection(db, 'cards'), (snap) => {
+  return ouvirComCache('cards', collection(db, 'cards'), (snap) => {
     const todos = snap.docs.map((d) => cartaoDe(d.id, d.data()))
     const porNumero = (a: Cartao, b: Cartao) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true })
     cb([
@@ -24,7 +24,7 @@ export function observarCartoes(cb: (c: Cartao[]) => void, onErro?: (e: Error) =
 
 export function observarCartao(id: string, cb: (c: Cartao | null) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarCartao(id, cb)
-  return ouvirDocComCache(doc(db, 'cards', id), (snap) => cb(snap.exists() ? cartaoDe(snap.id, snap.data()) : null), onErro)
+  return ouvirDocComCache(`cards/${id}`, doc(db, 'cards', id), (snap) => cb(snap.exists() ? cartaoDe(snap.id, snap.data()) : null), onErro)
 }
 
 export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?: string }, usuario: Usuario): Promise<string> {
@@ -74,5 +74,5 @@ export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<vo
 export function observarEventos(cartaoId: string, cb: (e: EventoCartao[]) => void, limite = 50): () => void {
   if (demoAtivo()) return demo.observarEventos(cartaoId, cb, limite)
   const q = query(collection(db, 'cards', cartaoId, 'eventos'), orderBy('em', 'desc'), limit(limite))
-  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => eventoDe(d.id, d.data()))))
+  return ouvirComCache(`cards/${cartaoId}/eventos`, q, (snap) => cb(snap.docs.map((d) => eventoDe(d.id, d.data()))))
 }

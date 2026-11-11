@@ -1,6 +1,7 @@
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import { db } from './app'
 import { demoAtivo } from '@/demo/modo'
+import { guardarDoc, guardarLista } from './cache'
 
 const SIMULTANEOS = 6
 const INTERVALO_MIN_MS = 10 * 60 * 1000
@@ -33,18 +34,27 @@ export function baixarTudo(opcoes: { admin: boolean }, forcar = false): Promise<
   emAndamento = (async () => {
     const cartoes = await tentar(() => getDocs(collection(db, 'cards')))
     if (!cartoes) { ultimo = 0; return }
+    guardarLista('cards', cartoes.docs)
     await emLotes(cartoes.docs, async (cartao) => {
+      guardarDoc(`cards/${cartao.id}`, cartao.id, cartao.data())
       const base = ['cards', cartao.id] as const
-      if (opcoes.admin) await tentar(() => getDocs(query(collection(db, ...base, 'eventos'), orderBy('em', 'desc'), limit(50))))
+      if (opcoes.admin) {
+        const eventos = await tentar(() => getDocs(query(collection(db, ...base, 'eventos'), orderBy('em', 'desc'), limit(50))))
+        if (eventos) guardarLista(`cards/${cartao.id}/eventos`, eventos.docs)
+      }
       const quadras = await tentar(() => getDocs(query(collection(db, ...base, 'blocks'), orderBy('ordem'))))
       if (!quadras) return
+      guardarLista(`cards/${cartao.id}/blocks`, quadras.docs)
       await emLotes(quadras.docs, async (quadra) => {
         const qBase = [...base, 'blocks', quadra.id] as const
-        await tentar(() => getDocs(query(collection(db, ...qBase, 'rodadas'), orderBy('numero', 'desc'))))
+        const rodadas = await tentar(() => getDocs(query(collection(db, ...qBase, 'rodadas'), orderBy('numero', 'desc'))))
+        if (rodadas) guardarLista(`cards/${cartao.id}/blocks/${quadra.id}/rodadas`, rodadas.docs)
         const casas = await tentar(() => getDocs(collection(db, ...qBase, 'houses')))
         if (!casas) return
+        guardarLista(`cards/${cartao.id}/blocks/${quadra.id}/houses`, casas.docs)
         await emLotes(casas.docs, async (casa) => {
-          await tentar(() => getDocs(query(collection(db, ...qBase, 'houses', casa.id, 'visits'), orderBy('em', 'desc'))))
+          const visitas = await tentar(() => getDocs(query(collection(db, ...qBase, 'houses', casa.id, 'visits'), orderBy('em', 'desc'))))
+          if (visitas) guardarLista(`cards/${cartao.id}/blocks/${quadra.id}/houses/${casa.id}/visits`, visitas.docs)
         })
       })
     })

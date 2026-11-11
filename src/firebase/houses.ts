@@ -23,6 +23,7 @@ const quadraRef = (cartaoId: string, quadraId: string) => doc(db, 'cards', carta
 export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[], semDados?: boolean) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarCasas(cartaoId, quadraId, cb)
   return ouvirComCache(
+    `cards/${cartaoId}/blocks/${quadraId}/houses`,
     casasRef(cartaoId, quadraId),
     (snap) => cb(ordenarCasas(snap.docs.map((d) => casaDe(d.id, quadraId, d.data()))), snap.empty && snap.metadata.fromCache),
     onErro,
@@ -32,7 +33,7 @@ export function observarCasas(cartaoId: string, quadraId: string, cb: (c: Casa[]
 export function observarVisitas(cartaoId: string, quadraId: string, casaId: string, cb: (v: Visita[]) => void): () => void {
   if (demoAtivo()) return demo.observarVisitas(cartaoId, quadraId, casaId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks', quadraId, 'houses', casaId, 'visits'), orderBy('em', 'desc'))
-  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => visitaDe(d.id, d.data()))))
+  return ouvirComCache(`cards/${cartaoId}/blocks/${quadraId}/houses/${casaId}/visits`, q, (snap) => cb(snap.docs.map((d) => visitaDe(d.id, d.data()))))
 }
 
 function exigirValida(d: { numero?: string; descricao?: string }): void {

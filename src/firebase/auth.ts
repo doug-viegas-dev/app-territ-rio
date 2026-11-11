@@ -1,6 +1,7 @@
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { demoAtivo, observarModoDemo, sairDaDemo, USUARIO_DEMO } from '@/demo/modo'
 import { auth } from './app'
+import { limparCopiaLocal } from './cache'
 
 export type UsuarioAutenticado = { uid: string; email: string; nome: string }
 
@@ -10,6 +11,7 @@ export function entrarComGoogle(): Promise<void> {
 
 export function sair(): Promise<void> {
   if (demoAtivo()) { sairDaDemo(); return Promise.resolve() }
+  limparCopiaLocal()
   return signOut(auth)
 }
 
@@ -23,6 +25,7 @@ export function observarUsuario(cb: (usuario: UsuarioAutenticado | null) => void
       email: usuario.email,
       nome: usuario.displayName || usuario.email,
     } : null
+    if (!real) limparCopiaLocal()
     emitir()
   })
   const pararDemo = observarModoDemo(emitir)

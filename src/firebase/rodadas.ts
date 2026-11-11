@@ -12,7 +12,7 @@ type Usuario = { uid: string; nome: string }
 export function observarRodadas(cartaoId: string, quadraId: string, cb: (r: Rodada[]) => void, onErro?: (e: Error) => void): () => void {
   if (demoAtivo()) return demo.observarRodadas(cartaoId, quadraId, cb)
   const q = query(collection(db, 'cards', cartaoId, 'blocks', quadraId, 'rodadas'), orderBy('numero', 'desc'))
-  return ouvirComCache(q, (snap) => cb(snap.docs.map((d) => rodadaDe(d.id, d.data()))), onErro)
+  return ouvirComCache(`cards/${cartaoId}/blocks/${quadraId}/rodadas`, q, (snap) => cb(snap.docs.map((d) => rodadaDe(d.id, d.data()))), onErro)
 }
 
 export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
