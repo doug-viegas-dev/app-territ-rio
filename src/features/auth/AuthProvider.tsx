@@ -11,7 +11,7 @@ import AguardandoLiberacao from './AguardandoLiberacao'
 import SoAdministradores from './SoAdministradores'
 import SemConexaoServidor from './SemConexaoServidor'
 
-const TEMPO_SEM_RESPOSTA_MS = 15_000
+const TEMPO_SEM_RESPOSTA_MS = 2_000
 
 type Sessao = { carregando: boolean; semResposta?: boolean; usuario: UsuarioAutenticado | null; membro: MembroObservado | null }
 const SessaoContext = createContext<Sessao | null>(null)

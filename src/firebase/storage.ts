@@ -5,19 +5,37 @@ import { demoAtivo } from '@/demo/modo'
 
 const chaveUrl = (path: string) => `mapa-url:${path}`
 
-/** A URL é pedida ao Firebase (rede). Guardamos a última para o mapa, já em cache no service worker, abrir sem internet. */
+async function urlDoFirebase(path: string): Promise<string> {
+  const url = await getDownloadURL(ref(storage, path))
+  try { localStorage.setItem(chaveUrl(path), url) } catch { /* sem armazenamento: segue sem guardar */ }
+  return url
+}
+
+/**
+ * Usa na hora a última URL guardada (a imagem em si já está no cache do service worker) e atualiza a URL em segundo plano.
+ * Só pergunta ao Firebase, e espera por ele, quando ainda não há URL guardada.
+ */
 export async function urlDaImagem(path: string): Promise<string> {
   if (demoAtivo()) return demo.urlDoArquivo(path)
-  try {
-    const url = await getDownloadURL(ref(storage, path))
-    try { localStorage.setItem(chaveUrl(path), url) } catch { /* sem armazenamento: segue sem guardar */ }
-    return url
-  } catch (erro) {
-    let guardada: string | null = null
-    try { guardada = localStorage.getItem(chaveUrl(path)) } catch { /* ignora */ }
-    if (guardada) return guardada
-    throw erro
+  let guardada: string | null = null
+  try { guardada = localStorage.getItem(chaveUrl(path)) } catch { /* ignora */ }
+  if (guardada) {
+    void urlDoFirebase(path).catch(() => { /* sem rede: a guardada serve */ })
+    return guardada
   }
+  return urlDoFirebase(path)
+}
+
+/** Baixa a imagem do mapa para o cache do aparelho (o service worker guarda a resposta), para abrir sem internet. */
+export async function baixarImagem(path: string): Promise<void> {
+  if (demoAtivo()) return
+  const url = await urlDoFirebase(path)
+  await new Promise<void>((resolver) => {
+    const img = new Image()
+    img.onload = () => resolver()
+    img.onerror = () => resolver()
+    img.src = url
+  })
 }
 
 export async function enviarArquivosDoCartao(cartaoId: string, arquivos: { pdf: Blob; imagem: Blob }): Promise<{ pdfPath: string; imagemPath: string }> {

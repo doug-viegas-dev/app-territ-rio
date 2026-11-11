@@ -7,6 +7,8 @@ import { getDocFromCache, getDocsFromCache, onSnapshot, Timestamp, type Document
  */
 const BANCO = 'territorio-local'
 const LOJA = 'listas'
+/** Tempo máximo esperando a rede antes de seguir com o que está guardado. */
+const LIMITE_REDE_MS = 2_000
 
 type DocSalvo = { id: string; data: Record<string, unknown> }
 type Salvo = { docs: DocSalvo[] }
@@ -95,15 +97,21 @@ export function ouvirComCache(
 ): () => void {
   let vivo = true
   let jaChegou = false
-  const entregar = (snap: QuerySnapshot) => { if (vivo && !jaChegou && !snap.empty) aoReceber(snap) }
+  let entregouAlgo = false
+  const entregar = (snap: QuerySnapshot) => { if (vivo && !jaChegou && !snap.empty) { entregouAlgo = true; aoReceber(snap) } }
   void lerSalvo(chave).then((docs) => { if (docs) entregar(instantaneoDeLista(docs)) })
   getDocsFromCache(alvo).then(entregar, () => { /* sem cache: o onSnapshot cuida */ })
+  // Rede ruim e nada guardado: depois de 2 s a tela segue com a lista vazia (marcada como "do cache") em vez de esperar.
+  const limite = setTimeout(() => {
+    if (vivo && !jaChegou && !entregouAlgo) { entregouAlgo = true; aoReceber(instantaneoDeLista([])) }
+  }, LIMITE_REDE_MS)
   const parar = onSnapshot(alvo, (snap) => {
     jaChegou = true
+    clearTimeout(limite)
     if (!snap.metadata.fromCache || !snap.empty) guardarLista(chave, snap.docs)
     aoReceber(snap)
   }, onErro)
-  return () => { vivo = false; parar() }
+  return () => { vivo = false; clearTimeout(limite); parar() }
 }
 
 export function ouvirDocComCache(

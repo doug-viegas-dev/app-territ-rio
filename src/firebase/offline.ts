@@ -2,6 +2,7 @@ import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import { db } from './app'
 import { demoAtivo } from '@/demo/modo'
 import { guardarDoc, guardarLista } from './cache'
+import { baixarImagem } from './storage'
 
 const SIMULTANEOS = 6
 const INTERVALO_MIN_MS = 10 * 60 * 1000
@@ -38,6 +39,8 @@ export function baixarTudo(opcoes: { admin: boolean }, forcar = false): Promise<
     await emLotes(cartoes.docs, async (cartao) => {
       guardarDoc(`cards/${cartao.id}`, cartao.id, cartao.data())
       const base = ['cards', cartao.id] as const
+      const imagemPath = cartao.data().imagemPath
+      const imagem = typeof imagemPath === 'string' ? tentar(() => baixarImagem(imagemPath)) : null
       if (opcoes.admin) {
         const eventos = await tentar(() => getDocs(query(collection(db, ...base, 'eventos'), orderBy('em', 'desc'), limit(50))))
         if (eventos) guardarLista(`cards/${cartao.id}/eventos`, eventos.docs)
@@ -57,6 +60,7 @@ export function baixarTudo(opcoes: { admin: boolean }, forcar = false): Promise<
           if (visitas) guardarLista(`cards/${cartao.id}/blocks/${quadra.id}/houses/${casa.id}/visits`, visitas.docs)
         })
       })
+      await imagem
     })
   })().finally(() => { emAndamento = null })
   return emAndamento
