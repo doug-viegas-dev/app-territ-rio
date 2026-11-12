@@ -31,6 +31,8 @@
   --st-sem-resposta: #8A5B14;
   --st-estudo: #7950A5;
   --st-nao-visitar: #A84643;
+  --st-nao-em-casa: #2B6CB0;
+  --st-carta: #A23F7A;
   --sobre-status: #FFFFFF;
   --glifo: #FFFFFF;
   --cor-erro: #A84643;
@@ -64,6 +66,8 @@
     --st-sem-resposta: #EDBB62;
     --st-estudo: #C3A5E6;
     --st-nao-visitar: #EE9E98;
+    --st-nao-em-casa: #8DBBF0;
+    --st-carta: #E58AC0;
     --sobre-status: #171C28;
     --glifo: #171C28;
     --cor-erro: #EE9E98;
@@ -111,7 +115,14 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 .c-sem-resposta { color: var(--st-sem-resposta); }
 .c-estudo { color: var(--st-estudo); }
 .c-nao-visitar { color: var(--st-nao-visitar); }
+.c-nao-em-casa { color: var(--st-nao-em-casa); }
+.c-carta { color: var(--st-carta); }
 .c-pendente { color: var(--texto-suave); }
+
+/* selo das marcas (Não visitar, Estudo): ícone + texto */
+.selo { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 500; line-height: 1.3; }
+.selo > span { color: var(--cor-texto); }
+.selo .ic { width: 20px; height: 20px; }
 
 /* ---------- topo ---------- */
 .topo { flex: none; position: relative; z-index: 1; background: var(--topo-bg); color: var(--topo-fg); padding: 8px var(--gutter) 22px; border-radius: 0 0 32px 32px; box-shadow: 0 10px 24px rgba(58, 70, 140, .18); }
@@ -251,6 +262,7 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .casa { background: transparent; border: 0; border-bottom: 1px solid var(--borda); border-radius: 0; padding: 0 4px; min-height: 60px; margin-bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; width: 100%; }
 .casa .rotulo { font-size: 17px; font-weight: 500; line-height: 1.3; padding: 12px 0; }
 .casa.foco { background: var(--superficie); border: 2px solid var(--cor-principal); border-radius: 20px; padding: 0 14px; margin: 6px 0; box-shadow: var(--sombra); }
+.casa.fora .rotulo { color: var(--texto-suave); }
 .casa .estado { text-align: right; justify-content: flex-end; }
 .casa.pendente-envio .estado small, .pend-envio { display: inline-flex; align-items: center; gap: 4px; }
 .sem-casas { text-align: center; padding: 28px 12px; }

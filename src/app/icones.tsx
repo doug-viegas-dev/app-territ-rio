@@ -10,6 +10,8 @@ const simbolos =
   `<symbol id="i-sem-resposta" viewBox="0 0 24 24"><rect ${F} x="1.5" y="1.5" width="21" height="21" rx="4.5"/><circle ${G} cx="12" cy="12" r="6.2"/><path ${G} d="M12 8.6V12l2.4 1.6"/></symbol>` +
   `<symbol id="i-estudo" viewBox="0 0 24 24"><path ${F} stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 1.2L22.8 12 12 22.8 1.2 12z"/><path ${G} d="M12 9.2v6.4M12 9.2c-1.3-1-3-1.3-4.6-1v6.2c1.6-.3 3.3 0 4.6 1M12 9.2c1.3-1 3-1.3 4.6-1v6.2c-1.6-.3-3.3 0-4.6 1"/></symbol>` +
   `<symbol id="i-nao-visitar" viewBox="0 0 24 24"><path ${F} stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M8 1.5h8L22.5 8v8L16 22.5H8L1.5 16V8z"/><path ${G} d="M7.5 12h9"/></symbol>` +
+  `<symbol id="i-nao-em-casa" viewBox="0 0 24 24"><path ${F} stroke="currentColor" stroke-width="3" stroke-linejoin="round" d="M12 3L21 20H3z"/><path ${G} d="M10.2 18.6v-6.4a1.8 1.8 0 0 1 3.6 0v6.4M10.2 18.6h3.6"/></symbol>` +
+  `<symbol id="i-carta" viewBox="0 0 24 24"><path ${F} stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 1.5l9 5.2v10.6l-9 5.2-9-5.2V6.7z"/><rect ${G} x="7" y="8.6" width="10" height="7" rx="1.4"/><path ${G} d="M7.4 9.4L12 13l4.6-3.6"/></symbol>` +
   `<symbol id="i-pendente" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/></symbol>` +
   // interface
   `<symbol id="i-voltar" viewBox="0 0 24 24"><path ${forma} d="M15 5l-7 7 7 7"/></symbol>` +
