@@ -4,4 +4,4 @@ export function rotuloCasa(c: Pick<Casa, 'numero' | 'descricao'>): string {
   return [c.numero?.trim(), c.descricao?.trim()].filter(Boolean).join(' · ')
 }
 
-export const classeStatus = (s: StatusVisita) => s.replace('_', '-')
+export const classeStatus = (s: StatusVisita) => s.replaceAll('_', '-')

@@ -97,6 +97,14 @@ describe('QuadraPage', () => {
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
+  it('o botão Não em casa usa o ícone e a classe de cor existentes', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const botao = within(barra()).getByRole('button', { name: 'Não em casa' })
+    expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-nao-em-casa')
+    expect(botao).toHaveClass('c-nao-em-casa')
+  })
+
   it('só existe alça de arrastar depois de tocar em "Reordenar"; "Concluir" volta à quadra', async () => {
     preparar([casa({ numero: '100' }), casa({ numero: '104' })])
     renderPagina()
