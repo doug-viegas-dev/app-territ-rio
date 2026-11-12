@@ -4,8 +4,10 @@ import type { Cartao, Quadra } from './types'
 export type MotivoBloqueio = 'aberto' | 'volta' | 'casas'
 
 export class ExclusaoBloqueada extends Error {
-  constructor(readonly motivo: MotivoBloqueio) {
+  readonly motivo: MotivoBloqueio
+  constructor(motivo: MotivoBloqueio) {
     super(`Exclusão bloqueada: ${motivo}`)
+    this.motivo = motivo
     this.name = 'ExclusaoBloqueada'
   }
 }

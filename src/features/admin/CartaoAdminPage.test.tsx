@@ -7,7 +7,7 @@ import type { Cartao, Quadra } from '@/domain/types'
 import { AuthProvider, RequerMembro } from '@/features/auth/AuthProvider'
 import { observarUsuario } from '@/firebase/auth'
 import { observarQuadras } from '@/firebase/blocks'
-import { observarCartao } from '@/firebase/cards'
+import { observarCartao, observarCartoes } from '@/firebase/cards'
 import { observarCasas } from '@/firebase/houses'
 import { observarMembro } from '@/firebase/members'
 import CartaoAdminPage from './CartaoAdminPage'
@@ -15,7 +15,8 @@ import CartaoAdminPage from './CartaoAdminPage'
 vi.mock('@/firebase/auth', () => ({ entrarComGoogle: vi.fn(), sair: vi.fn(), observarUsuario: vi.fn() }))
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn(), adicionarRua: vi.fn(), atualizarQuadra: vi.fn(), criarQuadra: vi.fn() }))
-vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn(), observarCartoes: vi.fn(), observarEventos: vi.fn(), abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn() }))
+vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn(), observarCartoes: vi.fn(), observarEventos: vi.fn(), abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn(), atualizarCartao: vi.fn() }))
+vi.mock('@/firebase/storage', () => ({ enviarArquivosDoCartao: vi.fn(), apagarArquivos: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), fecharEReiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
 
 const cartao: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 0, resolvidas: 0, atualizadoEm: 0 }
@@ -41,9 +42,17 @@ describe('CartaoAdminPage', () => {
     vi.mocked(observarUsuario).mockImplementation((cb) => { cb({ uid: 'u1', email: 'maria@example.com', nome: 'Maria Souza' }); return () => {} })
     vi.mocked(observarCartao).mockImplementation((_id, cb) => { cb(cartao); return () => {} })
     vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb(quadras); return () => {} })
+    vi.mocked(observarCartoes).mockImplementation((cb) => { cb([cartao]); return () => {} })
     vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([]); return () => {} })
   })
   afterEach(cleanup)
+
+  it('mostra o bloco Dados do cartão, fechado, entre Estado e Quadras e ruas', () => {
+    renderPagina()
+    const titulos = [...document.querySelectorAll('.rolagem > details.bloco > summary span')].map((e) => e.textContent)
+    expect(titulos).toEqual(['Estado', 'Dados do cartão', 'Quadras e ruas', 'Histórico'])
+    expect(screen.getByText('Dados do cartão').closest('details')).toHaveProperty('open', false)
+  })
 
   it('mostra os três blocos', () => {
     renderPagina()

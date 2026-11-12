@@ -44,8 +44,10 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
 
 /** A renomeação gravou parte das casas e parou: repetir termina o trabalho. */
 export class RenomeacaoIncompleta extends Error {
-  constructor(readonly causa: unknown) {
+  readonly causa: unknown
+  constructor(causa: unknown) {
     super('Renomeação incompleta')
+    this.causa = causa
     this.name = 'RenomeacaoIncompleta'
   }
 }
