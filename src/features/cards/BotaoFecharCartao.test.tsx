@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fecharCartaoManual } from '@/firebase/cards'
 import type { Cartao, Quadra } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { observarCasas } from '@/firebase/houses'
@@ -41,6 +42,20 @@ describe('BotaoFecharCartao', () => {
     sessao('admin')
     render(<BotaoFecharCartao cartao={aberto} quadras={null} />)
     expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeDisabled()
+  })
+
+  it('o aviso de erro some ao cancelar e reabrir a folha', async () => {
+    sessao('admin')
+    const comVolta: Quadra[] = [{ ...quadras[0], rodadaAtual: { id: 'r1', numero: 1, porNome: 'Ana', em: 1 } }]
+    const { encerrarRodada } = await import('@/firebase/rodadas')
+    vi.mocked(encerrarRodada).mockRejectedValue(new Error('x'))
+    vi.mocked(fecharCartaoManual).mockResolvedValue()
+    render(<BotaoFecharCartao cartao={aberto} quadras={comVolta} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
+    await user.click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('"Fechar e reiniciar" troca a folha de fechamento pela de reinício', async () => {

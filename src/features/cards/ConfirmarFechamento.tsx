@@ -43,7 +43,7 @@ export default function ConfirmarFechamento({ cartao, quadras, usuario, onFechar
       <div className="pilha">
         <button type="button" className="btn primario" style={{ minHeight: 48 }} disabled={enviando} onClick={() => void fechar()}>{comVolta ? 'Encerrar voltas e fechar' : 'Fechar cartão'}</button>
         <button type="button" className="btn secundario" style={{ minHeight: 48 }} disabled={enviando} onClick={onReiniciar}>Fechar e reiniciar</button>
-        <button type="button" className="btn link" style={{ minHeight: 48 }} onClick={onFechar}>Cancelar</button>
+        <button type="button" className="btn link" style={{ minHeight: 48 }} disabled={enviando} onClick={onFechar}>Cancelar</button>
       </div>
     </div>
   </div>

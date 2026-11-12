@@ -20,7 +20,7 @@ export default function BotaoFecharCartao({ cartao, quadras }: { cartao: Cartao;
     <p style={{ margin: '12px 0 0' }}>
       <button type="button" className="btn secundario medio auto" style={{ minHeight: 48 }} disabled={quadras === null} onClick={() => { setErro(false); setFolha('fechar') }}><Icone nome="cadeado" className="ic ic-20" />Fechar cartão</button>
     </p>
-    {folha === 'fechar' && quadras && <ConfirmarFechamento cartao={cartao} quadras={quadras} usuario={quem} onFechar={() => setFolha(null)} onReiniciar={() => setFolha('reiniciar')} onErro={() => setErro(true)} />}
+    {folha === 'fechar' && quadras && <ConfirmarFechamento cartao={cartao} quadras={quadras} usuario={quem} onFechar={() => { setErro(false); setFolha(null) }} onReiniciar={() => setFolha('reiniciar')} onErro={() => setErro(true)} />}
     {folha === 'reiniciar' && quadras && <ConfirmarReinicio cartao={cartao} quadras={quadras} podeFechar={podeFecharCartao(quadras)} onFechar={() => setFolha(null)}
       onConfirmar={(casas) => { setFolha(null); fecharEReiniciarCartao(cartao, casas, quadras, quem).catch(() => setErro(true)) }} />}
   </>

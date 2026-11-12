@@ -65,6 +65,18 @@ describe('ConfirmarFechamento', () => {
     expect(p.onFechar).toHaveBeenCalled()
   })
 
+  it('enquanto encerra as voltas, Cancelar fica desativado e a folha não fecha', async () => {
+    vi.mocked(encerrarRodada).mockReturnValue(new Promise(() => {}))
+    const p = renderizar([q2, q3])
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await user.click(document.querySelector('.veu') as Element)
+    expect(p.onFechar).not.toHaveBeenCalled()
+    expect(fecharCartaoManual).not.toHaveBeenCalled()
+  })
+
   it('se encerrarRodada rejeitar, não fecha o cartão e chama onErro', async () => {
     vi.mocked(encerrarRodada).mockRejectedValue(new Error('x'))
     const p = renderizar([q2, q3])

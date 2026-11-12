@@ -15,7 +15,7 @@ vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/cards', () => ({ abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), fecharEReiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
 
-const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 1, atualizadoEm: 0 }
+const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 2, resolvidas: 1, atualizadoEm: 0 }
 const fechado: Cartao = { ...aberto, estado: 'fechado', ciclo: 3, resolvidas: 3 }
 const quadras: Quadra[] = [
   { id: 'q1', rotulo: 'Quadra 1', ruas: ['Rua A'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 },
@@ -113,7 +113,7 @@ describe('EstadoCartao', () => {
     renderEstado(aberto)
     const user = userEvent.setup()
     const folha = await abrirReinicio(user)
-    expect(within(folha).getByText(/ainda estamos carregando todas as casas/)).toBeInTheDocument()
+    expect(within(folha).getByText(/ainda estamos carregando todas as casas/)).toHaveTextContent('(1 de 2)')
     await user.click(within(folha).getByRole('checkbox', { name: 'Entendo que o cartão volta ao início.' }))
     await user.click(within(folha).getByRole('button', { name: 'Fechar e reiniciar' }))
     expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
