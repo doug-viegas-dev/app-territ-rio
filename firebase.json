@@ -26,6 +26,10 @@
       "enabled": true,
       "port": 4000,
       "host": "127.0.0.1"
+    },
+    "functions": {
+      "port": 5001,
+      "host": "127.0.0.1"
     }
   },
   "hosting": {
@@ -41,5 +45,13 @@
         "destination": "/index.html"
       }
     ]
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "predeploy": [
+        "npm --prefix functions run build"
+      ]
+    }
+  ]
 }

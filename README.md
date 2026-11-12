@@ -108,6 +108,18 @@ O app roda na Vercel (preset Vite, build `npm run build`, saída `dist`; o `verc
 - **Android (Chrome):** toque em **Instalar app** (aviso no topo da lista de cartões) ou use o menu do Chrome > **Instalar app**.
 - **iPhone (Safari):** Compartilhar > **Adicionar à Tela de Início** > **Adicionar**.
 
+## Cloud Function
+
+A função `apagarContaAoRemoverMembro` (em `functions/`) apaga a conta do Auth quando um membro é removido.
+
+```bash
+npm run build:funcoes   # compila a função
+npm run test:funcoes    # testa com os emuladores de Auth, Firestore e Functions
+npm run deploy:funcoes  # publica a função
+```
+
+O plano Blaze e o deploy são feitos pelo usuário no console do Firebase.
+
 ## Design e documentação
 
 - [`design/`](design/): briefing, identidade visual e protótipo estático das telas

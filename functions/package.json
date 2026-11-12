@@ -1,0 +1,22 @@
+{
+  "name": "functions",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0",
+    "meu-territorio": "file:.."
+  },
+  "devDependencies": {
+    "typescript": "~6.0.0",
+    "vitest": "^5.1.0"
+  }
+}
