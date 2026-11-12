@@ -209,10 +209,42 @@ describe('CasaPage', () => {
     expect(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' })).toHaveAttribute('aria-checked', 'false')
   })
 
-  it('marca sem autor nem data não quebra a tela', () => {
-    preparar({ ...casaComNumero, naoVisitar: true })
+  it('marca sem autor nem data não quebra a tela nem mostra "Marcado por"', () => {
+    preparar({ ...casaComNumero, naoVisitar: true, estudo: true })
     renderPagina()
     expect(screen.getAllByText('Não visitar').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Marcado/)).not.toBeInTheDocument()
+  })
+
+  it('cartão fechado (publicador): aviso sem link "Abrir cartão" e sem "Editar número e descrição"', () => {
+    preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' } })
+    renderPagina()
+    expect(screen.getByText(/Só um administrador pode abrir o cartão/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Abrir cartão' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar número e descrição' })).not.toBeInTheDocument()
+  })
+
+  it('quadra sem contadores: marcarCasa e excluirCasa recebem quadraSemContadores: true', async () => {
+    preparar(casaComNumero, { papel: 'admin', quadra: { ...quadra, semContadores: true } })
+    vi.mocked(excluirCasa).mockResolvedValue()
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' }))
+    expect(marcarCasa).toHaveBeenCalledWith(expect.objectContaining({ quadraSemContadores: true }))
+    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: true })
+  })
+
+  it('falha ao salvar a observação mostra o aviso e devolve o texto ao campo', async () => {
+    vi.mocked(salvarObservacao).mockRejectedValueOnce(new Error('falhou'))
+    preparar(casaComNumero)
+    renderPagina()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/^Observação/), 'voltar à tarde')
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar')
+    expect(screen.getByLabelText(/^Observação/)).toHaveValue('voltar à tarde')
   })
 
   it('ligar "estudo" chama marcarCasa sem confirmação', async () => {

@@ -116,7 +116,10 @@ export default function CasaPage() {
     const texto = obs.trim()
     if (!cartao || !usuario || !aberto || !texto) return
     setErroObs(false)
-    salvarObservacao({ cartaoId, quadraId, casaId, ciclo: cartao.ciclo, texto, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } }).catch(() => setErroObs(true))
+    salvarObservacao({ cartaoId, quadraId, casaId, ciclo: cartao.ciclo, texto, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } }).catch(() => {
+      setErroObs(true)
+      setObs((atual) => (atual === '' ? obs : atual))
+    })
     setObs('')
   }
 
