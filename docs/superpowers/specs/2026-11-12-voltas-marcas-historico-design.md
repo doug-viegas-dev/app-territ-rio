@@ -93,7 +93,7 @@ Cada observação salva é um documento em `visits` com `obs`, data, autor e `ex
 - Uma política de **TTL do Firestore** no campo `expiraEm`, grupo de coleções `visits`, apaga os vencidos sem intervenção de ninguém e sem código no servidor. Pode levar até cerca de 1 dia depois do vencimento.
 - O app **filtra** o que passou de 2 anos (`expiraEm` ≤ agora), então o vencido some da tela na hora.
 - O apagamento é definitivo, sem lixeira.
-- A edição de data pelo administrador (já existente) recalcula `expiraEm`.
+- Visitas não são editáveis (as regras proíbem), então `expiraEm` só é gravado na criação e, uma vez, pela migração (o administrador pode preencher só esse campo).
 
 **Passo do usuário, uma vez:** no console do Firebase, Firestore, aba TTL, criar a política com grupo de coleções `visits` e campo `expiraEm`. Sem isso o app continua escondendo o vencido, mas os dados ficam no banco.
 
