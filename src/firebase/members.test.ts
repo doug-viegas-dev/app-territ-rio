@@ -7,14 +7,15 @@ vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   doc: vi.fn(),
   setDoc: vi.fn(),
+  deleteDoc: vi.fn(() => Promise.resolve()),
   terminate: vi.fn(() => Promise.resolve()),
   clearIndexedDbPersistence: vi.fn(() => Promise.resolve()),
   onSnapshot: (_ref: unknown, ok: (s: Snap) => void) => { emitir = ok; return () => undefined },
 }))
 vi.mock('./app', () => ({ db: {} }))
 
-import { clearIndexedDbPersistence, terminate } from 'firebase/firestore'
-import { observarMembro, verificarDeNovo } from './members'
+import { clearIndexedDbPersistence, deleteDoc, doc, terminate } from 'firebase/firestore'
+import { observarMembro, removerMembro, verificarDeNovo } from './members'
 
 const snap = (existe: boolean, fromCache: boolean): Snap => ({
   exists: () => existe,
@@ -76,5 +77,13 @@ describe('verificarDeNovo', () => {
     expect(clearIndexedDbPersistence).toHaveBeenCalledOnce()
     expect(reload).toHaveBeenCalledOnce()
     vi.unstubAllGlobals()
+  })
+})
+
+describe('removerMembro', () => {
+  it('apaga members/{e-mail em minúsculas e sem espaços}', async () => {
+    await removerMembro('  Ana@Gmail.com ')
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'members', 'ana@gmail.com')
+    expect(deleteDoc).toHaveBeenCalledTimes(1)
   })
 })

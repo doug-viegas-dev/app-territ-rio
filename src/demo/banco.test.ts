@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { faltaVisitar } from '@/domain/status'
-import { excluirQuadra, quadraTemCasas, removerRua, renomearRua, trocarOrdemDeQuadras, abrirCartaoManual, abrirRodada, criarCartao, atualizarCartao, cartaoTemCasas, excluirCartao, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
+import { observarMembros, removerMembro, salvarMembro, excluirQuadra, quadraTemCasas, removerRua, renomearRua, trocarOrdemDeQuadras, abrirCartaoManual, abrirRodada, criarCartao, atualizarCartao, cartaoTemCasas, excluirCartao, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -579,5 +579,15 @@ describe('banco de demonstração: quadras e ruas', () => {
     await expect(removerRua(cartao, quadra, 'Rua A')).rejects.toMatchObject({ motivo: 'casas' })
     await removerRua(cartao, quadra, 'Rua B')
     expect(quadraDe(cartao, quadra).ruas).toEqual(['Rua A'])
+  })
+})
+
+describe('banco de demonstração: remover membro', () => {
+  beforeEach(reiniciarBanco)
+  it('tira o membro da lista observada', async () => {
+    await salvarMembro('  Zé@Gmail.com ', { nome: 'Zé', papel: 'publicador', ativo: true })
+    expect(ler<{ email: string }[]>(observarMembros).some((m) => m.email === 'zé@gmail.com')).toBe(true)
+    await removerMembro('ZÉ@gmail.com')
+    expect(ler<{ email: string }[]>(observarMembros).some((m) => m.email === 'zé@gmail.com')).toBe(false)
   })
 })

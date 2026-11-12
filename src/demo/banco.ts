@@ -609,6 +609,12 @@ export async function salvarMembro(email: string, d: { nome: string; papel: Pape
   mudou()
 }
 
+export async function removerMembro(email: string): Promise<void> {
+  const chave = email.trim().toLowerCase()
+  estado.membros = estado.membros.filter((m) => m.email !== chave)
+  mudou()
+}
+
 // ---------- arquivos ----------
 
 export async function urlDoArquivo(path: string): Promise<string> {
