@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { rotuloStatus } from './rotulos'
 
-it('traduz os cinco status', () => {
-  expect(['pendente', 'sem_resposta', 'falado', 'estudo', 'nao_visitar'].map((s) => rotuloStatus(s as Parameters<typeof rotuloStatus>[0]))).toEqual(['Pendente', 'Não atendeu', 'Conversado', 'Estudo', 'Não visitar'])
+it('traduz os sete valores de StatusVisita', () => {
+  expect((['pendente', 'falado', 'sem_resposta', 'nao_em_casa', 'carta', 'estudo', 'nao_visitar'] as const).map(rotuloStatus)).toEqual(['Pendente', 'Conversado', 'Não atendeu', 'Não em casa', 'Carta', 'Estudo', 'Não visitar'])
 })

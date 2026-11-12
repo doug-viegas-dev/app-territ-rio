@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contadoresDaQuadraSuspeitos, podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia } from './rodada'
+import { contadoresDaQuadraSuspeitos, podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaCasa, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia } from './rodada'
 
 const rodadaAtual = { id: 'r1', numero: 1, porNome: 'Ana', em: new Date(2026, 10, 8, 10).getTime() }
 
@@ -55,5 +55,14 @@ describe('rodada', () => {
     const comRodada = { totalCasas: 5, faltam: 0, rodadaAtual }
     const pronta = { totalCasas: 5, faltam: 0 }
     expect(quadrasParaVisitar([semContadores, comRodada, pronta])).toEqual([semContadores, comRodada])
+  })
+})
+
+describe('podeRegistrarNaCasa', () => {
+  it('exige cartão aberto, volta aberta e casa sem naoVisitar', () => {
+    expect(podeRegistrarNaCasa({ estado: 'aberto' }, { rodadaAtual }, {})).toBe(true)
+    expect(podeRegistrarNaCasa({ estado: 'aberto' }, { rodadaAtual }, { naoVisitar: true })).toBe(false)
+    expect(podeRegistrarNaCasa({ estado: 'fechado' }, { rodadaAtual }, {})).toBe(false)
+    expect(podeRegistrarNaCasa({ estado: 'aberto' }, {}, {})).toBe(false)
   })
 })

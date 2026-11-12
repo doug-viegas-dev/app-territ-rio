@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest'
-import { abrirCartao, contadoresSuspeitos, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, listaDeTrabalho, podeRegistrar } from './ciclo'
+import { abrirCartao, contadoresAposReinicio, contadoresSuspeitos, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, listaDeTrabalho, podeRegistrar } from './ciclo'
 import type { Casa, Cartao, Status } from './types'
 
 const cartao: Cartao = { id: '1', numero: '1', titulo: 'Cartão', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 3, atualizadoEm: 0 }
-const casa = (id: string, status: Status, ordem: number): Casa => ({ id, status, ordem, rua: 'Rua', criadoEm: 1 })
+const casa = (id: string, status: Status, ordem: number, extra: Partial<Casa> = {}): Casa => ({ id, status, ordem, rua: 'Rua', criadoEm: 1, ...extra })
 
 it('fechar não sobe o ciclo e abrir mantém', () => {
   expect(fecharCartao(cartao)).toEqual({ estado: 'fechado' })
@@ -12,12 +12,16 @@ it('fechar não sobe o ciclo e abrir mantém', () => {
   expect(podeRegistrar(cartao)).toBe(true)
   expect(podeRegistrar({ estado: 'fechado' })).toBe(false)
 })
-it('separa e ordena a lista de trabalho e seleciona casas para reinício', () => {
-  const casas = [casa('falado', 'falado', 1), casa('estudo', 'estudo', 4), casa('sem', 'sem_resposta', 3), casa('nao', 'nao_visitar', 2), casa('pendente', 'pendente', 1)]
-  const lista = listaDeTrabalho(casas)
-  expect(lista.pendentes.map((c) => c.id)).toEqual(['pendente', 'sem'])
-  expect(lista.destacadas.map((c) => c.id)).toEqual(['nao', 'estudo'])
-  expect(idsParaReiniciar(casas)).toEqual(['falado', 'estudo', 'sem'])
+it('lista de trabalho: faltam e marcadas não visitar, em ordem, sem resolvidas', () => {
+  const casas = [casa('falado', 'falado', 1), casa('carta', 'carta', 2), casa('sem', 'sem_resposta', 5), casa('nao', 'falado', 3, { naoVisitar: true }), casa('pendente', 'pendente', 1), casa('nec', 'nao_em_casa', 4)]
+  expect(listaDeTrabalho(casas).map((c) => c.id)).toEqual(['pendente', 'nao', 'nec', 'sem'])
+})
+it('ids para reiniciar: todas menos pendentes', () => {
+  const casas = [casa('falado', 'falado', 1), casa('sem', 'sem_resposta', 2), casa('carta', 'carta', 3), casa('pendente', 'pendente', 4), casa('nao', 'falado', 5, { naoVisitar: true })]
+  expect(idsParaReiniciar(casas)).toEqual(['falado', 'sem', 'carta', 'nao'])
+})
+it('contadores após reinício ignoram marcadas não visitar', () => {
+  expect(contadoresAposReinicio([{}, {}, { naoVisitar: true }])).toEqual({ totalCasas: 2, faltam: 2 })
 })
 it('fechar e reiniciar sobe o ciclo e deixa o cartão fechado', () => {
   expect(estadoAposFecharEReiniciar({ ciclo: 3 })).toEqual({ estado: 'fechado', ciclo: 4 })

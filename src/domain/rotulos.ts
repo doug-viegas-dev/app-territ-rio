@@ -1,6 +1,6 @@
-import type { Status } from './types'
+import type { StatusVisita } from './types'
 
-const rotulos: Record<Status, string> = {
-  pendente: 'Pendente', sem_resposta: 'Não atendeu', falado: 'Conversado', estudo: 'Estudo', nao_visitar: 'Não visitar',
+const rotulos: Record<StatusVisita, string> = {
+  pendente: 'Pendente', falado: 'Conversado', sem_resposta: 'Não atendeu', nao_em_casa: 'Não em casa', carta: 'Carta', estudo: 'Estudo', nao_visitar: 'Não visitar',
 }
-export function rotuloStatus(s: Status): string { return rotulos[s] }
+export function rotuloStatus(s: StatusVisita): string { return rotulos[s] }

@@ -1,4 +1,4 @@
-import type { Cartao, Quadra, RodadaAtual } from './types'
+import type { Casa, Cartao, Quadra, RodadaAtual } from './types'
 
 /** Quadra com contadores, mas com números impossíveis: pede "Recalcular contadores". `semContadores` é outro caso. */
 export function contadoresDaQuadraSuspeitos(q: Pick<Quadra, 'totalCasas' | 'faltam' | 'semContadores'>): boolean {
@@ -9,6 +9,9 @@ export function podeEncerrarRodada(q: Pick<Quadra, 'rodadaAtual'>): boolean { re
 export function proximoNumeroRodada(q: Pick<Quadra, 'rodadasTotal'>): number { return q.rodadasTotal + 1 }
 export function podeRegistrarNaQuadra(c: Pick<Cartao, 'estado'>, q: Pick<Quadra, 'rodadaAtual'>): boolean {
   return c.estado === 'aberto' && !!q.rodadaAtual
+}
+export function podeRegistrarNaCasa(c: Pick<Cartao, 'estado'>, q: Pick<Quadra, 'rodadaAtual'>, casa: Pick<Casa, 'naoVisitar'>): boolean {
+  return podeRegistrarNaQuadra(c, q) && !casa.naoVisitar
 }
 export function rodadaDeOutroDia(r: Pick<RodadaAtual, 'em'>, agora: number): boolean {
   return new Date(r.em).toDateString() !== new Date(agora).toDateString()
