@@ -38,7 +38,7 @@ export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, prog
         <h1 title={titulo}>{titulo}</h1>
         <Conexao naoEnviado={naoEnviado} />
       </div>
-      {sub && <p className="topo-sub">{sub}</p>}
+      {sub && <p className={voltarPara ? 'topo-sub com-voltar' : 'topo-sub'}>{sub}</p>}
       {progresso && <Progresso resolvidas={progresso.resolvidas} total={progresso.total} />}
     </header>
     {faixaOffline && !online && <div className="aviso faixa" role="status"><Icone nome="offline" /><p>Sem internet — suas anotações serão enviadas depois.</p></div>}

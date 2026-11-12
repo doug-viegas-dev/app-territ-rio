@@ -128,6 +128,8 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 .topo-linha h1 { flex: 1; font-size: 24px; min-width: 0; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .voltar { width: 48px; height: 48px; margin-left: -6px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .16); flex: none; }
 .topo-sub { font-size: 16px; margin: 0 0 12px; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* alinha o subtítulo com o título, que fica ao lado do botão de voltar (48 - 6 + 10) */
+.topo-sub.com-voltar { padding-left: 52px; }
 .topo.simples { padding-bottom: 18px; }
 .topo-acao { min-height: 48px; padding: 0 12px; margin-right: -12px; display: flex; align-items: center; gap: 6px; font-weight: 600; border-radius: 12px; }
 
