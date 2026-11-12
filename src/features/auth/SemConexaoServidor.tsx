@@ -11,7 +11,7 @@ export default function SemConexaoServidor({ email }: { email: string }) {
         <p>Não foi possível conferir a sua liberação agora. Isso não quer dizer que o seu e-mail não esteja liberado.</p>
       </div>
       <div className="auth-email"><span>Você entrou como</span><strong>{email}</strong></div>
-      <p className="auth-nota esquerda">Confira a sua internet. Se usa bloqueador de anúncios ou VPN, desligue por um momento ou tente uma janela anônima. Depois toque em “Tentar de novo”.</p>
+      <p className="auth-nota esquerda">Confira a sua internet e toque em “Tentar de novo”.</p>
     </div>
     <footer className="auth-rodape auth-pilha">
       <button className="auth-botao" type="button" onClick={() => void verificarDeNovo()}>Tentar de novo</button>

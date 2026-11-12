@@ -35,11 +35,13 @@ export default function InstalarPage() {
           <p style={{ fontSize: 18, lineHeight: 1.5 }}>Instale em um toque. O app vai para a tela inicial e funciona sem internet.</p>
         </div>
         <p style={{ color: 'var(--texto-suave)' }}>O Chrome vai pedir uma confirmação. Toque em <b>Instalar</b>.</p>
-        <h2 className="titulo-secao" style={{ marginTop: 32 }}>O botão não funcionou?</h2>
-        <ol className="passos">
-          <li><div>No Chrome, toque no menu <b>três pontos</b> <Dentro nome="pontos" /> no canto de cima.</div></li>
-          <li><div>Toque em <b>Instalar app</b> ou em <b>Adicionar à tela inicial</b>.</div></li>
-        </ol>
+        <details className="bloco" style={{ marginTop: 24 }}>
+          <summary>O botão não funcionou?</summary>
+          <ol className="passos" style={{ marginTop: 12 }}>
+            <li><div>No Chrome, toque no menu <b>três pontos</b> <Dentro nome="pontos" /> no canto de cima.</div></li>
+            <li><div>Toque em <b>Instalar app</b> ou em <b>Adicionar à tela inicial</b>.</div></li>
+          </ol>
+        </details>
       </div>}
 
       {!instalado && iphone && safari && <div>

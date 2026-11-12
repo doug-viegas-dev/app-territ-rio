@@ -10,11 +10,10 @@ export default function AguardandoLiberacao({ email }: { email: string }) {
       <div className="auth-centro">
         <Marca />
         <h1>Aguardando liberação</h1>
-        <p>O administrador precisa liberar o seu e-mail antes de você ver os cartões.</p>
+        <p>Avise o administrador para liberar o seu e-mail. Depois toque em “Verificar de novo”.</p>
         {!online && <p role="status">Sem internet. Pode ser que você já esteja liberado: conecte-se para conferir.</p>}
       </div>
       <div className="auth-email"><span>Você entrou como</span><strong>{email}</strong></div>
-      <p className="auth-nota esquerda">Avise o administrador da congregação. Quando ele liberar, toque em “Verificar de novo”.</p>
     </div>
     <footer className="auth-rodape auth-pilha">
       <button className="auth-botao" type="button" onClick={() => void verificarDeNovo()}>Verificar de novo</button>
