@@ -230,6 +230,17 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .nav a[aria-current="page"] { color: var(--cor-texto); font-weight: 600; }
 .nav a[aria-current="page"]::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cor-secundaria); border-radius: 22px; }
 
+/* ---------- botão flutuante + casa ---------- */
+/* a área da lista termina onde a barra de registro começa, então o botão nunca cobre a barra */
+.area-lista { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.rolagem.com-fab { padding-bottom: 96px; }
+.fab {
+  position: absolute; right: 16px; bottom: 16px; width: 64px; height: 64px; border-radius: 50%;
+  background: var(--cor-destaque); color: #252C3B; display: flex; align-items: center; justify-content: center; z-index: 3;
+  box-shadow: 0 8px 20px rgba(150, 100, 20, .30), 0 0 0 3px var(--cor-fundo);
+}
+.fab .ic { color: #252C3B; }
+
 /* ---------- listas ---------- */
 .titulo-secao { font-size: 18px; font-weight: 600; margin: 24px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .rolagem > .titulo-secao:first-child { margin-top: 4px; }

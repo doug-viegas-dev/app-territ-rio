@@ -89,12 +89,12 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
   })
 
-  it('o botão de adicionar casa fica na faixa de ações da lista, com ícone e nome', () => {
+  it('o botão de adicionar casa é flutuante, mostra só o ícone e tem nome acessível', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
     const botao = screen.getByRole('button', { name: 'Adicionar casa' })
-    expect(botao.textContent).toBe('Adicionar casa')
-    expect(botao).not.toHaveClass('fab')
+    expect(botao.textContent).toBe('')
+    expect(botao).toHaveClass('fab')
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
