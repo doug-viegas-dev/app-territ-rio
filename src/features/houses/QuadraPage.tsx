@@ -6,23 +6,23 @@ import Logo from '@/app/Logo'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
-import { podeRegistrarNaQuadra } from '@/domain/rodada'
+import { podeRegistrarNaCasa } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
-import { isResolvida } from '@/domain/status'
+import { contaNoTotal, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
 import AvisoNaoEnviado from './AvisoNaoEnviado'
 import FaixaRodada from './FaixaRodada'
-import CasaLinha, { CasaAtencao } from './CasaLinha'
+import CasaLinha from './CasaLinha'
 import NovaCasaSheet from './NovaCasaSheet'
 import ReordenarLista from './ReordenarLista'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasasInfo } from './useCasas'
 
-const STATUS_REGISTRAVEIS: Status[] = ['falado', 'sem_resposta', 'estudo', 'nao_visitar']
-const falta = (c: Casa) => c.status === 'pendente' || c.status === 'sem_resposta'
+const STATUS_REGISTRAVEIS: Status[] = ['falado', 'sem_resposta', 'nao_em_casa', 'carta']
+const falta = faltaVisitar
 
 function proximaDoTrabalho(ordenadas: Casa[], atual: Casa): Casa | null {
   const aberta = (c: Casa) => c.id !== atual.id && falta(c)
@@ -57,20 +57,20 @@ export default function QuadraPage() {
   </>
 
   const aberto = podeRegistrar(cartao)
-  const podeAnotar = !!quadra && podeRegistrarNaQuadra(cartao, quadra)
   const ehAdmin = membro?.papel === 'admin'
   const ruas = [...(quadra?.ruas ?? []), ...casas.map((c) => c.rua).filter((r, i, l) => l.indexOf(r) === i && !(quadra?.ruas ?? []).includes(r))]
   const grupos = ruas.map((rua) => ({ rua, casas: casas.filter((c) => c.rua === rua) })).filter((g) => g.casas.length > 0)
   const ordenadas = grupos.flatMap((g) => g.casas)
-  const destacadas = grupos.flatMap((g) => listaDeTrabalho(g.casas).destacadas)
   const foco = ordenadas.find((c) => c.id === focoId) ?? ordenadas.find(falta) ?? ordenadas[0] ?? null
-  const semFaltar = grupos.every((g) => listaDeTrabalho(g.casas).pendentes.length === 0)
-  const resolvidas = casas.filter((c) => isResolvida(c.status)).length
+  const podeAnotar = !!quadra && !!foco && podeRegistrarNaCasa(cartao, quadra, foco)
+  const semFaltar = !casas.some(falta)
+  const contadas = casas.filter(contaNoTotal)
+  const resolvidas = contadas.filter(isResolvida).length
   const paraCasa = (c: Casa) => `/cartao/${cartaoId}/quadra/${quadraId}/casa/${c.id}`
 
   async function enviar(casa: Casa, novoStatus: Status, mover = true) {
     const rodada = quadra?.rodadaAtual?.numero
-    if (!cartao || !usuario || !quadra || rodada === undefined || !podeRegistrarNaQuadra(cartao, quadra)) return
+    if (!cartao || !usuario || !quadra || rodada === undefined || !podeRegistrarNaCasa(cartao, quadra, casa)) return
     if (mover) setFocoId(proximaDoTrabalho(ordenadas, casa)?.id ?? casa.id)
     setFalha(null)
     try {
@@ -107,8 +107,8 @@ export default function QuadraPage() {
     <Topo
       titulo={quadra?.rotulo ?? 'Quadra'}
       {...voltar}
-      sub={`Cartão ${cartao.numero} · ${vazia ? 'nenhuma casa' : `${resolvidas} de ${casas.length} resolvidas`}`}
-      progresso={vazia ? undefined : { resolvidas, total: casas.length }}
+      sub={`Cartão ${cartao.numero} · ${vazia ? 'nenhuma casa' : `${resolvidas} de ${contadas.length} resolvidas`}`}
+      progresso={vazia ? undefined : { resolvidas, total: contadas.length }}
       naoEnviado={falha !== null}
     />
     {erroEscrita && <div className="aviso faixa erro" role="alert">
@@ -159,17 +159,13 @@ export default function QuadraPage() {
             <button type="button" className="btn secundario medio auto" style={{ margin: '0 auto' }} onClick={() => setModo('todas')}>Ver todas as casas</button>
           </div>}
           {grupos.map((g) => {
-            const faltam = listaDeTrabalho(g.casas).pendentes
-            if (faltam.length === 0) return null
+            const lista = listaDeTrabalho(g.casas)
+            if (lista.length === 0) return null
             return <div key={g.rua}>
-              <h2 className="titulo-secao">{g.rua} <small>{faltam.length} para visitar</small></h2>
-              {faltam.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
+              <h2 className="titulo-secao">{g.rua} <small>{lista.filter(falta).length} para visitar</small></h2>
+              {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
             </div>
           })}
-          {destacadas.length > 0 && <>
-            <h2 className="titulo-secao divisor">Atenção <small>{destacadas.length} {destacadas.length === 1 ? 'casa' : 'casas'}</small></h2>
-            {destacadas.map((c) => <CasaAtencao key={c.id} casa={c} para={paraCasa(c)} />)}
-          </>}
         </> : grupos.map((g) => <div key={g.rua}>
           <h2 className="titulo-secao">{g.rua} <small>{g.casas.length} {g.casas.length === 1 ? 'casa' : 'casas'}</small></h2>
           {g.casas.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
@@ -183,6 +179,7 @@ export default function QuadraPage() {
           <div><b>{rotuloCasa(foco)}</b><span>{foco.rua}</span></div>
           <Link className="detalhes" to={paraCasa(foco)}>Detalhes<Icone nome="chev" className="ic ic-20" /></Link>
         </div>
+        {foco.naoVisitar && <p className="dica" role="status" style={{ margin: '0 0 8px' }}>Pediu para não ser visitado. Desmarque nos detalhes para registrar</p>}
         <div className="grade-status">
           {STATUS_REGISTRAVEIS.map((s) => {
             const atual = foco.status === s

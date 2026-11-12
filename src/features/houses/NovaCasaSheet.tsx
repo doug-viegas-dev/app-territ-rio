@@ -16,7 +16,7 @@ type Props = {
   depoisDe?: Casa; onFechar: () => void; onErro?: () => void
 }
 
-const RESULTADOS: Status[] = ['pendente', 'falado', 'sem_resposta', 'estudo', 'nao_visitar']
+const RESULTADOS: Status[] = ['pendente', 'falado', 'sem_resposta', 'nao_em_casa', 'carta']
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
 
@@ -162,9 +162,9 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
           </div>
           {!podeResultado && <div className="aviso" role="status" style={{ margin: '10px 0 0', background: 'var(--superficie)' }}>
             <Icone nome="info" />
-            <p>Abra a rodada para registrar o que aconteceu
+            <p>Abra a volta para registrar o que aconteceu
               {cartao.estado === 'aberto' && !quadra.rodadaAtual && <span className="acoes">
-                <button type="button" className="btn primario medio auto" onClick={abrirNovaRodada}>Abrir rodada</button>
+                <button type="button" className="btn primario medio auto" onClick={abrirNovaRodada}>Abrir volta</button>
               </span>}
             </p>
           </div>}

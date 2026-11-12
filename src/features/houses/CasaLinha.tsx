@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
 import { Icone } from '@/app/icones'
 import { rotuloStatus } from '@/domain/rotulos'
 import type { Casa } from '@/domain/types'
+import { SeloMarcas } from './SeloMarcas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 
 const dia = (ms: number) => new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -23,16 +23,12 @@ function Estado({ casa }: { casa: Casa }) {
 type Props = { casa: Casa; foco: boolean; onSelecionar: (c: Casa) => void }
 
 export default function CasaLinha({ casa, foco, onSelecionar }: Props) {
-  return <button className={foco ? 'casa foco' : 'casa'} type="button" aria-current={foco ? 'true' : undefined} onClick={() => onSelecionar(casa)}>
-    <span className="rotulo">{rotuloCasa(casa)}</span>
+  const classe = ['casa', foco && 'foco', casa.naoVisitar && 'fora'].filter(Boolean).join(' ')
+  return <button className={classe} type="button" aria-current={foco ? 'true' : undefined} onClick={() => onSelecionar(casa)}>
+    <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, textAlign: 'left' }}>
+      <span className="rotulo">{rotuloCasa(casa)}</span>
+      <SeloMarcas casa={casa} />
+    </span>
     <Estado casa={casa} />
   </button>
-}
-
-/** Casa em "Atenção": abre os detalhes, com a rua ao lado do rótulo. */
-export function CasaAtencao({ casa, para }: { casa: Casa; para: string }) {
-  return <Link className="casa" to={para}>
-    <span className="rotulo">{rotuloCasa(casa)} <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>· {casa.rua}</span></span>
-    <Estado casa={casa} />
-  </Link>
 }

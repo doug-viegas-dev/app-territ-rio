@@ -145,19 +145,68 @@ describe('QuadraPage', () => {
     expect(textos('.casa .rotulo').filter((t) => t === '120')).toHaveLength(2)
   })
 
-  it('no modo Trabalho esconde as conversadas e põe estudo e não visitar em "Atenção"', () => {
+  it('no modo Trabalho esconde as conversadas e não tem seção "Atenção"', () => {
     preparar([
       casa({ numero: '1', status: 'falado' }),
       casa({ numero: '2', status: 'pendente' }),
-      casa({ numero: '3', status: 'estudo' }),
-      casa({ numero: '4', status: 'nao_visitar' }),
+      casa({ numero: '3', estudo: true }),
+      casa({ numero: '4', naoVisitar: true }),
     ])
     renderPagina()
     const rotulos = textos('.casa .rotulo')
     expect(rotulos.some((t) => t?.startsWith('1'))).toBe(false)
-    const atencao = screen.getByRole('heading', { name: /Atenção/ })
-    expect(atencao).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: /Detalhes|Estudo|Não visitar/ }).length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByRole('heading', { name: /Atenção/ })).not.toBeInTheDocument()
+    expect(rotulos).toEqual(['2', '3', '4'])
+    expect(screen.getByText('Não visitar')).toBeInTheDocument()
+    expect(screen.getByText('Estudo')).toBeInTheDocument()
+  })
+
+  it('o título da rua conta só as casas que faltam visitar, sem as de não visitar', () => {
+    preparar([casa({ numero: '1' }), casa({ numero: '2', naoVisitar: true }), casa({ numero: '3', status: 'sem_resposta' })])
+    renderPagina()
+    expect(screen.getByRole('heading', { name: /Rua das Acácias/ })).toHaveTextContent('2 para visitar')
+  })
+
+  it('"Todas" também mostra os selos', async () => {
+    preparar([casa({ numero: '1', status: 'falado', estudo: true }), casa({ numero: '2', naoVisitar: true })])
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Todas' }))
+    expect(screen.getByText('Estudo')).toBeInTheDocument()
+    expect(screen.getByText('Não visitar')).toBeInTheDocument()
+  })
+
+  it('a barra tem exatamente quatro botões, na ordem', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const nomes = within(barra()).getAllByRole('button').map((b) => b.textContent)
+    expect(nomes).toEqual(['Conversado', 'Não atendeu', 'Não em casa', 'Carta'])
+  })
+
+  it('tocar em "Carta" registra com novoStatus carta e sem obs', async () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Carta' }))
+    expect(registrarVisita).toHaveBeenCalledTimes(1)
+    const arg = vi.mocked(registrarVisita).mock.calls[0][0]
+    expect(arg.novoStatus).toBe('carta')
+    expect(arg).not.toHaveProperty('obs')
+  })
+
+  it('com a casa em foco naoVisitar os botões ficam bloqueados e aparece o aviso', async () => {
+    preparar([casa({ numero: '1', naoVisitar: true })])
+    renderPagina()
+    const botoes = within(barra()).getAllByRole('button').filter((b) => ['Conversado', 'Não atendeu', 'Não em casa', 'Carta'].includes(b.textContent ?? ''))
+    expect(botoes).toHaveLength(4)
+    for (const b of botoes) expect(b).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.setup().click(botoes[0])
+    expect(registrarVisita).not.toHaveBeenCalled()
+    expect(screen.getByText('Pediu para não ser visitado. Desmarque nos detalhes para registrar')).toBeInTheDocument()
+  })
+
+  it('o foco inicial é a primeira casa que falta visitar', () => {
+    preparar([casa({ numero: '1', naoVisitar: true }), casa({ numero: '2' })])
+    renderPagina()
+    expect(within(barra()).getByText('2')).toBeInTheDocument()
   })
 
   it('"Todas" mostra todas as casas, inclusive as conversadas', async () => {
@@ -191,7 +240,7 @@ describe('QuadraPage', () => {
   it('os quatro botões têm altura mínima de 48px', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    const botoes = within(barra()).getAllByRole('button').filter((b) => ['Conversado', 'Não atendeu', 'Estudo', 'Não visitar'].includes(b.textContent ?? ''))
+    const botoes = within(barra()).getAllByRole('button').filter((b) => ['Conversado', 'Não atendeu', 'Não em casa', 'Carta'].includes(b.textContent ?? ''))
     expect(botoes).toHaveLength(4)
     for (const b of botoes) expect(parseInt(b.style.minHeight, 10)).toBeGreaterThanOrEqual(48)
   })
@@ -211,9 +260,9 @@ describe('QuadraPage', () => {
   })
 
   it('o botão do status atual aparece marcado', () => {
-    preparar([casa({ numero: '1', status: 'estudo' })])
+    preparar([casa({ numero: '1', status: 'carta' })])
     renderPagina()
-    expect(within(barra()).getByRole('button', { name: 'Estudo' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(barra()).getByRole('button', { name: 'Carta' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(barra()).getByRole('button', { name: 'Conversado' })).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -298,9 +347,9 @@ describe('QuadraPage', () => {
   })
 
   it('mostra o progresso da quadra no cabeçalho', () => {
-    preparar([casa({ numero: '1', status: 'falado' }), casa({ numero: '2' }), casa({ numero: '3', status: 'nao_visitar' })])
+    preparar([casa({ numero: '1', status: 'falado' }), casa({ numero: '2' }), casa({ numero: '3', naoVisitar: true })])
     renderPagina()
-    expect(screen.getByText(/2 de 3 resolvidas/)).toBeInTheDocument()
+    expect(screen.getByText(/1 de 2 resolvidas/)).toBeInTheDocument()
   })
 })
 
@@ -345,12 +394,5 @@ describe('QuadraPage com rodadas', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Ver todas as casas' }))
     expect(screen.getByRole('tab', { name: 'Todas' })).toHaveAttribute('aria-selected', 'true')
     expect(textos('.casa .rotulo')).toContain('1')
-  })
-
-  it('Trabalho continua mostrando Atenção para Estudo e Não visitar', () => {
-    preparar([casa({ numero: '1' }), casa({ numero: '3', status: 'estudo' }), casa({ numero: '4', status: 'nao_visitar' })])
-    renderPagina()
-    expect(screen.getByRole('heading', { name: /Atenção/ })).toBeInTheDocument()
-    expect(screen.queryByText('Nada para visitar nesta quadra')).not.toBeInTheDocument()
   })
 })

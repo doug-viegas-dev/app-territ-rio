@@ -112,7 +112,7 @@ describe('NovaCasaSheet', () => {
     it('mostra as cinco opções com Pendente marcada por padrão', () => {
       abrir({ quadra: quadraAberta })
       const nomes = within(grupo()).getAllByRole('radio').map((r) => r.textContent)
-      expect(nomes).toEqual(['Pendente', 'Conversado', 'Não atendeu', 'Estudo', 'Não visitar'])
+      expect(nomes).toEqual(['Pendente', 'Conversado', 'Não atendeu', 'Não em casa', 'Carta'])
       expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
     })
 
@@ -135,9 +135,9 @@ describe('NovaCasaSheet', () => {
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
     })
 
-    it('sem rodada aberta a linha fica desativada com o aviso e o botão Abrir rodada', async () => {
+    it('sem volta aberta a linha fica desativada com o aviso e o botão Abrir volta', async () => {
       const { user } = abrir()
-      expect(screen.getByText('Abra a rodada para registrar o que aconteceu')).toBeInTheDocument()
+      expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
       const opcoes = within(grupo()).getAllByRole('radio')
       opcoes.forEach((o) => expect(o).toHaveAttribute('aria-disabled', 'true'))
       await user.click(within(grupo()).getByRole('radio', { name: 'Conversado' }))
@@ -147,13 +147,13 @@ describe('NovaCasaSheet', () => {
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
       cleanup()
       const outra = abrir()
-      await outra.user.click(screen.getByRole('button', { name: 'Abrir rodada' }))
+      await outra.user.click(screen.getByRole('button', { name: 'Abrir volta' }))
       expect(abrirRodada).toHaveBeenCalledWith('c12', quadra, usuario)
     })
 
     it('com o cartão fechado a linha também fica desativada', () => {
       abrir({ quadra: quadraAberta, cartao: { ...cartao, estado: 'fechado' } })
-      expect(screen.getByText('Abra a rodada para registrar o que aconteceu')).toBeInTheDocument()
+      expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
       expect(within(grupo()).getByRole('radio', { name: 'Conversado' })).toHaveAttribute('aria-disabled', 'true')
     })
 
@@ -161,9 +161,9 @@ describe('NovaCasaSheet', () => {
       const { user } = abrir({ quadra: quadraAberta })
       await user.click(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' }))
       await user.type(campoNumero(), '112')
-      await user.click(within(grupo()).getByRole('radio', { name: 'Estudo' }))
+      await user.click(within(grupo()).getByRole('radio', { name: 'Carta' }))
       await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
-      expect(vi.mocked(criarCasa).mock.calls[0][2].resultado?.status).toBe('estudo')
+      expect(vi.mocked(criarCasa).mock.calls[0][2].resultado?.status).toBe('carta')
       await waitFor(() => expect(campoNumero()).toHaveValue(''))
       expect(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' })).toHaveAttribute('aria-checked', 'true')
       expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
