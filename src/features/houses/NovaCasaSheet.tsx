@@ -47,6 +47,23 @@ function FolhaNovaRua({ quadra, ruas, onAdicionar, onCancelar }: { quadra: Quadr
   </div>
 }
 
+function FolhaEscolherRua({ ruas, rua, onEscolher, onNova, onCancelar }: { ruas: string[]; rua: string; onEscolher: (r: string) => void; onNova: () => void; onCancelar: () => void }) {
+  return <div className="veu">
+    <div className="folha" role="dialog" aria-label="Escolher rua">
+      <h2>Qual rua?</h2>
+      <div className="chips" role="radiogroup" aria-label="Rua" style={{ marginBottom: 16 }}>
+        {ruas.map((r) => <button key={r} type="button" role="radio" aria-checked={r === rua} className={r === rua ? 'chip sel' : 'chip'} onClick={() => onEscolher(r)}>
+          {r === rua && <Icone nome="check" className="ic ic-20" />}{r}
+        </button>)}
+      </div>
+      <div className="pilha">
+        <button type="button" className="btn secundario" onClick={onNova}><Icone nome="mais" className="ic ic-20" />Nova rua</button>
+        <button type="button" className="btn secundario" onClick={onCancelar}>Cancelar</button>
+      </div>
+    </div>
+  </div>
+}
+
 export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario, depoisDe, onFechar, onErro }: Props) {
   const [aba, setAba] = useState<'uma' | 'faixa'>('uma')
   const [extras, setExtras] = useState<string[]>([])
@@ -59,6 +76,8 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
   const [erro, setErro] = useState<string | null>(null)
   const [salva, setSalva] = useState<{ rotulo: string; rua: string; depois: boolean } | null>(null)
   const [novaRua, setNovaRua] = useState(false)
+  const [escolhendoRua, setEscolhendoRua] = useState(false)
+  const [mostrarResultado, setMostrarResultado] = useState(false)
   const [resultado, setResultado] = useState<Status>('pendente')
   const podeResultado = podeRegistrarNaQuadra(cartao, quadra)
   const opQuadra = { quadraSemContadores: quadra.semContadores === true }
@@ -75,6 +94,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     setExtras((e) => [...e, nome])
     mudarRua(nome)
     setNovaRua(false)
+    setEscolhendoRua(false)
   }
 
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
@@ -95,6 +115,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     setNumero('')
     setDescricao('')
     setResultado('pendente')
+    setMostrarResultado(false)
   }
 
   function abrirNovaRodada() {
@@ -124,14 +145,15 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
 
       <div className="campo">
         <span className="rotulo-campo" id="rua-rotulo">Rua</span>
-        <div className="chips" role="radiogroup" aria-labelledby="rua-rotulo">
-          {ruas.map((r) => <button key={r} type="button" role="radio" aria-checked={r === rua} className={r === rua ? 'chip sel' : 'chip'} onClick={() => mudarRua(r)}>
-            {r === rua && <Icone nome="check" className="ic ic-20" />}{r}
-          </button>)}
-          <button type="button" className="chip" style={{ background: 'transparent', border: '1.5px dashed var(--borda-forte)' }} onClick={() => setNovaRua(true)}>
-            <Icone nome="mais" className="ic ic-20" />Nova rua
-          </button>
-        </div>
+        {ruas.length > 4 ? <button type="button" className="chip" aria-haspopup="dialog" onClick={() => setEscolhendoRua(true)}>{rua || 'Escolher rua'} <small>Trocar</small></button>
+          : <div className="chips" role="radiogroup" aria-labelledby="rua-rotulo">
+            {ruas.map((r) => <button key={r} type="button" role="radio" aria-checked={r === rua} className={r === rua ? 'chip sel' : 'chip'} onClick={() => mudarRua(r)}>
+              {r === rua && <Icone nome="check" className="ic ic-20" />}{r}
+            </button>)}
+            <button type="button" className="chip" style={{ background: 'transparent', border: '1.5px dashed var(--borda-forte)' }} onClick={() => setNovaRua(true)}>
+              <Icone nome="mais" className="ic ic-20" />Nova rua
+            </button>
+          </div>}
       </div>
 
       {aba === 'uma' ? <>
@@ -146,9 +168,10 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
         <div className="campo">
           <label htmlFor="casa-descricao">Descrição curta</label>
           <input id="casa-descricao" className="entrada" placeholder="Ex.: portão azul" value={descricao} onChange={(e) => { setDescricao(e.target.value); setErro(null) }} />
-          <span className="dica">Obrigatória quando a casa não tem número. Ex.: ao lado da padaria.</span>
+          <span className="dica">Obrigatória sem número. {depoisDe ? "Entra logo depois da casa escolhida." : "Entra no fim da rua."} Mude em “Reordenar”.</span>
         </div>
-        <div className="campo">
+        {!mostrarResultado && <button type="button" className="btn suave medio" style={{ marginBottom: 16 }} onClick={() => setMostrarResultado(true)}>Registrar resultado agora</button>}
+        {mostrarResultado && <div className="campo">
           <span className="rotulo-campo" id="resultado-rotulo">O que aconteceu</span>
           <div className="chips" role="radiogroup" aria-labelledby="resultado-rotulo">
             {RESULTADOS.map((s) => {
@@ -168,11 +191,8 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
               </span>}
             </p>
           </div>}
-        </div>
+        </div>}
         {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
-        <p style={{ color: 'var(--texto-suave)' }}>
-          {depoisDe ? 'A casa entra logo depois da que você escolheu.' : 'A casa entra no fim da rua.'} Depois você pode mudar a posição em “Reordenar”.
-        </p>
         <div className="barra-fixa" style={{ paddingTop: 14 }}>
           <div className="pilha">
             <button type="button" className="btn primario" onClick={() => salvar(false)}>Salvar e adicionar outra</button>
@@ -185,6 +205,7 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
       }} />}
     </div>
 
+    {escolhendoRua && <FolhaEscolherRua ruas={ruas} rua={rua} onEscolher={(r) => { mudarRua(r); setEscolhendoRua(false) }} onNova={() => { setEscolhendoRua(false); setNovaRua(true) }} onCancelar={() => setEscolhendoRua(false)} />}
     {novaRua && <FolhaNovaRua quadra={quadra} ruas={ruas} onAdicionar={adicionarNovaRua} onCancelar={() => setNovaRua(false)} />}
   </div>
 }

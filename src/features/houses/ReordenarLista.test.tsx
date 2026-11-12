@@ -25,43 +25,16 @@ describe('ReordenarLista', () => {
   })
   afterEach(cleanup)
 
-  it('"Descer" na primeira casa move para entre a segunda e a terceira', async () => {
-    const { user } = abrir()
-    await user.click(screen.getByRole('button', { name: 'Descer 100' }))
-    expect(moverCasa).toHaveBeenCalledWith('c12', 'q3', '100', { rua: 'Rua das Acácias', antes: b, depois: d }, [a, b, d])
-  })
-
-  it('"Subir" na última casa move para entre a primeira e a segunda', async () => {
-    const { user } = abrir()
-    await user.click(screen.getByRole('button', { name: 'Subir 108' }))
-    expect(moverCasa).toHaveBeenCalledWith('c12', 'q3', '108', { rua: 'Rua das Acácias', antes: a, depois: b }, [a, b, d])
-  })
-
-  it('"Subir" na primeira casa está desativado e não move', async () => {
-    const { user } = abrir()
-    const subir = screen.getByRole('button', { name: 'Subir 100' })
-    expect(subir).toHaveAttribute('aria-disabled', 'true')
-    await user.click(subir)
-    expect(moverCasa).not.toHaveBeenCalled()
-  })
-
-  it('"Descer" na última casa está desativado', () => {
+  it('não há alça nem setas: a linha toda é arrastada', () => {
     abrir()
-    expect(screen.getByRole('button', { name: 'Descer 108' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryAllByLabelText(/^Arrastar /)).toHaveLength(0)
+    expect(screen.queryAllByRole('button', { name: /^(Subir|Descer) / })).toHaveLength(0)
+    expect(screen.getByText(/Segure uma casa e arraste/)).toBeInTheDocument()
   })
 
-  it('cada casa tem uma alça de arrastar', () => {
-    abrir()
-    expect(screen.getAllByLabelText(/^Arrastar /)).toHaveLength(3)
-  })
-
-  it('agrupa por rua e só mexe nas casas da própria rua', async () => {
-    const { user } = abrir([a, b, outra])
+  it('agrupa por rua', () => {
+    abrir([a, b, outra])
     expect(screen.getByRole('heading', { name: /Rua Ipê Amarelo/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Subir 24' })).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByRole('button', { name: 'Descer 24' })).toHaveAttribute('aria-disabled', 'true')
-    await user.click(screen.getByRole('button', { name: 'Descer 100' }))
-    expect(moverCasa).toHaveBeenCalledWith('c12', 'q3', '100', { rua: 'Rua das Acácias', antes: b, depois: null }, [a, b, outra])
   })
 
   it('"Adicionar depois desta" entrega a casa a quem abriu a lista', async () => {

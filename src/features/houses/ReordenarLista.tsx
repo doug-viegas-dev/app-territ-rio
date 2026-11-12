@@ -20,36 +20,26 @@ type Props = {
 type LinhaProps = {
   casa: Casa
   aberta: boolean
-  primeira: boolean
-  ultima: boolean
   podeMudarDeRua: boolean
   onAlternar: () => void
-  onMover: (indice: number) => void
   onMudarDeRua: () => void
   onAdicionarDepois: () => void
-  indice: number
 }
 
-function Linha({ casa, aberta, primeira, ultima, podeMudarDeRua, onAlternar, onMover, onMudarDeRua, onAdicionarDepois, indice }: LinhaProps) {
+function Linha({ casa, aberta, podeMudarDeRua, onAlternar, onMudarDeRua, onAdicionarDepois }: LinhaProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: casa.id })
   const rotulo = rotuloCasa(casa)
   return <div
-    ref={setNodeRef}
+    ref={(el) => { setNodeRef(el); setActivatorNodeRef(el) }}
+    {...attributes}
+    {...listeners}
+    role={undefined}
+    aria-roledescription="item que pode ser arrastado"
     className={aberta ? 'linha-ordem aberta' : 'linha-ordem'}
     style={{ transform: CSS.Transform.toString(transform), transition, position: 'relative', zIndex: isDragging ? 2 : undefined, opacity: isDragging ? 0.85 : undefined }}
   >
     <div className="principal">
-      <span
-        ref={setActivatorNodeRef}
-        className="alca"
-        aria-label={`Arrastar ${rotulo}`}
-        style={{ touchAction: 'none', cursor: 'grab' }}
-        {...attributes}
-        {...listeners}
-      ><Icone nome="alca" /></span>
-      <button type="button" className="rotulo" aria-expanded={aberta} style={{ textAlign: 'left', background: 'none', border: 0, minHeight: 48 }} onClick={onAlternar}>{rotulo}</button>
-      <button type="button" className="mov" aria-label={`Subir ${rotulo}`} aria-disabled={primeira ? true : undefined} style={primeira ? { opacity: 0.4 } : undefined} onClick={() => { if (!primeira) onMover(indice - 1) }}><Icone nome="subir" /></button>
-      <button type="button" className="mov" aria-label={`Descer ${rotulo}`} aria-disabled={ultima ? true : undefined} style={ultima ? { opacity: 0.4 } : undefined} onClick={() => { if (!ultima) onMover(indice + 1) }}><Icone nome="descer" /></button>
+      <button type="button" className="rotulo" aria-expanded={aberta} style={{ textAlign: 'left', background: 'none', border: 0, minHeight: 48, touchAction: 'manipulation' }} onClick={onAlternar}>{rotulo}</button>
     </div>
     {aberta && <div className="extra">
       {podeMudarDeRua && <button type="button" className="btn suave medio" onClick={onMudarDeRua}><Icone nome="mover" className="ic ic-20" />Mover para outra rua</button>}
@@ -82,7 +72,7 @@ export default function ReordenarLista({ casas, ruas, cartaoId, quadraId, onAdic
   const [movendo, setMovendo] = useState<Casa | null>(null)
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
@@ -120,22 +110,18 @@ export default function ReordenarLista({ casas, ruas, cartaoId, quadraId, onAdic
   return <>
     <div className="aviso" role="note">
       <Icone nome="info" />
-      <p>Arraste pela alça ou use as setas. Os registros não mudam.</p>
+      <p>Segure uma casa e arraste para mudar a ordem. Os registros não mudam.</p>
     </div>
     {grupos.map((g) => <div key={g.rua}>
       <h2 className="titulo-secao">{g.rua} <small>{g.casas.length} {g.casas.length === 1 ? 'casa' : 'casas'}</small></h2>
       <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={(e) => aoSoltar(g.casas, e)}>
         <SortableContext items={g.casas.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          {g.casas.map((c, i) => <Linha
+          {g.casas.map((c) => <Linha
             key={c.id}
             casa={c}
-            indice={i}
             aberta={abertaId === c.id}
-            primeira={i === 0}
-            ultima={i === g.casas.length - 1}
             podeMudarDeRua={nomes.length > 1}
             onAlternar={() => setAbertaId((atual) => (atual === c.id ? null : c.id))}
-            onMover={(novo) => irPara(g.casas, c, novo)}
             onMudarDeRua={() => setMovendo(c)}
             onAdicionarDepois={() => onAdicionarDepois(c)}
           />)}

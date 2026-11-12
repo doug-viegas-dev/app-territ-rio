@@ -178,7 +178,7 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 
 /* ---------- chips e segmentos ---------- */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 24px; border: 1.5px solid transparent; background: var(--cor-secundaria); font-weight: 500; }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 18px; max-width: 100%; text-align: left; line-height: 1.25; border-radius: 24px; border: 1.5px solid transparent; background: var(--cor-secundaria); font-weight: 500; }
 .chip.sel { background: var(--cor-principal); border-color: var(--cor-principal); color: var(--sobre-principal); }
 .segmento { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--cor-secundaria); border-radius: 999px; padding: 4px; gap: 4px; }
 .segmento > * { min-height: 48px; display: grid; place-items: center; font-weight: 500; border-radius: 999px; padding: 0 8px; text-align: center; }
@@ -307,7 +307,7 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 
 /* ---------- reordenar ---------- */
 .linha-ordem { background: var(--superficie); border-radius: var(--raio); margin-bottom: 10px; box-shadow: var(--sombra); }
-.linha-ordem .principal { display: grid; grid-template-columns: 48px 1fr 54px 54px; align-items: center; min-height: 64px; padding: 0 2px 0 2px; }
+.linha-ordem .principal { display: grid; grid-template-columns: 1fr; align-items: center; min-height: 64px; padding: 0 2px 0 2px; }
 .linha-ordem .alca, .linha-ordem .mov { width: 48px; height: 48px; display: grid; place-items: center; color: var(--texto-suave); }
 .linha-ordem .mov { border-radius: 12px; border: 1.5px solid var(--borda-forte); color: var(--cor-texto); width: 48px; height: 48px; justify-self: center; background: var(--cor-fundo); }
 .linha-ordem .rotulo { font-weight: 600; font-size: 17px; line-height: 1.25; padding: 8px 4px; }

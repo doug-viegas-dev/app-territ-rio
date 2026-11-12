@@ -108,9 +108,19 @@ describe('NovaCasaSheet', () => {
 
   describe('O que aconteceu', () => {
     const grupo = () => screen.getByRole('radiogroup', { name: 'O que aconteceu' })
+    const revelar = (u: ReturnType<typeof userEvent.setup>) => u.click(screen.getByRole('button', { name: 'Registrar resultado agora' }))
 
-    it('mostra as cinco opções com Pendente marcada por padrão', () => {
-      abrir({ quadra: quadraAberta })
+    it('começa escondido atrás de "Registrar resultado agora" e salva como Pendente', async () => {
+      const { user } = abrir({ quadra: quadraAberta })
+      expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
+      await user.type(campoNumero(), '130')
+      await user.click(screen.getByRole('button', { name: 'Salvar' }))
+      expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
+    })
+
+    it('mostra as cinco opções com Pendente marcada por padrão', async () => {
+      const { user } = abrir({ quadra: quadraAberta })
+      await revelar(user)
       const nomes = within(grupo()).getAllByRole('radio').map((r) => r.textContent)
       expect(nomes).toEqual(['Pendente', 'Conversado', 'Não atendeu', 'Não em casa', 'Carta'])
       expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
@@ -118,6 +128,7 @@ describe('NovaCasaSheet', () => {
 
     it('escolher Falado salva a casa com resultado, ciclo e rodada', async () => {
       const { user } = abrir({ quadra: quadraAberta })
+      await revelar(user)
       await user.type(campoNumero(), '130')
       await user.click(within(grupo()).getByRole('radio', { name: 'Conversado' }))
       await user.click(screen.getByRole('button', { name: 'Salvar' }))
@@ -137,6 +148,7 @@ describe('NovaCasaSheet', () => {
 
     it('sem volta aberta a linha fica desativada com o aviso e o botão Abrir volta', async () => {
       const { user } = abrir()
+      await revelar(user)
       expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
       const opcoes = within(grupo()).getAllByRole('radio')
       opcoes.forEach((o) => expect(o).toHaveAttribute('aria-disabled', 'true'))
@@ -147,12 +159,14 @@ describe('NovaCasaSheet', () => {
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
       cleanup()
       const outra = abrir()
+      await revelar(outra.user)
       await outra.user.click(screen.getByRole('button', { name: 'Abrir volta' }))
       expect(abrirRodada).toHaveBeenCalledWith('c12', quadra, usuario)
     })
 
-    it('com o cartão fechado a linha também fica desativada', () => {
-      abrir({ quadra: quadraAberta, cartao: { ...cartao, estado: 'fechado' } })
+    it('com o cartão fechado a linha também fica desativada', async () => {
+      const { user } = abrir({ quadra: quadraAberta, cartao: { ...cartao, estado: 'fechado' } })
+      await revelar(user)
       expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
       expect(within(grupo()).getByRole('radio', { name: 'Conversado' })).toHaveAttribute('aria-disabled', 'true')
     })
@@ -161,18 +175,35 @@ describe('NovaCasaSheet', () => {
       const { user } = abrir({ quadra: quadraAberta })
       await user.click(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' }))
       await user.type(campoNumero(), '112')
+      await revelar(user)
       await user.click(within(grupo()).getByRole('radio', { name: 'Carta' }))
       await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
       expect(vi.mocked(criarCasa).mock.calls[0][2].resultado?.status).toBe('carta')
       await waitFor(() => expect(campoNumero()).toHaveValue(''))
       expect(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' })).toHaveAttribute('aria-checked', 'true')
+      expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
+      await revelar(user)
       expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
     })
 
     it('a aba Faixa não mostra o resultado', async () => {
       const { user } = abrir({ quadra: quadraAberta })
+      await revelar(user)
       await user.click(screen.getByRole('tab', { name: 'Faixa' }))
       expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Muitas ruas', () => {
+    const cinco = ['Rua A', 'Rua B', 'Rua C', 'Rua D', 'Rua E']
+    it('com mais de 4 ruas a escolha vira folha', async () => {
+      const { user } = abrir({ quadra: { ...quadra, ruas: cinco }, casas: [] })
+      expect(screen.queryByRole('radio', { name: 'Rua B' })).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /Rua A/ }))
+      const folha = screen.getByRole('dialog', { name: 'Escolher rua' })
+      await user.click(within(folha).getByRole('radio', { name: 'Rua B' }))
+      expect(screen.queryByRole('dialog', { name: 'Escolher rua' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Rua B/ })).toBeInTheDocument()
     })
   })
 
