@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, increment, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, increment, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
 
 let env: RulesTestEnvironment
 const projectId = 'demo-meu-territorio'
@@ -131,6 +131,40 @@ describe('regras Firestore', () => {
     const block = doc(publisherDb(), 'cards/c1/blocks/b1')
     await assertFails(updateDoc(block, { rotulo: 'Outra', totalCasas: 3 }))
     await assertFails(updateDoc(block, { ruas: [], totalCasas: 3 }))
+  })
+
+  const visitaV1 = 'cards/c1/blocks/b1/houses/h1/visits/v1'
+  const expiraEm = Timestamp.fromDate(new Date('2028-11-12T00:00:00Z'))
+  const criarVisitaV1 = () => env.withSecurityRulesDisabled(async (context) =>
+    setDoc(doc(context.firestore(), visitaV1), { status: 'falado', porUid: 'publisher', porNome: 'Publicador', ciclo: 1 }))
+
+  it('admin pode preencher expiraEm numa visita existente', async () => {
+    await criarVisitaV1()
+    await assertSucceeds(updateDoc(doc(adminDb(), visitaV1), { expiraEm }))
+  })
+
+  it('admin não altera outros campos da visita', async () => {
+    await criarVisitaV1()
+    await assertFails(updateDoc(doc(adminDb(), visitaV1), { status: 'carta' }))
+  })
+
+  it('publicador não altera a visita nem o expiraEm', async () => {
+    await criarVisitaV1()
+    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { expiraEm }))
+    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { status: 'carta' }))
+  })
+
+  it('publicador cria observação sem status, com expiraEm', async () => {
+    await assertSucceeds(setDoc(doc(publisherDb(), 'cards/c1/blocks/b1/houses/h1/visits/v9'), { obs: 'voltar à tarde', porUid: 'publisher', porNome: 'Publicador', ciclo: 1, expiraEm }))
+  })
+
+  it('publicador marca a casa', async () => {
+    await assertSucceeds(updateDoc(doc(publisherDb(), 'cards/c1/blocks/b1/houses/h1'), { naoVisitar: true, naoVisitarPor: 'Publicador' }))
+  })
+
+  it('publicador continua sem abrir cartão nem zerar voltas', async () => {
+    await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1/blocks/b1'), { rodadasTotal: 3 }))
+    await assertFails(updateDoc(doc(publisherDb(), 'cards/c1/blocks/b1'), { rodadasTotal: 0 }))
   })
 
   const rodadaAtual = { id: 'r1', numero: 1, porNome: 'Publicador', em: 5 }

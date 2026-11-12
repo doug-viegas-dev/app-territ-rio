@@ -94,7 +94,10 @@ service cloud.firestore {
           match /visits/{visitId} {
             allow read: if ehMembro();
             allow create: if ehMembro() && request.resource.data.porUid == request.auth.uid;
-            allow update, delete: if false;
+            // O administrador só preenche expiraEm (visitas antigas); nada mais muda.
+            allow update: if ehAdmin()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiraEm']);
+            allow delete: if false;
           }
         }
       }
