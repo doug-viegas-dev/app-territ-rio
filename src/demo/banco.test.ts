@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { faltaVisitar } from '@/domain/status'
-import { abrirCartaoManual, abrirRodada, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
+import { abrirCartaoManual, abrirRodada, criarCartao, atualizarCartao, cartaoTemCasas, excluirCartao, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -511,5 +511,31 @@ describe('visitas, casas e fechamento na demonstração', () => {
     expect(quadras()[0]).toMatchObject({ totalCasas: lista.filter((c) => !c.naoVisitar).length, faltam: lista.filter(faltaVisitar).length })
     const todas = quadras().flatMap((x) => casas(x.id))
     expect(cartao()).toMatchObject({ totalCasas: todas.filter((c) => !c.naoVisitar).length, resolvidas: todas.filter((c) => !c.naoVisitar && (c.status === 'falado' || c.status === 'carta')).length })
+  })
+})
+
+describe('banco de demonstração: editar e excluir cartão', () => {
+  beforeEach(reiniciarBanco)
+
+  it('exclui cartão fechado e vazio', async () => {
+    const id = await criarCartao({ numero: '99', titulo: 'Vazio' }, usuario)
+    await excluirCartao(id)
+    expect(ler<Cartao[]>(observarCartoes).some((c) => c.id === id)).toBe(false)
+    expect(await cartaoTemCasas(id).catch(() => false)).toBe(false)
+  })
+  it('com casas rejeita com casas', async () => {
+    const c = ler<Cartao[]>(observarCartoes).find((x) => x.estado === 'fechado') as Cartao
+    expect(await cartaoTemCasas(c.id)).toBe(true)
+    await expect(excluirCartao(c.id)).rejects.toMatchObject({ motivo: 'casas' })
+    expect(ler<Cartao[]>(observarCartoes).some((x) => x.id === c.id)).toBe(true)
+  })
+  it('cartão aberto rejeita com aberto', async () => {
+    const c = ler<Cartao[]>(observarCartoes).find((x) => x.estado === 'aberto') as Cartao
+    await expect(excluirCartao(c.id)).rejects.toMatchObject({ motivo: 'aberto' })
+  })
+  it('mapsUrl null limpa o link', async () => {
+    const id = await criarCartao({ numero: '98', titulo: 'Link', mapsUrl: 'https://x.test' }, usuario)
+    await atualizarCartao(id, { mapsUrl: null })
+    expect(ler<Cartao | null>((cb) => observarCartao(id, cb))?.mapsUrl).toBeUndefined()
   })
 })

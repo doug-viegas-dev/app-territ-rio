@@ -2,6 +2,7 @@ import { abrirCartao, contadoresAposReinicio, estadoAposFecharEReiniciar, fechar
 import { validarCasa } from '@/domain/casa'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
+import { bloqueiosDoCartao, ExclusaoBloqueada } from '@/domain/exclusao'
 import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
 import { contribuicao, deltaContadores } from '@/domain/status'
 import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
@@ -236,10 +237,34 @@ export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?:
   return id
 }
 
-export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numero' | 'titulo' | 'mapsUrl' | 'imagemPath' | 'pdfPath'>>): Promise<void> {
+export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numero' | 'titulo' | 'imagemPath' | 'pdfPath'>> & { mapsUrl?: string | null }): Promise<void> {
   const c = cartaoPorId(id)
-  Object.assign(c, d)
+  const { mapsUrl, ...resto } = d
+  Object.assign(c, resto)
+  if (mapsUrl === null) delete c.mapsUrl
+  else if (mapsUrl !== undefined) c.mapsUrl = mapsUrl
   tocar(c)
+  mudou()
+}
+
+export async function cartaoTemCasas(cartaoId: string): Promise<boolean> {
+  return (estado.quadras[cartaoId] ?? []).some((q) => listaCasas(cartaoId, q.id).length > 0)
+}
+
+export async function excluirCartao(cartaoId: string): Promise<void> {
+  const c = estado.cartoes.find((x) => x.id === cartaoId)
+  if (!c) return
+  const quadras = estado.quadras[cartaoId] ?? []
+  const bloqueio = bloqueiosDoCartao(c, quadras)[0]
+  if (bloqueio) throw new ExclusaoBloqueada(bloqueio)
+  if (await cartaoTemCasas(cartaoId)) throw new ExclusaoBloqueada('casas')
+  for (const q of quadras) {
+    delete estado.casas[chaveCasas(cartaoId, q.id)]
+    delete estado.rodadas[chaveCasas(cartaoId, q.id)]
+  }
+  delete estado.quadras[cartaoId]
+  delete estado.eventos[cartaoId]
+  estado.cartoes = estado.cartoes.filter((x) => x.id !== cartaoId)
   mudou()
 }
 
@@ -553,8 +578,9 @@ export async function urlDoArquivo(path: string): Promise<string> {
 }
 
 export async function guardarArquivos(cartaoId: string, arquivos: { pdf: Blob; imagem: Blob }): Promise<{ pdfPath: string; imagemPath: string }> {
-  const pdfPath = `cards/${cartaoId}/mapa.pdf`
-  const imagemPath = `cards/${cartaoId}/mapa.webp`
+  const quando = Date.now()
+  const pdfPath = `cards/${cartaoId}/mapa-${quando}.pdf`
+  const imagemPath = `cards/${cartaoId}/mapa-${quando}.webp`
   estado.arquivos[pdfPath] = URL.createObjectURL(arquivos.pdf)
   estado.arquivos[imagemPath] = URL.createObjectURL(arquivos.imagem)
   return { pdfPath, imagemPath }
