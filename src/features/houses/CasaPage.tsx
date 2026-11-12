@@ -5,26 +5,40 @@ import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { validarCasa } from '@/domain/casa'
 import { podeRegistrar } from '@/domain/ciclo'
-import { podeRegistrarNaQuadra } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
-import type { Casa, Status, Visita } from '@/domain/types'
+import type { Casa, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
-import { editarCasa, excluirCasa, observarVisitas, registrarVisita } from '@/firebase/houses'
-import AvisoNaoEnviado from './AvisoNaoEnviado'
+import { aindaNoHistorico } from '@/domain/historico'
+import { editarCasa, excluirCasa, marcarCasa, observarVisitas, salvarObservacao } from '@/firebase/houses'
 import FaixaRodada from './FaixaRodada'
 import HistoricoVisitas from './HistoricoVisitas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
+import { SeloMarcas } from './SeloMarcas'
 import { useCasas } from './useCasas'
 
-const STATUS_REGISTRAVEIS: Status[] = ['falado', 'sem_resposta', 'estudo', 'nao_visitar']
 const dia = (ms: number) => new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
 function useVisitas(cartaoId: string, quadraId: string, casaId: string): Visita[] {
   const [atual, setAtual] = useState<{ chave: string; visitas: Visita[] } | null>(null)
   const chave = `${cartaoId}/${quadraId}/${casaId}`
-  useEffect(() => observarVisitas(cartaoId, quadraId, casaId, (visitas) => setAtual({ chave, visitas })), [cartaoId, quadraId, casaId, chave])
+  useEffect(() => observarVisitas(cartaoId, quadraId, casaId, (visitas) => {
+    const agora = Date.now()
+    setAtual({ chave, visitas: visitas.filter((v) => aindaNoHistorico(v, agora)) })
+  }), [cartaoId, quadraId, casaId, chave])
   return atual?.chave === chave ? atual.visitas : []
+}
+
+function Interruptor({ rotulo, ligada, bloqueado, onClick }: { rotulo: string; ligada: boolean; bloqueado: boolean; onClick: () => void }) {
+  return <button
+    type="button"
+    role="switch"
+    aria-checked={ligada}
+    aria-disabled={bloqueado ? true : undefined}
+    className={ligada ? 'chave on' : 'chave'}
+    style={{ minHeight: 48, width: '100%', justifyContent: 'space-between', textAlign: 'left' }}
+    onClick={() => { if (!bloqueado) onClick() }}
+  ><span>{rotulo}</span><i /></button>
 }
 
 function FolhaEditar({ casa, onSalvar, onCancelar }: { casa: Casa; onSalvar: (d: { numero: string; descricao: string }) => void; onCancelar: () => void }) {
@@ -69,9 +83,11 @@ export default function CasaPage() {
   const [editando, setEditando] = useState(false)
   const [erroEdicao, setErroEdicao] = useState(false)
   const [erroRodada, setErroRodada] = useState(false)
+  const [erroMarca, setErroMarca] = useState(false)
+  const [erroObs, setErroObs] = useState(false)
+  const [confirmandoNaoVisitar, setConfirmandoNaoVisitar] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
   const navigate = useNavigate()
-  const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status; obs: string } | null>(null)
 
   const quadra = quadras.find((q) => q.id === quadraId)
   const casa = casas?.find((c) => c.id === casaId)
@@ -87,21 +103,20 @@ export default function CasaPage() {
   </>
 
   const aberto = podeRegistrar(cartao)
-  const podeAnotar = !!quadra && podeRegistrarNaQuadra(cartao, quadra)
   const ehAdmin = membro?.papel === 'admin'
 
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
-  function enviar(novoStatus: Status, texto: string) {
-    const rodada = quadra?.rodadaAtual?.numero
-    if (!cartao || !casa || !usuario || !quadra || rodada === undefined || !podeRegistrarNaQuadra(cartao, quadra)) return
-    setFalha(null)
-    registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, ...(texto.trim() && { obs: texto.trim() }), usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra.semContadores === true })
-      .catch(() => setFalha({ casa, novoStatus, obs: texto }))
+  function marcar(marca: 'naoVisitar' | 'estudo', ligada: boolean) {
+    if (!cartao || !casa || !usuario || !aberto) return
+    setErroMarca(false)
+    marcarCasa({ cartaoId, quadraId, casa, marca, ligada, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra?.semContadores === true }).catch(() => setErroMarca(true))
   }
 
-  function registrar(s: Status) {
-    if (!podeAnotar) return
-    enviar(s, obs)
+  function salvarObs() {
+    const texto = obs.trim()
+    if (!cartao || !usuario || !aberto || !texto) return
+    setErroObs(false)
+    salvarObservacao({ cartaoId, quadraId, casaId, ciclo: cartao.ciclo, texto, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } }).catch(() => setErroObs(true))
     setObs('')
   }
 
@@ -121,11 +136,18 @@ export default function CasaPage() {
 
   const nome = classeStatus(casa.status)
   return <>
-    <Topo titulo="Casa" {...voltar} sub={`${quadra?.rotulo ?? 'Quadra'} · ${casa.rua}`} naoEnviado={falha !== null} />
-    {falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => enviar(falha.novoStatus, falha.obs)} />}
+    <Topo titulo="Casa" {...voltar} sub={`${quadra?.rotulo ?? 'Quadra'} · ${casa.rua}`} />
     {erroEdicao && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
       <p><b>Não foi possível salvar a edição</b>O número e a descrição voltaram ao que estava. Tente de novo.</p>
+    </div>}
+    {erroMarca && <div className="aviso faixa erro" role="alert">
+      <Icone nome="aviso" />
+      <p><b>Não foi possível salvar</b>A marca da casa não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroMarca(false)}>Entendi</button></p>
+    </div>}
+    {erroObs && <div className="aviso faixa erro" role="alert">
+      <Icone nome="aviso" />
+      <p><b>Não foi possível salvar</b>A observação não foi enviada. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroObs(false)}>Entendi</button></p>
     </div>}
     {erroRodada && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
@@ -136,7 +158,7 @@ export default function CasaPage() {
       <Icone nome="cadeado" />
       <p>
         <b>Cartão fechado</b>
-        {ehAdmin ? 'Abra o cartão para registrar visitas. ' : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
+        {ehAdmin ? 'Abra o cartão para registrar visitas e marcar a casa. ' : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
         {ehAdmin && <Link className="btn link" style={{ minHeight: 40 }} to={`/cartao/${cartaoId}`}>Abrir cartão</Link>}
       </p>
     </div>}
@@ -156,27 +178,19 @@ export default function CasaPage() {
         </div>
       </div>
 
-      <h2 className="titulo-secao" style={{ marginTop: 4 }}>Registrar visita</h2>
-      <div className="grade-status">
-        {STATUS_REGISTRAVEIS.map((s) => {
-          const atual = casa.status === s
-          const n = classeStatus(s)
-          return <button
-            key={s}
-            type="button"
-            className={`bs c-${n}${atual ? ' sel' : ''}`}
-            style={{ minHeight: 56 }}
-            aria-pressed={atual}
-            aria-disabled={podeAnotar ? undefined : true}
-            onClick={() => registrar(s)}
-          ><Icone nome={n} /><span>{rotuloStatus(s)}</span></button>
-        })}
-      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: 4 }}><SeloMarcas casa={casa} /></div>
+
+      <h2 className="titulo-secao" style={{ marginTop: 18 }}>Sobre esta casa</h2>
+      <Interruptor rotulo="Pediu para não ser visitado" ligada={!!casa.naoVisitar} bloqueado={!aberto} onClick={() => (casa.naoVisitar ? marcar('naoVisitar', false) : setConfirmandoNaoVisitar(true))} />
+      {casa.naoVisitar && (casa.naoVisitarPor || casa.naoVisitarEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)' }}>Marcado{casa.naoVisitarPor && ` por ${casa.naoVisitarPor}`}{casa.naoVisitarEm !== undefined && ` em ${dia(casa.naoVisitarEm)}`}</p>}
+      <Interruptor rotulo="Aqui há um estudo de alguém" ligada={!!casa.estudo} bloqueado={!aberto} onClick={() => marcar('estudo', !casa.estudo)} />
+      {casa.estudo && (casa.estudoPor || casa.estudoEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)' }}>Marcado{casa.estudoPor && ` por ${casa.estudoPor}`}{casa.estudoEm !== undefined && ` em ${dia(casa.estudoEm)}`}</p>}
 
       <div className="campo" style={{ marginTop: 18 }}>
+        <span className="dica">Não anote nenhum dado pessoal: nem nomes, telefones ou documentos de moradores.</span>
         <label htmlFor="casa-obs">Observação <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>(opcional)</span></label>
         <textarea id="casa-obs" className="entrada" placeholder="Ex.: voltar à tarde" value={obs} onChange={(e) => setObs(e.target.value)} />
-        <span className="dica">Não escreva nomes de moradores. A observação vai junto com o próximo registro.</span>
+        <button type="button" className="btn secundario" aria-disabled={aberto ? undefined : true} onClick={salvarObs}>Salvar</button>
       </div>
 
       <h2 className="titulo-secao divisor">Histórico</h2>
@@ -194,6 +208,17 @@ export default function CasaPage() {
         <div className="pilha">
           <button type="button" className="btn perigo" onClick={excluir}>Excluir casa</button>
           <button type="button" className="btn secundario" onClick={() => setExcluindo(false)}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
+
+    {confirmandoNaoVisitar && <div className="veu">
+      <div className="folha" role="dialog" aria-label="Marcar como não visitar">
+        <h2>Marcar como não visitar?</h2>
+        <p>{rotuloCasa(casa)} sai das contas do cartão e da quadra, e o registro de visitas nela fica travado até você desmarcar.</p>
+        <div className="pilha">
+          <button type="button" className="btn primario" onClick={() => { setConfirmandoNaoVisitar(false); marcar('naoVisitar', true) }}>Marcar</button>
+          <button type="button" className="btn secundario" onClick={() => setConfirmandoNaoVisitar(false)}>Cancelar</button>
         </div>
       </div>
     </div>}

@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,14 +6,14 @@ import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { observarQuadras } from '@/firebase/blocks'
 import { observarCartao } from '@/firebase/cards'
-import { editarCasa, excluirCasa, observarCasas, observarVisitas, registrarVisita } from '@/firebase/houses'
+import { editarCasa, excluirCasa, marcarCasa, observarCasas, observarVisitas, salvarObservacao } from '@/firebase/houses'
 import { abrirRodada } from '@/firebase/rodadas'
 import type { Cartao, Casa, Quadra, Visita } from '@/domain/types'
 import CasaPage from './CasaPage'
 
 vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
-vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), registrarVisita: vi.fn(), editarCasa: vi.fn(), excluirCasa: vi.fn() }))
+vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), marcarCasa: vi.fn(), salvarObservacao: vi.fn(), editarCasa: vi.fn(), excluirCasa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 vi.mock('@/firebase/rodadas', () => ({ abrirRodada: vi.fn(), encerrarRodada: vi.fn() }))
@@ -54,40 +54,31 @@ describe('CasaPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useOnline).mockReturnValue(true)
-    vi.mocked(registrarVisita).mockResolvedValue()
+    vi.mocked(marcarCasa).mockResolvedValue()
+    vi.mocked(salvarObservacao).mockResolvedValue()
     vi.mocked(editarCasa).mockResolvedValue()
   })
   afterEach(cleanup)
 
-  it('sem rodada aberta os botões de status ficam bloqueados e nada é gravado', async () => {
-    preparar(casaComNumero)
-    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([{ ...quadra, rodadaAtual: undefined }]); return () => {} })
-    renderPagina()
-    const botao = screen.getByRole('button', { name: 'Conversado' })
-    expect(botao).toHaveAttribute('aria-disabled', 'true')
-    await userEvent.setup().click(botao)
-    expect(registrarVisita).not.toHaveBeenCalled()
-  })
-
-  it('lista o histórico na ordem recebida, com nome, data e rodada', () => {
+  it('lista o histórico na ordem recebida, com nome, data e volta', () => {
     preparar(casaComNumero)
     renderPagina()
     const itens = screen.getAllByRole('listitem')
     expect(itens).toHaveLength(2)
     expect(itens[0]).toHaveTextContent('Não atendeu')
-    expect(itens[0]).toHaveTextContent('02/11/2026 · Marcos S. · Rodada 2')
+    expect(itens[0]).toHaveTextContent('02/11/2026 · Marcos S. · Volta 2')
     expect(itens[1]).toHaveTextContent('Conversado')
-    expect(itens[1]).toHaveTextContent('18/09/2026 · Ana P. · Rodada 1')
+    expect(itens[1]).toHaveTextContent('18/09/2026 · Ana P. · Volta 1')
     expect(screen.queryByText(/Ciclo/)).not.toBeInTheDocument()
     expect(itens[1]).toHaveTextContent('Pediu para voltar à tarde.')
   })
 
-  it('visita antiga sem rodada não mostra Rodada nem Ciclo', () => {
+  it('visita antiga sem rodada não mostra Volta nem Ciclo', () => {
     preparar(casaComNumero, { visitas: [{ id: 'v0', status: 'falado', em: new Date(2026, 8, 18).getTime(), porUid: 'u8', porNome: 'Ana P.', ciclo: 1 }] })
     renderPagina()
     const item = screen.getByRole('listitem')
     expect(item).toHaveTextContent('18/09/2026 · Ana P.')
-    expect(item).not.toHaveTextContent('Rodada')
+    expect(item).not.toHaveTextContent('Volta')
     expect(item).not.toHaveTextContent('Ciclo')
   })
 
@@ -96,19 +87,6 @@ describe('CasaPage', () => {
     renderPagina()
     expect(screen.getByText(/Nenhuma visita ainda/)).toBeInTheDocument()
     expect(screen.getByText(/nenhuma visita ainda/)).toBeInTheDocument()
-  })
-
-  it('registrar com observação envia a observação e limpa o campo', async () => {
-    preparar(casaComNumero)
-    renderPagina()
-    const user = userEvent.setup()
-    await user.type(screen.getByLabelText(/^Observação/), 'voltar à tarde')
-    await user.click(screen.getByRole('button', { name: 'Conversado' }))
-    expect(registrarVisita).toHaveBeenCalledTimes(1)
-    expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: aberto, quadraId: 'q3', rodada: 2, casa: casaComNumero, novoStatus: 'falado', obs: 'voltar à tarde', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
-    })
-    expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
   })
 
   it('mostra a faixa da rodada; sem rodada, "Nenhuma rodada aberta" e o botão "Abrir rodada"', async () => {
@@ -123,34 +101,6 @@ describe('CasaPage', () => {
     preparar(casaComNumero)
     renderPagina()
     expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toBeInTheDocument()
-  })
-
-  it('se a rodada encerra depois da falha, troca "Tentar de novo" por uma explicação', async () => {
-    vi.mocked(registrarVisita).mockRejectedValueOnce(new Error('falhou'))
-    let emitir: (q: Quadra[]) => void = () => {}
-    preparar(casaComNumero)
-    vi.mocked(observarQuadras).mockImplementation((_id, cb) => { emitir = cb; cb([quadra]); return () => {} })
-    renderPagina()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Conversado' }))
-    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
-    act(() => emitir([{ ...quadra, rodadaAtual: undefined }]))
-    expect(screen.getByText('A última anotação não foi enviada')).toBeInTheDocument()
-    expect(screen.getByText('A rodada foi encerrada. Abra a rodada para registrar de novo.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
-    await waitFor(() => expect(registrarVisita).toHaveBeenCalledTimes(1))
-  })
-
-  it('registrar sem observação não envia obs', async () => {
-    preparar(casaComNumero)
-    renderPagina()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Estudo' }))
-    expect(vi.mocked(registrarVisita).mock.calls[0][0].obs).toBeUndefined()
-  })
-
-  it('o botão do status atual aparece marcado', () => {
-    preparar(casaSemNumero)
-    renderPagina()
-    expect(screen.getByRole('button', { name: 'Não atendeu' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('editar a descrição chama editarCasa', async () => {
@@ -180,19 +130,6 @@ describe('CasaPage', () => {
     expect(within(folha).getByRole('alert')).toHaveTextContent('Informe o número ou uma descrição.')
   })
 
-  it('cartão fechado desativa os botões e mostra o aviso (publicador)', async () => {
-    preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' } })
-    renderPagina()
-    expect(screen.getByText('Cartão fechado')).toBeInTheDocument()
-    expect(screen.getByText(/Só um administrador pode abrir o cartão/)).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Abrir cartão' })).not.toBeInTheDocument()
-    const botao = screen.getByRole('button', { name: 'Conversado' })
-    expect(botao).toHaveAttribute('aria-disabled', 'true')
-    await userEvent.setup().click(botao)
-    expect(registrarVisita).not.toHaveBeenCalled()
-    expect(screen.queryByRole('button', { name: 'Editar número e descrição' })).not.toBeInTheDocument()
-  })
-
   it('cartão fechado: o administrador vê o link "Abrir cartão"', () => {
     preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' }, papel: 'admin' })
     renderPagina()
@@ -209,18 +146,6 @@ describe('CasaPage', () => {
     const folha = screen.getByRole('dialog', { name: 'Excluir casa' })
     await user.click(within(folha).getByRole('button', { name: 'Excluir casa' }))
     expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: false })
-  })
-
-  it('quadra sem contadores: registrar e excluir avisam para não mexer nos contadores da quadra', async () => {
-    preparar(casaComNumero, { papel: 'admin', quadra: { ...quadra, semContadores: true } })
-    vi.mocked(excluirCasa).mockResolvedValue()
-    renderPagina()
-    const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Conversado' }))
-    expect(vi.mocked(registrarVisita).mock.calls[0][0].quadraSemContadores).toBe(true)
-    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
-    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
-    expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: true })
   })
 
   it('sem a quadra carregada, Excluir casa fica desativado e não abre a confirmação nem grava', async () => {
@@ -260,6 +185,135 @@ describe('CasaPage', () => {
     preparar(casaComNumero)
     renderPagina()
     expect(screen.queryByRole('button', { name: 'Excluir casa' })).not.toBeInTheDocument()
+  })
+
+  it('não tem região "Registrar visita", botões de registro nem o texto antigo da observação', () => {
+    preparar(casaComNumero)
+    renderPagina()
+    expect(screen.queryByText('Registrar visita')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Conversado' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Carta' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/A observação vai junto com o próximo registro/)).not.toBeInTheDocument()
+  })
+
+  it('"Sobre esta casa" tem dois interruptores coerentes com as marcas', () => {
+    preparar({ ...casaComNumero, estudo: true })
+    renderPagina()
+    expect(screen.getByText('Sobre esta casa')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Pediu para não ser visitado' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' })).toHaveAttribute('aria-checked', 'true')
+    cleanup()
+    preparar({ ...casaComNumero, naoVisitar: true })
+    renderPagina()
+    expect(screen.getByRole('switch', { name: 'Pediu para não ser visitado' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' })).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('marca sem autor nem data não quebra a tela', () => {
+    preparar({ ...casaComNumero, naoVisitar: true })
+    renderPagina()
+    expect(screen.getAllByText('Não visitar').length).toBeGreaterThan(0)
+  })
+
+  it('ligar "estudo" chama marcarCasa sem confirmação', async () => {
+    preparar(casaComNumero)
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' }))
+    expect(marcarCasa).toHaveBeenCalledTimes(1)
+    expect(marcarCasa).toHaveBeenCalledWith(expect.objectContaining({ cartaoId: 'c12', quadraId: 'q3', casa: casaComNumero, marca: 'estudo', ligada: true, usuario: { uid: 'u1', nome: 'Maria S.' } }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('ligar "não visitar" pede confirmação; só "Marcar" grava e "Cancelar" não', async () => {
+    preparar(casaComNumero)
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('switch', { name: 'Pediu para não ser visitado' }))
+    const dialogo = screen.getByRole('dialog', { name: 'Marcar como não visitar' })
+    expect(dialogo).toHaveTextContent(/sai das contas/)
+    expect(dialogo).toHaveTextContent(/registro/)
+    expect(marcarCasa).not.toHaveBeenCalled()
+    await user.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
+    expect(marcarCasa).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: 'Pediu para não ser visitado' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Marcar como não visitar' })).getByRole('button', { name: 'Marcar' }))
+    expect(marcarCasa).toHaveBeenCalledTimes(1)
+    expect(marcarCasa).toHaveBeenCalledWith(expect.objectContaining({ marca: 'naoVisitar', ligada: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('desligar "não visitar" não pede confirmação', async () => {
+    preparar({ ...casaComNumero, naoVisitar: true })
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('switch', { name: 'Pediu para não ser visitado' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(marcarCasa).toHaveBeenCalledWith(expect.objectContaining({ marca: 'naoVisitar', ligada: false }))
+  })
+
+  it('falha ao gravar a marca mostra o aviso de erro', async () => {
+    vi.mocked(marcarCasa).mockRejectedValueOnce(new Error('falhou'))
+    preparar(casaComNumero)
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar')
+  })
+
+  it('cartão fechado: interruptores e "Salvar" ficam desativados e não gravam', async () => {
+    preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' } })
+    renderPagina()
+    expect(screen.getByText('Cartão fechado')).toBeInTheDocument()
+    const user = userEvent.setup()
+    const estudo = screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' })
+    const nao = screen.getByRole('switch', { name: 'Pediu para não ser visitado' })
+    const salvar = screen.getByRole('button', { name: 'Salvar' })
+    for (const b of [estudo, nao, salvar]) expect(b).toHaveAttribute('aria-disabled', 'true')
+    await user.type(screen.getByLabelText(/^Observação/), 'algo')
+    await user.click(estudo)
+    await user.click(nao)
+    await user.click(salvar)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(marcarCasa).not.toHaveBeenCalled()
+    expect(salvarObservacao).not.toHaveBeenCalled()
+  })
+
+  it('o aviso de dados pessoais aparece acima do campo Observação', () => {
+    preparar(casaComNumero)
+    renderPagina()
+    const aviso = screen.getByText('Não anote nenhum dado pessoal: nem nomes, telefones ou documentos de moradores.')
+    const campo = screen.getByLabelText(/^Observação/)
+    expect(aviso.compareDocumentPosition(campo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('"Salvar" com texto vazio ou só espaços não grava', async () => {
+    preparar(casaComNumero)
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    await user.type(screen.getByLabelText(/^Observação/), '   ')
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(salvarObservacao).not.toHaveBeenCalled()
+  })
+
+  it('"Salvar" com texto grava a observação no ciclo do cartão e limpa o campo', async () => {
+    preparar(casaComNumero)
+    renderPagina()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/^Observação/), 'voltar à tarde')
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(salvarObservacao).toHaveBeenCalledWith({ cartaoId: 'c12', quadraId: 'q3', casaId: 'h1', texto: 'voltar à tarde', ciclo: 2, usuario: { uid: 'u1', nome: 'Maria S.' } })
+    expect(screen.getByLabelText(/^Observação/)).toHaveValue('')
+  })
+
+  it('o histórico não mostra visita de mais de 2 anos e mostra a de 1 ano', () => {
+    const ano = 365 * 24 * 3600 * 1000
+    preparar(casaComNumero, { visitas: [
+      { id: 'novo', status: 'falado', em: Date.now() - ano, porUid: 'u', porNome: 'Recente R.', ciclo: 1 },
+      { id: 'velho', status: 'falado', em: Date.now() - 3 * ano, porUid: 'u', porNome: 'Antigo A.', ciclo: 1 },
+    ] })
+    renderPagina()
+    expect(screen.getByText(/Recente R\./)).toBeInTheDocument()
+    expect(screen.queryByText(/Antigo A\./)).not.toBeInTheDocument()
   })
 
   it('casa sem número mostra só a descrição e "Sem número"', () => {
