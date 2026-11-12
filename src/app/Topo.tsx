@@ -14,6 +14,8 @@ type Props = {
   sub?: ReactNode
   progresso?: { resolvidas: number; total: number }
   naoEnviado?: boolean
+  /** Falso quando a tela já mostra a conexão só pela pílula (Quadra). */
+  faixaOffline?: boolean
 }
 
 export function Conexao({ naoEnviado = false }: { naoEnviado?: boolean }) {
@@ -23,22 +25,22 @@ export function Conexao({ naoEnviado = false }: { naoEnviado?: boolean }) {
   if (online && sincronizando) return <span className="sync" role="status"><Icone nome="nuvem" />Sincronizando</span>
   return online
     ? <span className="sync"><Icone nome="nuvem-ok" /><span className="so-leitor">Sincronizado</span></span>
-    : <span className="sync"><Icone nome="offline" />Sem internet</span>
+    : <span className="sync"><Icone nome="offline" /><span className="so-leitor">Sem internet</span></span>
 }
 
-export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, progresso, naoEnviado }: Props) {
+export default function Topo({ titulo, logo, voltarPara, voltarRotulo, sub, progresso, naoEnviado, faixaOffline = true }: Props) {
   const online = useOnline()
   return <>
     <header className={progresso || sub ? 'topo' : 'topo simples'}>
       <div className="topo-linha">
         {voltarPara && <Link className="voltar" to={voltarPara} aria-label={voltarRotulo ?? 'Voltar'}><Icone nome="voltar" className="ic ic-28" /></Link>}
         {logo && <Logo tamanho={36} />}
-        <h1>{titulo}</h1>
+        <h1 title={titulo}>{titulo}</h1>
         <Conexao naoEnviado={naoEnviado} />
       </div>
       {sub && <p className="topo-sub">{sub}</p>}
       {progresso && <Progresso resolvidas={progresso.resolvidas} total={progresso.total} />}
     </header>
-    {!online && <div className="aviso faixa" role="status"><Icone nome="offline" /><p>Sem internet — suas anotações serão enviadas depois.</p></div>}
+    {faixaOffline && !online && <div className="aviso faixa" role="status"><Icone nome="offline" /><p>Sem internet — suas anotações serão enviadas depois.</p></div>}
   </>
 }

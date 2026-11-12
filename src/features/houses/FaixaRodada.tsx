@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icone } from '@/app/icones'
 import { podeAbrirRodada, podeEncerrarRodada, rodadaDeOutroDia } from '@/domain/rodada'
 import type { Quadra } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -53,15 +52,16 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
       .finally(() => setPendente((p) => (p === marca ? null : p)))
   }
 
-  const texto = atual
+  // Título curto numa linha; quem e quando na segunda, cortado com reticências se faltar largura.
+  const titulo = atual ? `Volta ${atual.numero}` : 'Nenhuma volta aberta'
+  const detalhe = atual
     ? rodadaDeOutroDia(atual, agora)
-      ? `Volta ${atual.numero} · aberta em ${dataCurta(atual.em)} por ${atual.porNome}`
-      : `Volta ${atual.numero} · aberta por ${atual.porNome} às ${hora(atual.em)}`
-    : 'Nenhuma volta aberta'
+      ? `aberta em ${dataCurta(atual.em)} por ${atual.porNome}`
+      : `aberta por ${atual.porNome} às ${hora(atual.em)}`
+    : null
 
-  return <div className="aviso faixa" style={{ alignItems: 'center' }}>
-    <Icone nome={atual ? 'historico' : 'info'} />
-    <p>{texto}</p>
+  return <div className="aviso faixa volta">
+    <p><b>{titulo}</b>{detalhe && <span className="detalhe">{detalhe}</span>}</p>
     {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" aria-disabled={ocupado || pausado ? true : undefined} onClick={() => executar(encerrarRodada)}>Encerrar volta</button>}
     {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto && !ocupado && !pausado ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir volta</button>}
   </div>

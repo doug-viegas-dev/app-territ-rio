@@ -27,7 +27,7 @@ export default function CasaLinha({ casa, foco, onSelecionar }: Props) {
   return <button className={classe} type="button" aria-current={foco ? 'true' : undefined} onClick={() => onSelecionar(casa)}>
     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, textAlign: 'left' }}>
       <span className="rotulo">{rotuloCasa(casa)}</span>
-      <SeloMarcas casa={casa} />
+      <SeloMarcas casa={casa} compacto />
     </span>
     <Estado casa={casa} />
   </button>

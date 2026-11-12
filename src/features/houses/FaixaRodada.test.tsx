@@ -30,13 +30,14 @@ describe('FaixaRodada', () => {
 
   it('mostra rodada aberta com quem e hora', () => {
     renderFaixa(comRodada(hoje()))
-    expect(screen.getByText('Volta 2 · aberta por Ana às 14:10')).toBeInTheDocument()
+    expect(screen.getByText('Volta 2')).toBeInTheDocument()
+    expect(screen.getByText('aberta por Ana às 14:10')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Encerrar volta' })).toBeInTheDocument()
   })
 
   it('mostra a data quando a rodada é de outro dia', () => {
     renderFaixa(comRodada(new Date(2026, 10, 2, 9, 0).getTime()))
-    expect(screen.getByText('Volta 2 · aberta em 02/11 por Ana')).toBeInTheDocument()
+    expect(screen.getByText('aberta em 02/11 por Ana')).toBeInTheDocument()
   })
 
   it('sem rodada mostra "Nenhuma volta aberta"', () => {
@@ -181,7 +182,7 @@ describe('FaixaRodada', () => {
       const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
       vi.setSystemTime(new Date(2026, 10, 9, 0, 6))
       rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(new Date(2026, 10, 9, 0, 5).getTime())} cartaoAberto onErro={vi.fn()} />)
-      expect(screen.getByText('Volta 2 · aberta por Ana às 00:05')).toBeInTheDocument()
+      expect(screen.getByText('aberta por Ana às 00:05')).toBeInTheDocument()
     } finally {
       vi.useRealTimers()
     }

@@ -89,11 +89,12 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
   })
 
-  it('o botão de adicionar casa mostra só o ícone e tem nome acessível', () => {
+  it('o botão de adicionar casa fica na faixa de ações da lista, com ícone e nome', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
     const botao = screen.getByRole('button', { name: 'Adicionar casa' })
-    expect(botao.textContent).toBe('')
+    expect(botao.textContent).toBe('Adicionar casa')
+    expect(botao).not.toHaveClass('fab')
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
@@ -364,11 +365,12 @@ describe('QuadraPage', () => {
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
   })
 
-  it('sem internet mostra a faixa de aviso', () => {
+  it('sem internet mostra a conexão só na pílula do topo, sem faixa extra', () => {
     vi.mocked(useOnline).mockReturnValue(false)
     preparar([casa({ numero: '1' })])
     renderPagina()
-    expect(screen.getByText('Sem internet — suas anotações serão enviadas depois.')).toBeInTheDocument()
+    expect(screen.getByText('Sem internet')).toBeInTheDocument()
+    expect(screen.queryByText('Sem internet — suas anotações serão enviadas depois.')).not.toBeInTheDocument()
   })
 
   it('mostra o progresso da quadra no cabeçalho', () => {
@@ -390,7 +392,7 @@ describe('QuadraPage com rodadas', () => {
   it('mostra a faixa da rodada aberta', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    expect(screen.getByText(/^Volta 2 · aberta por Ana às /)).toBeInTheDocument()
+    expect(screen.getByText(/^aberta por Ana às /)).toBeInTheDocument()
   })
 
   it('sem rodada aberta os botões de status ficam bloqueados', async () => {

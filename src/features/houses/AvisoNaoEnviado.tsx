@@ -13,7 +13,7 @@ export default function AvisoNaoEnviado({ cartaoAberto, rodadaAberta, onTentar }
       <b>A última anotação não foi enviada</b>
       {motivo
         ? <span>{motivo}</span>
-        : <>Ela está guardada neste aparelho. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={onTentar}>Tentar de novo</button></>}
+        : <>Ela está guardada neste aparelho. <button type="button" className="btn link" onClick={onTentar}>Tentar de novo</button></>}
     </p>
   </div>
 }

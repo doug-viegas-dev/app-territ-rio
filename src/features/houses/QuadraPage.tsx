@@ -112,20 +112,22 @@ export default function QuadraPage() {
       sub={`Cartão ${cartao.numero} · ${vazia ? 'nenhuma casa' : `${resolvidas} de ${contadas.length} resolvidas`}`}
       progresso={vazia ? undefined : { resolvidas, total: contadas.length }}
       naoEnviado={falha !== null}
+      faixaOffline={false}
     />
-    {erroEscrita && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>Não foi possível salvar</b>A última alteração não foi aceita. Confira o que aparece na lista e tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroEscrita(false)}>Entendi</button></p>
-    </div>}
-    {falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => void enviar(falha.casa, falha.novoStatus, false)} />}
-    <div style={{ padding: '0 16px' }}><BotaoFecharCartao cartao={cartao} quadras={quadrasCarregadas} /></div>
+    {/* Um só espaço para avisos de falha: o erro de escrita vence "Não enviado". */}
+    {erroEscrita
+      ? <div className="aviso faixa erro" role="alert">
+        <Icone nome="aviso" />
+        <p><b>Não foi possível salvar</b>A última alteração não foi aceita. Confira o que aparece na lista e tente de novo. <button type="button" className="btn link" onClick={() => setErroEscrita(false)}>Entendi</button></p>
+      </div>
+      : falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => void enviar(falha.casa, falha.novoStatus, false)} />}
     {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />
       <p>
         <b>Cartão fechado</b>
         {ehAdmin ? 'Abra o cartão para registrar visitas. ' : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
-        {ehAdmin && <Link className="btn link" style={{ minHeight: 40 }} to={`/cartao/${cartaoId}`}>Abrir cartão</Link>}
+        {ehAdmin && <Link className="btn link" to={`/cartao/${cartaoId}`}>Abrir cartão</Link>}
       </p>
     </div>}
 
@@ -144,17 +146,19 @@ export default function QuadraPage() {
         <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
         {aberto && <button type="button" className="btn primario" style={{ maxWidth: 260, margin: '0 auto' }} onClick={() => setNovaCasa({})}><Icone nome="mais" />Cadastrar a primeira casa</button>}
       </div>
+      <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
     </div>}
 
     {!vazia && foco && <>
-      <div className="rolagem com-barra">
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
-          <div className="segmento" style={{ flex: 1 }} role="tablist">
-            <button type="button" role="tab" aria-selected={modo === 'trabalho'} className={modo === 'trabalho' ? 'ativo' : ''} onClick={() => setModo('trabalho')}>Trabalho</button>
-            <button type="button" role="tab" aria-selected={modo === 'todas'} className={modo === 'todas' ? 'ativo' : ''} onClick={() => setModo('todas')}>Todas</button>
-          </div>
-          {aberto && <button type="button" className="btn secundario medio auto" style={{ minHeight: 52 }} onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>}
+      <div className="rolagem">
+        <div className="segmento" role="tablist">
+          <button type="button" role="tab" aria-selected={modo === 'trabalho'} className={modo === 'trabalho' ? 'ativo' : ''} onClick={() => setModo('trabalho')}>Trabalho</button>
+          <button type="button" role="tab" aria-selected={modo === 'todas'} className={modo === 'todas' ? 'ativo' : ''} onClick={() => setModo('todas')}>Todas</button>
         </div>
+        {aberto && <div className="acoes-lista">
+          <button type="button" className="btn secundario medio" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-20" />Adicionar casa</button>
+          <button type="button" className="btn secundario medio" onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>
+        </div>}
 
         {modo === 'trabalho' ? <>
           {semFaltar && <div className="sem-casas" style={{ paddingTop: 24 }}>
@@ -173,11 +177,10 @@ export default function QuadraPage() {
           <h2 className="titulo-secao">{g.rua} <small>{g.casas.length} {g.casas.length === 1 ? 'casa' : 'casas'}</small></h2>
           {g.casas.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
         </div>)}
+        <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
       </div>
 
-      {aberto && <button type="button" className="fab sobre-barra" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-28" /></button>}
-
-      <section className="barra-fixa" aria-label="Registrar visita">
+      <section className="barra-fixa no-fluxo" aria-label="Registrar visita">
         <div className="quem">
           <div><b>{rotuloCasa(foco)}</b><span>{foco.rua}</span></div>
           <Link className="detalhes" to={paraCasa(foco)}>Detalhes<Icone nome="chev" className="ic ic-20" /></Link>

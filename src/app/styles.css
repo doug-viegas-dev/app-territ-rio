@@ -5,7 +5,6 @@
   --cor-principal: #5662B5;
   --cor-secundaria: #E6E9F8;
   --cor-destaque: #E5AD50;
-  --altura-barra: 224px;
   --cor-fundo: #F5F7FD;
   --cor-texto: #232A40;
   --cor-fundo-escuro: #171C28;
@@ -103,7 +102,6 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 }
 .rolagem { flex: 1; overflow-y: auto; padding: 16px var(--gutter) 24px; }
 .rolagem.com-nav { padding-bottom: 24px; }
-.rolagem.com-barra { padding-bottom: calc(var(--altura-barra) + 56px + 32px); }
 .rolagem.centro { display: flex; flex-direction: column; justify-content: center; }
 
 /* ---------- ícones ---------- */
@@ -127,9 +125,9 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 /* ---------- topo ---------- */
 .topo { flex: none; position: relative; z-index: 1; background: var(--topo-bg); color: var(--topo-fg); padding: 8px var(--gutter) 22px; border-radius: 0 0 32px 32px; box-shadow: 0 10px 24px rgba(58, 70, 140, .18); }
 .topo-linha { display: flex; align-items: center; gap: 10px; min-height: 52px; }
-.topo-linha h1 { flex: 1; font-size: 24px; min-width: 0; letter-spacing: -.01em; }
+.topo-linha h1 { flex: 1; font-size: 24px; min-width: 0; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .voltar { width: 48px; height: 48px; margin-left: -6px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .16); flex: none; }
-.topo-sub { font-size: 16px; margin: 0 0 12px; opacity: .95; }
+.topo-sub { font-size: 16px; margin: 0 0 12px; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topo.simples { padding-bottom: 18px; }
 .topo-acao { min-height: 48px; padding: 0 12px; margin-right: -12px; display: flex; align-items: center; gap: 6px; font-weight: 600; border-radius: 12px; }
 
@@ -181,7 +179,7 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 .chip { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 24px; border: 1.5px solid transparent; background: var(--cor-secundaria); font-weight: 500; }
 .chip.sel { background: var(--cor-principal); border-color: var(--cor-principal); color: var(--sobre-principal); }
 .segmento { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--cor-secundaria); border-radius: 999px; padding: 4px; gap: 4px; }
-.segmento > * { min-height: 44px; display: grid; place-items: center; font-weight: 500; border-radius: 999px; padding: 0 8px; text-align: center; }
+.segmento > * { min-height: 48px; display: grid; place-items: center; font-weight: 500; border-radius: 999px; padding: 0 8px; text-align: center; }
 .segmento .ativo { background: var(--superficie); box-shadow: var(--sombra); font-weight: 600; }
 
 /* ---------- avisos ---------- */
@@ -193,6 +191,11 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 .rolagem > .aviso { border-radius: 20px; }
 .aviso.erro > .ic { color: var(--cor-erro); }
 .aviso.faixa { margin: 0; border-radius: 0; flex: none; }
+.aviso.faixa.volta { align-items: center; padding: 8px var(--gutter); }
+.aviso.faixa.volta p { min-width: 0; }
+.aviso.faixa.volta .detalhe { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acoes-lista { display: flex; gap: 8px; margin: 8px 0 4px; }
+.acoes-lista .btn { flex: 1; min-width: 0; padding: 0 10px; }
 .demo-faixa { display: flex; align-items: center; gap: 12px; flex: none; padding: 4px 8px 4px 16px; background: var(--cor-secundaria); color: var(--cor-texto); }
 .demo-faixa p { flex: 1; margin: 0; font-size: 16px; }
 .demo-faixa button { min-width: 48px; min-height: 48px; padding: 0 16px; border-radius: 999px; font-weight: 600; color: var(--cor-texto); text-decoration: underline; }
@@ -227,16 +230,6 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .nav a[aria-current="page"] { color: var(--cor-texto); font-weight: 600; }
 .nav a[aria-current="page"]::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cor-secundaria); border-radius: 22px; }
 
-/* ---------- botão flutuante + casa ---------- */
-.fab {
-  position: absolute; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%;
-  background: var(--cor-destaque); color: #252C3B; display: flex; align-items: center; justify-content: center; z-index: 3;
-  box-shadow: 0 8px 20px rgba(150, 100, 20, .30), 0 0 0 3px var(--cor-fundo);
-}
-.fab .ic { color: #252C3B; }
-/* acima da barra de status (altura aproximada em --altura-barra) */
-.fab.sobre-barra { bottom: calc(var(--altura-barra) + 16px); }
-
 /* ---------- listas ---------- */
 .titulo-secao { font-size: 18px; font-weight: 600; margin: 24px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .rolagem > .titulo-secao:first-child { margin-top: 4px; }
@@ -268,6 +261,7 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .sem-casas { text-align: center; padding: 28px 12px; }
 
 /* barra de registro fixa */
+.barra-fixa.no-fluxo { position: relative; flex: none; }
 .barra-fixa { position: absolute; left: 0; right: 0; bottom: 0; background: var(--superficie); border-radius: 28px 28px 0 0; box-shadow: 0 -8px 28px rgba(58, 70, 140, .14); padding: 16px var(--gutter) 18px; z-index: 2; }
 .barra-fixa .quem { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; min-height: 48px; }
 .barra-fixa .quem b { font-size: 18px; display: block; line-height: 1.2; }
