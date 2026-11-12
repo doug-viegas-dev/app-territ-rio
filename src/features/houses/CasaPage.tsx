@@ -8,7 +8,8 @@ import { podeRegistrar } from '@/domain/ciclo'
 import { rotuloStatus } from '@/domain/rotulos'
 import type { Casa, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
-import { useCartao, useQuadras } from '@/features/cards/useCartao'
+import { useOnline } from '@/app/useOnline'
+import { useCartao, useQuadrasCarregadas } from '@/features/cards/useCartao'
 import { aindaNoHistorico } from '@/domain/historico'
 import { editarCasa, excluirCasa, marcarCasa, observarVisitas, salvarObservacao } from '@/firebase/houses'
 import HistoricoVisitas from './HistoricoVisitas'
@@ -75,7 +76,8 @@ function FolhaEditar({ casa, onSalvar, onCancelar, onExcluir }: { casa: Casa; on
 export default function CasaPage() {
   const { cartaoId = '', quadraId = '', casaId = '' } = useParams()
   const cartao = useCartao(cartaoId)
-  const quadras = useQuadras(cartaoId)
+  const quadras = useQuadrasCarregadas(cartaoId)
+  const online = useOnline()
   const casas = useCasas(cartaoId, quadraId)
   const visitas = useVisitas(cartaoId, quadraId, casaId)
   const { usuario, membro } = useSessao()
@@ -84,15 +86,21 @@ export default function CasaPage() {
   const [erro, setErro] = useState<'edicao' | 'marca' | 'obs' | null>(null)
   const [confirmandoNaoVisitar, setConfirmandoNaoVisitar] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
+  const [enviandoExclusao, setEnviandoExclusao] = useState(false)
+  const [erroExclusao, setErroExclusao] = useState(false)
   const navigate = useNavigate()
 
-  const quadra = quadras.find((q) => q.id === quadraId)
+  const quadra = quadras?.find((q) => q.id === quadraId)
   const casa = casas?.find((c) => c.id === casaId)
   const voltar = { voltarPara: `/cartao/${cartaoId}/quadra/${quadraId}`, voltarRotulo: `Voltar para a ${quadra?.rotulo ?? 'quadra'}` }
 
-  if (cartao === undefined || casas === null) return <>
+  if (cartao === undefined || casas === null || quadras === null) return <>
     <Topo titulo="Casa" {...voltar} />
     <div className="rolagem"><Carregando /></div>
+  </>
+  if (cartao !== null && !quadra) return <>
+    <Topo titulo="Casa" voltarPara={`/cartao/${cartaoId}`} voltarRotulo={`Voltar para o Cartão ${cartao.numero}`} />
+    <div className="rolagem"><div className="sem-casas"><h2 style={{ fontSize: 22 }}>Quadra não encontrada</h2><p style={{ color: 'var(--texto-suave)' }}>Ela pode ter sido removida por outra pessoa.</p></div></div>
   </>
   if (cartao === null || !casa) return <>
     <Topo titulo="Casa" {...voltar} />
@@ -126,11 +134,19 @@ export default function CasaPage() {
     setEditando(false)
   }
 
-  /** Não espera a escrita: offline ela só resolve com rede. */
-  function excluir() {
+  /** Online espera o resultado para mostrar a falha; offline a escrita só resolve com rede, então não espera. */
+  async function excluir() {
     // Sem a quadra não dá para saber se ela tem contadores: não apaga a casa às cegas.
-    if (!casa || !quadra) return
-    excluirCasa(cartaoId, quadraId, casa, { quadraSemContadores: quadra.semContadores === true }).catch(() => {})
+    if (!casa || !quadra || enviandoExclusao) return
+    const escrita = excluirCasa(cartaoId, quadraId, casa, { quadraSemContadores: quadra.semContadores === true })
+    if (online) {
+      setEnviandoExclusao(true)
+      setErroExclusao(false)
+      try { await escrita } catch {
+        setEnviandoExclusao(false)
+        return setErroExclusao(true)
+      }
+    } else escrita.catch(() => {})
     navigate(voltar.voltarPara, { replace: true })
   }
 
@@ -193,9 +209,10 @@ export default function CasaPage() {
       <div className="folha" role="dialog" aria-label="Excluir casa">
         <h2>Excluir esta casa?</h2>
         <p>{rotuloCasa(casa)} sai da lista e do total do cartão. O histórico de visitas dela não será mais exibido. Isso não pode ser desfeito.</p>
+        {erroExclusao && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p><b>Não foi possível excluir</b>Confira a conexão e tente de novo.</p></div>}
         <div className="pilha">
-          <button type="button" className="btn perigo" onClick={excluir}>Excluir casa</button>
-          <button type="button" className="btn secundario" onClick={() => setExcluindo(false)}>Cancelar</button>
+          <button type="button" className="btn perigo" disabled={enviandoExclusao} onClick={() => void excluir()}>{enviandoExclusao ? 'Excluindo…' : 'Excluir casa'}</button>
+          <button type="button" className="btn secundario" onClick={() => { setExcluindo(false); setErroExclusao(false) }}>Cancelar</button>
         </div>
       </div>
     </div>}

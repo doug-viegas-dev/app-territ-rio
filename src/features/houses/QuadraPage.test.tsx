@@ -98,11 +98,11 @@ describe('QuadraPage', () => {
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
-  it('"Fechar cartão" fica desativado até as quadras chegarem', () => {
+  it('"Fechar cartão" não aparece até as quadras chegarem (a tela fica em carregando)', () => {
     preparar([casa({ numero: '1' })], { papel: 'admin' })
     vi.mocked(observarQuadras).mockImplementation(() => () => {})
     renderPagina()
-    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Fechar cartão' })).not.toBeInTheDocument()
   })
 
   it('o botão Não em casa usa o ícone e a classe de cor existentes', () => {
@@ -423,3 +423,26 @@ describe('QuadraPage com rodadas', () => {
     expect(textos('.casa .rotulo')).toContain('1')
   })
 })
+
+describe('QuadraPage com a quadra removida', () => {
+  beforeEach(() => { vi.clearAllMocks(); vi.mocked(useOnline).mockReturnValue(true) })
+  afterEach(cleanup)
+
+  it('quadras carregadas sem a quadra da rota mostram "Quadra não encontrada", sem convite a cadastrar', () => {
+    preparar([], { quadra: { ...quadra, id: 'outra' } })
+    renderPagina()
+    expect(screen.getByRole('heading', { name: 'Quadra não encontrada' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Voltar para o Cartão 12' })).toHaveAttribute('href', '/cartao/c12')
+    expect(screen.queryByText('Cadastrar a primeira casa')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nenhuma casa nesta quadra')).not.toBeInTheDocument()
+  })
+
+  it('enquanto as quadras não chegaram, continua o carregando', () => {
+    preparar([])
+    vi.mocked(observarQuadras).mockImplementation(() => () => {})
+    renderPagina()
+    expect(screen.queryByRole('heading', { name: 'Quadra não encontrada' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Nenhuma casa nesta quadra')).not.toBeInTheDocument()
+  })
+})
+

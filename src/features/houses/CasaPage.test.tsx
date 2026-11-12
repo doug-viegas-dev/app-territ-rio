@@ -42,6 +42,7 @@ function renderPagina() {
     <MemoryRouter initialEntries={['/cartao/c12/quadra/q3/casa/h1']}>
       <Routes>
         <Route path="/cartao/:cartaoId/quadra/:quadraId/casa/:casaId" element={<CasaPage />} />
+        <Route path="/cartao/:cartaoId/quadra/:quadraId" element={<p>Tela da quadra</p>} />
         <Route path="/cartao/:cartaoId" element={<p>Tela do cartão</p>} />
       </Routes>
     </MemoryRouter>,
@@ -145,16 +146,16 @@ describe('CasaPage', () => {
     expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: false })
   })
 
-  it('sem a quadra carregada, Excluir casa não abre a confirmação nem grava', async () => {
+  it('sem a quadra, não há como excluir a casa: a tela é "Quadra não encontrada"', () => {
     preparar(casaComNumero, { papel: 'admin' })
     vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([]); return () => {} })
     renderPagina()
-    await abrirExcluir(userEvent.setup())
-    expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Quadra não encontrada' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar número e descrição' })).not.toBeInTheDocument()
     expect(excluirCasa).not.toHaveBeenCalled()
   })
 
-  it('se a quadra some com a confirmação aberta, confirmar a exclusão não grava', async () => {
+  it('se a quadra some com a confirmação aberta, a confirmação sai e nada é gravado', async () => {
     preparar(casaComNumero, { papel: 'admin' })
     let enviarQuadras: (q: Quadra[]) => void = () => {}
     vi.mocked(observarQuadras).mockImplementation((_id, cb) => { enviarQuadras = cb; cb([quadra]); return () => {} })
@@ -162,7 +163,8 @@ describe('CasaPage', () => {
     const user = userEvent.setup()
     await abrirExcluir(user)
     act(() => enviarQuadras([]))
-    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
+    expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Quadra não encontrada' })).toBeInTheDocument()
     expect(excluirCasa).not.toHaveBeenCalled()
   })
 
@@ -349,5 +351,50 @@ describe('CasaPage', () => {
     renderPagina()
     expect(screen.getByRole('heading', { name: 'Casa verde, ao lado da padaria' })).toBeInTheDocument()
     expect(screen.getByText('Sem número')).toBeInTheDocument()
+  })
+
+  it('quadras carregadas sem a quadra da rota mostram "Quadra não encontrada"', () => {
+    preparar(casaComNumero, { quadra: { ...quadra, id: 'outra' } })
+    renderPagina()
+    expect(screen.getByRole('heading', { name: 'Quadra não encontrada' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Voltar para o Cartão 12' })).toHaveAttribute('href', '/cartao/c12')
+  })
+
+  it('online, excluir a casa espera o resultado antes de navegar', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    let resolver: () => void = () => {}
+    vi.mocked(excluirCasa).mockReturnValue(new Promise<void>((r) => { resolver = r }))
+    renderPagina()
+    const user = userEvent.setup()
+    await abrirExcluir(user)
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: /Exclu/ }))
+    expect(screen.queryByText('Tela da quadra')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Excluir casa' })).toBeInTheDocument()
+    await act(async () => { resolver() })
+    expect(await screen.findByText('Tela da quadra')).toBeInTheDocument()
+  })
+
+  it('online, falha ao excluir mostra o erro dentro da folha e não navega', async () => {
+    preparar(casaComNumero, { papel: 'admin' })
+    vi.mocked(excluirCasa).mockRejectedValue(new Error('falhou'))
+    renderPagina()
+    const user = userEvent.setup()
+    await abrirExcluir(user)
+    const folha = screen.getByRole('dialog', { name: 'Excluir casa' })
+    await user.click(within(folha).getByRole('button', { name: 'Excluir casa' }))
+    expect(await within(folha).findByRole('alert')).toHaveTextContent('Não foi possível excluir')
+    expect(screen.queryByText('Tela da quadra')).not.toBeInTheDocument()
+  })
+
+  it('offline, chama excluirCasa sem esperar e navega', async () => {
+    vi.mocked(useOnline).mockReturnValue(false)
+    preparar(casaComNumero, { papel: 'admin' })
+    vi.mocked(excluirCasa).mockReturnValue(new Promise<void>(() => {}))
+    renderPagina()
+    const user = userEvent.setup()
+    await abrirExcluir(user)
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
+    expect(excluirCasa).toHaveBeenCalled()
+    expect(await screen.findByText('Tela da quadra')).toBeInTheDocument()
   })
 })

@@ -49,13 +49,18 @@ export default function QuadraPage() {
   const quadra = quadras.find((q) => q.id === quadraId)
   const voltar = { voltarPara: `/cartao/${cartaoId}`, voltarRotulo: cartao ? `Voltar para o Cartão ${cartao.numero}` : 'Voltar' }
 
-  if (cartao === undefined || casas === null) return <>
+  if (cartao === undefined || casas === null || quadrasCarregadas === null) return <>
     <Topo titulo={quadra?.rotulo ?? 'Quadra'} {...voltar} />
     <div className="rolagem"><Carregando /></div>
   </>
   if (cartao === null) return <>
     <Topo titulo="Quadra" voltarPara="/" voltarRotulo="Voltar para Cartões" />
     <div className="rolagem"><div className="sem-casas"><h2 style={{ fontSize: 22 }}>Cartão não encontrado</h2></div></div>
+  </>
+
+  if (!quadra) return <>
+    <Topo titulo="Quadra" {...voltar} />
+    <div className="rolagem"><div className="sem-casas"><h2 style={{ fontSize: 22 }}>Quadra não encontrada</h2><p style={{ color: 'var(--texto-suave)' }}>Ela pode ter sido removida por outra pessoa.</p></div></div>
   </>
 
   const aberto = podeRegistrar(cartao)
