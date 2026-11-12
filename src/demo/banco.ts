@@ -2,7 +2,8 @@ import { abrirCartao, contadoresAposReinicio, estadoAposFecharEReiniciar, fechar
 import { validarCasa } from '@/domain/casa'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
-import { bloqueiosDoCartao, ExclusaoBloqueada } from '@/domain/exclusao'
+import { bloqueioDaQuadra, bloqueiosDoCartao, ExclusaoBloqueada } from '@/domain/exclusao'
+import { renomearRuaNaLista } from '@/domain/ruas'
 import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
 import { contribuicao, deltaContadores } from '@/domain/status'
 import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
@@ -336,6 +337,45 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
   const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
   if (q.ruas.some((r) => chave(r) === chave(nome))) return
   q.ruas.push(nome)
+  mudou()
+}
+
+export async function quadraTemCasas(cartaoId: string, quadraId: string): Promise<boolean> {
+  return listaCasas(cartaoId, quadraId).length > 0
+}
+
+export async function excluirQuadra(cartaoId: string, quadraId: string): Promise<void> {
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (!q) return
+  if (bloqueioDaQuadra(q)) throw new ExclusaoBloqueada('volta')
+  if (await quadraTemCasas(cartaoId, quadraId)) throw new ExclusaoBloqueada('casas')
+  estado.quadras[cartaoId] = estado.quadras[cartaoId].filter((x) => x.id !== quadraId)
+  delete estado.casas[chaveCasas(cartaoId, quadraId)]
+  delete estado.rodadas[chaveCasas(cartaoId, quadraId)]
+  mudou()
+}
+
+export async function trocarOrdemDeQuadras(cartaoId: string, troca: [{ id: string; ordem: number }, { id: string; ordem: number }]): Promise<void> {
+  for (const { id, ordem } of troca) {
+    const q = estado.quadras[cartaoId]?.find((x) => x.id === id)
+    if (q) q.ordem = ordem
+  }
+  mudou()
+}
+
+export async function renomearRua(cartaoId: string, quadraId: string, de: string, para: string): Promise<{ casas: number }> {
+  const alvo = listaCasas(cartaoId, quadraId).filter((c) => c.rua === de)
+  for (const c of alvo) c.rua = para
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (q) q.ruas = renomearRuaNaLista(q.ruas, de, para)
+  mudou()
+  return { casas: alvo.length }
+}
+
+export async function removerRua(cartaoId: string, quadraId: string, rua: string): Promise<void> {
+  if (listaCasas(cartaoId, quadraId).some((c) => c.rua === rua)) throw new ExclusaoBloqueada('casas')
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (q) q.ruas = q.ruas.filter((r) => r !== rua)
   mudou()
 }
 

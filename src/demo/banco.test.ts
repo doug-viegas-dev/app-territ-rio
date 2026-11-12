@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { faltaVisitar } from '@/domain/status'
-import { abrirCartaoManual, abrirRodada, criarCartao, atualizarCartao, cartaoTemCasas, excluirCartao, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
+import { excluirQuadra, quadraTemCasas, removerRua, renomearRua, trocarOrdemDeQuadras, abrirCartaoManual, abrirRodada, criarCartao, atualizarCartao, cartaoTemCasas, excluirCartao, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -537,5 +537,47 @@ describe('banco de demonstração: editar e excluir cartão', () => {
     const id = await criarCartao({ numero: '98', titulo: 'Link', mapsUrl: 'https://x.test' }, usuario)
     await atualizarCartao(id, { mapsUrl: null })
     expect(ler<Cartao | null>((cb) => observarCartao(id, cb))?.mapsUrl).toBeUndefined()
+  })
+})
+
+describe('banco de demonstração: quadras e ruas', () => {
+  beforeEach(reiniciarBanco)
+  const cenario = async () => {
+    const cartao = await criarCartao({ numero: '97', titulo: 'Ruas' }, usuario)
+    const quadra = await criarQuadra(cartao, { rotulo: 'Q', ruas: ['Rua A', 'Rua B'] })
+    return { cartao, quadra }
+  }
+  const quadraDe = (cartao: string, id: string) => ler<Quadra[]>((cb) => observarQuadras(cartao, cb)).find((q) => q.id === id) as Quadra
+
+  it('renomearRua muda a rua nas casas e na lista', async () => {
+    const { cartao, quadra } = await cenario()
+    await criarCasa(cartao, quadra, { rua: 'Rua A', numero: '1' }, [])
+    await criarCasa(cartao, quadra, { rua: 'Rua B', numero: '2' }, [])
+    expect(await renomearRua(cartao, quadra, 'Rua A', 'Rua C')).toEqual({ casas: 1 })
+    expect(ler<Casa[]>((cb) => observarCasas(cartao, quadra, (c) => cb(c))).map((c) => c.rua).sort()).toEqual(['Rua B', 'Rua C'])
+    expect(quadraDe(cartao, quadra).ruas).toEqual(['Rua C', 'Rua B'])
+  })
+  it('excluirQuadra vazia some; com casas rejeita com casas', async () => {
+    const { cartao, quadra } = await cenario()
+    await criarCasa(cartao, quadra, { rua: 'Rua A', numero: '1' }, [])
+    expect(await quadraTemCasas(cartao, quadra)).toBe(true)
+    await expect(excluirQuadra(cartao, quadra)).rejects.toMatchObject({ motivo: 'casas' })
+    const vazia = await criarQuadra(cartao, { rotulo: 'V', ruas: [] })
+    await excluirQuadra(cartao, vazia)
+    expect(ler<Quadra[]>((cb) => observarQuadras(cartao, cb)).some((q) => q.id === vazia)).toBe(false)
+  })
+  it('trocarOrdemDeQuadras reflete em observarQuadras', async () => {
+    const cartao = await criarCartao({ numero: '96', titulo: 'Ordem' }, usuario)
+    const a = await criarQuadra(cartao, { rotulo: 'A', ruas: [] })
+    const b = await criarQuadra(cartao, { rotulo: 'B', ruas: [] })
+    await trocarOrdemDeQuadras(cartao, [{ id: a, ordem: 2 }, { id: b, ordem: 1 }])
+    expect(ler<Quadra[]>((cb) => observarQuadras(cartao, cb)).map((q) => q.id)).toEqual([b, a])
+  })
+  it('removerRua reflete na lista; com casa rejeita com casas', async () => {
+    const { cartao, quadra } = await cenario()
+    await criarCasa(cartao, quadra, { rua: 'Rua A', numero: '1' }, [])
+    await expect(removerRua(cartao, quadra, 'Rua A')).rejects.toMatchObject({ motivo: 'casas' })
+    await removerRua(cartao, quadra, 'Rua B')
+    expect(quadraDe(cartao, quadra).ruas).toEqual(['Rua A'])
   })
 })
