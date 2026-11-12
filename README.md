@@ -97,6 +97,12 @@ O app roda na Vercel (preset Vite, build `npm run build`, saída `dist`; o `verc
 5. Crie o primeiro administrador no console do Firestore: em `members`, um documento com ID igual ao seu e-mail Google em minúsculas e os campos `nome`, `papel: "admin"` e `ativo: true`. Os demais membros são liberados pela tela de Administração.
 6. Na Vercel, cadastre as variáveis `VITE_FIREBASE_*` e `VITE_USE_EMULATORS=false`, e adicione o domínio da Vercel em Authentication > Domínios autorizados.
 
+### Ordem de publicação de uma versão com mudança nos dados
+
+1. Publicar o app novo.
+2. Rodar **Atualizar dados** em cada cartão (Administração, com internet).
+3. Ligar o TTL do histórico, conforme [`docs/ttl-historico.md`](docs/ttl-historico.md).
+
 ## Instalar no celular
 
 - **Android (Chrome):** toque em **Instalar app** (aviso no topo da lista de cartões) ou use o menu do Chrome > **Instalar app**.

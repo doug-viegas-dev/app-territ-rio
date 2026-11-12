@@ -327,6 +327,18 @@ describe('visitas, casas e fechamento na demonstração', () => {
       expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas, faltam: q.faltam })
     })
 
+    it('desmarcar mantém o status; registrar visita mantém a marca de estudo', async () => {
+      const { cartao, quadras, casas } = cenario()
+      const q = quadras()[0]
+      const alvo = casas(q.id).find((c) => c.status === 'pendente' && !c.naoVisitar && !c.estudo) as Casa
+      await marcar(cartao().id, q.id, alvo, 'estudo', true)
+      const marcada = casas(q.id).find((c) => c.id === alvo.id) as Casa
+      await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: marcada, novoStatus: 'falado', usuario })
+      expect(casas(q.id).find((c) => c.id === alvo.id)).toMatchObject({ status: 'falado', estudo: true })
+      await marcar(cartao().id, q.id, casas(q.id).find((c) => c.id === alvo.id) as Casa, 'estudo', false)
+      expect(casas(q.id).find((c) => c.id === alvo.id)).toMatchObject({ status: 'falado' })
+    })
+
     it('marcarCasa estudo só grava a marca', async () => {
       const { cartao, quadras, casas } = cenario()
       const q = quadras()[0]

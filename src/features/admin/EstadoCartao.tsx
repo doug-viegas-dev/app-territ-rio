@@ -8,6 +8,7 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from '@/features/cards/ConfirmarAbertura'
 import { fecharCartaoManual } from '@/firebase/cards'
 import { fecharEReiniciarCartao, recalcularContadores } from '@/firebase/houses'
+import { atualizarDadosDoCartao } from '@/firebase/migracao'
 import AvisoRodadas from './AvisoRodadas'
 import ConfirmarReinicio from './ConfirmarReinicio'
 
@@ -16,6 +17,8 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
   const { usuario, membro } = useSessao()
   const [folha, setFolha] = useState<'abrir' | 'reiniciar' | null>(null)
   const [erro, setErro] = useState(false)
+  const [resumo, setResumo] = useState<string | null>(null)
+  const [atualizando, setAtualizando] = useState(false)
   const online = useOnline()
   const aberto = cartao.estado === 'aberto'
   const quem = usuario ? { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } : null
@@ -27,6 +30,17 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
   function gravar(p: Promise<unknown>) {
     setErro(false)
     p.catch(() => setErro(true))
+  }
+
+  function atualizarDados() {
+    if (!online || atualizando || !quem) return
+    setErro(false)
+    setResumo(null)
+    setAtualizando(true)
+    atualizarDadosDoCartao(cartao.id, { nome: quem.nome })
+      .then((r) => setResumo(r.casas || r.visitas ? `${r.casas} casas e ${r.visitas} visitas atualizadas.` : 'Nada para atualizar.'))
+      .catch(() => setErro(true))
+      .finally(() => setAtualizando(false))
   }
 
   return <>
@@ -53,6 +67,9 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
         {aberto && <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Só administradores abrem cartões. Abrir só fica disponível com o cartão fechado, e fica registrado quem abriu.</p>}
         <button type="button" className="btn secundario" aria-disabled={online ? undefined : true} onClick={() => { if (online) gravar(recalcularContadores(cartao.id)) }}>Recalcular contadores</button>
         <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use se o total de casas parecer errado.' : 'Precisa de internet: o cálculo lê todas as casas no servidor.'}</p>
+        <button type="button" className="btn secundario" aria-disabled={online && !atualizando ? undefined : true} onClick={atualizarDados}>Atualizar dados</button>
+        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use uma vez em cada cartão depois de uma atualização do app: passa as marcas Não visitar e Estudo para o formato novo e dá prazo ao histórico.' : 'Precisa de internet: a atualização lê as casas e as visitas no servidor.'}</p>
+        {resumo && <p role="status">{resumo}</p>}
       </div>
     </div>
 

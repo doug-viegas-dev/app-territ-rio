@@ -517,6 +517,29 @@ describe('marcas da casa e observação', () => {
     expect(await quadraAtual(c.cartaoId, c.quadraId)).toMatchObject({ totalCasas: 1, faltam: 1 })
   })
 
+  it('desmarcar troca o status antigo gravado (estudo) por pendente', async () => {
+    const c = await comCasas(1)
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `cards/${c.cartaoId}/blocks/${c.quadraId}/houses/${c.casas[0].id}`), { status: 'estudo' }, { merge: true })
+    })
+    const legada = await casaQue(c, c.casas[0].id, (x) => !!x.estudo)
+    expect(legada.status).toBe('pendente')
+    await marcar(c, legada, 'estudo', false)
+    await casaQue(c, legada.id, (x) => !x.estudo)
+    expect(await camposDaCasa(c, legada.id)).toMatchObject({ status: 'pendente' })
+  })
+
+  it('registrarVisita numa casa com status antigo estudo mantém a marca', async () => {
+    const c = await comCasas(1)
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `cards/${c.cartaoId}/blocks/${c.quadraId}/houses/${c.casas[0].id}`), { status: 'estudo', estudoPor: 'Ana' }, { merge: true })
+    })
+    const legada = await casaQue(c, c.casas[0].id, (x) => !!x.estudo)
+    await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, casa: legada, novoStatus: 'falado', usuario: admin })
+    await casaQue(c, legada.id, (x) => x.status === 'falado')
+    expect(await camposDaCasa(c, legada.id)).toMatchObject({ status: 'falado', estudo: true, estudoPor: 'Ana' })
+  })
+
   it('marcarCasa estudo só grava a marca', async () => {
     const c = await comCasas(2)
     await conversado(c, c.casas[0])

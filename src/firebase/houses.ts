@@ -183,7 +183,13 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rod
     ciclo: cartao.ciclo,
     rodada: a.rodada,
   })
-  batch.update(doc(casasRef(cartao.id, quadraId), casa.id), { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
+  // Casa ainda gravada com status antigo 'estudo': o novo status o substitui, então a marca é regravada junto (com quem e quando, se já existiam).
+  batch.update(doc(casasRef(cartao.id, quadraId), casa.id), {
+    status: novoStatus,
+    ultimaVisitaEm: agora,
+    ultimoPor: usuario.nome,
+    ...(casa.estudo && { estudo: true, ...(casa.estudoPor && { estudoPor: casa.estudoPor }), ...(casa.estudoEm !== undefined && { estudoEm: paraTimestamp(casa.estudoEm) }) }),
+  })
   aplicarDelta(batch, cartao.id, quadraId, deltaContadores(casa, { ...casa, status: novoStatus }), agora, a)
   await batch.commit()
 }
@@ -199,7 +205,8 @@ export async function marcarCasa(a: { cartaoId: string; quadraId: string; casa: 
     doc(casasRef(cartaoId, quadraId), casa.id),
     ligada
       ? { [marca]: true, [`${marca}Por`]: usuario.nome, [`${marca}Em`]: agora }
-      : { [marca]: deleteField(), [`${marca}Por`]: deleteField(), [`${marca}Em`]: deleteField() },
+      // `status: casa.status` troca um status antigo ('estudo', 'nao_visitar') já lido como Pendente por esse valor limpo
+      : { [marca]: deleteField(), [`${marca}Por`]: deleteField(), [`${marca}Em`]: deleteField(), status: casa.status },
   )
   if (marca === 'naoVisitar') aplicarDelta(batch, cartaoId, quadraId, deltaContadores(casa, { ...casa, naoVisitar: ligada }), agora, a)
   await batch.commit()
@@ -219,7 +226,7 @@ export async function salvarObservacao(a: { cartaoId: string; quadraId: string; 
   })
 }
 
-const LOTE = 400
+export const LOTE = 400
 
 /** Fecha o cartão e começa o ciclo seguinte: todas as casas voltam a Pendente (as marcas ficam) e o cartão fica fechado até um administrador abri-lo. */
 export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quadras: Quadra[], usuario: Usuario): Promise<void> {

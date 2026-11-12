@@ -7,12 +7,14 @@ import { AuthProvider, RequerMembro } from '@/features/auth/AuthProvider'
 import { observarUsuario } from '@/firebase/auth'
 import { abrirCartaoManual, fecharCartaoManual } from '@/firebase/cards'
 import { fecharEReiniciarCartao, observarCasas, recalcularContadores } from '@/firebase/houses'
+import { atualizarDadosDoCartao } from '@/firebase/migracao'
 import { observarMembro } from '@/firebase/members'
 import EstadoCartao from './EstadoCartao'
 
 vi.mock('@/firebase/auth', () => ({ entrarComGoogle: vi.fn(), sair: vi.fn(), observarUsuario: vi.fn() }))
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/cards', () => ({ abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn() }))
+vi.mock('@/firebase/migracao', () => ({ atualizarDadosDoCartao: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), fecharEReiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 2, resolvidas: 1, atualizadoEm: 0 }
@@ -57,6 +59,7 @@ describe('EstadoCartao', () => {
     vi.mocked(fecharCartaoManual).mockResolvedValue()
     vi.mocked(fecharEReiniciarCartao).mockResolvedValue()
     vi.mocked(recalcularContadores).mockResolvedValue()
+    vi.mocked(atualizarDadosDoCartao).mockResolvedValue({ casas: 2, visitas: 1 })
   })
   afterEach(cleanup)
 
@@ -219,6 +222,31 @@ describe('EstadoCartao', () => {
     renderEstado(aberto)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Recalcular contadores' }))
     expect(recalcularContadores).toHaveBeenCalledWith('c12')
+  })
+
+  it('Atualizar dados chama a migração e mostra o resumo', async () => {
+    renderEstado(aberto)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Atualizar dados' }))
+    expect(atualizarDadosDoCartao).toHaveBeenCalledWith('c12', { nome: 'Maria S.' })
+    expect(await screen.findByText('2 casas e 1 visitas atualizadas.')).toBeInTheDocument()
+  })
+
+  it('Atualizar dados sem nada a mudar avisa', async () => {
+    vi.mocked(atualizarDadosDoCartao).mockResolvedValue({ casas: 0, visitas: 0 })
+    renderEstado(aberto)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Atualizar dados' }))
+    expect(await screen.findByText('Nada para atualizar.')).toBeInTheDocument()
+  })
+
+  it('Atualizar dados fica desativado sem internet', async () => {
+    const spy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    renderEstado(aberto)
+    const botao = screen.getByRole('button', { name: 'Atualizar dados' })
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.setup().click(botao)
+    expect(atualizarDadosDoCartao).not.toHaveBeenCalled()
+    spy.mockRestore()
   })
 
   it('não existe mais a ação "Reiniciar território" nem o nome de seção "Ciclo"', () => {
