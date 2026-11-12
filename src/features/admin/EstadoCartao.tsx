@@ -6,7 +6,7 @@ import { contadoresDaQuadraSuspeitos, podeFecharCartao } from '@/domain/rodada'
 import type { Cartao, Quadra } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from '@/features/cards/ConfirmarAbertura'
-import { fecharCartaoManual } from '@/firebase/cards'
+import ConfirmarFechamento from '@/features/cards/ConfirmarFechamento'
 import { fecharEReiniciarCartao, recalcularContadores } from '@/firebase/houses'
 import { atualizarDadosDoCartao } from '@/firebase/migracao'
 import AvisoRodadas from './AvisoRodadas'
@@ -15,16 +15,20 @@ import ConfirmarReinicio from './ConfirmarReinicio'
 /** `quadras` é `null` enquanto ainda não chegaram: nesse caso nada é fechado. */
 export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quadras: Quadra[] | null }) {
   const { usuario, membro } = useSessao()
-  const [folha, setFolha] = useState<'abrir' | 'reiniciar' | null>(null)
+  const [folha, setFolha] = useState<'abrir' | 'fechar' | 'reiniciar' | null>(null)
   const [erro, setErro] = useState(false)
   const [resumo, setResumo] = useState<string | null>(null)
   const [atualizando, setAtualizando] = useState(false)
+  const [atualizado, setAtualizado] = useState(false)
   const online = useOnline()
   const aberto = cartao.estado === 'aberto'
   const quem = usuario ? { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } : null
   const carregandoQuadras = quadras === null
   const rodadaAberta = quadras !== null && !podeFecharCartao(quadras)
+  // Fechar cartão encerra as voltas abertas na própria folha; reiniciar exige que não haja nenhuma.
   const podeFechar = quadras !== null && !rodadaAberta
+  const podeFecharCartaoAgora = quadras !== null
+  const suspeito = contadoresSuspeitos(cartao) || !!quadras?.some((q) => q.semContadores || contadoresDaQuadraSuspeitos(q))
 
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
   function gravar(p: Promise<unknown>) {
@@ -38,7 +42,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
     setResumo(null)
     setAtualizando(true)
     atualizarDadosDoCartao(cartao.id, { nome: quem.nome })
-      .then((r) => setResumo(r.casas || r.visitas ? `${r.casas} casas e ${r.visitas} visitas atualizadas.` : 'Nada para atualizar.'))
+      .then((r) => { setResumo(r.casas || r.visitas ? `${r.casas} casas e ${r.visitas} visitas atualizadas.` : 'Nada para atualizar.'); setAtualizado(true) })
       .catch(() => setErro(true))
       .finally(() => setAtualizando(false))
   }
@@ -55,25 +59,33 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
         </span>
       </p>
       <div className="pilha">
-        <button type="button" className="btn secundario" aria-disabled={aberto && podeFechar ? undefined : true}
-          onClick={() => { if (aberto && podeFechar && quem && quadras) gravar(fecharCartaoManual(cartao, quem, quadras)) }}>Fechar cartão</button>
-        <button type="button" className="btn secundario" aria-disabled={podeFechar ? undefined : true}
-          onClick={() => { if (podeFechar) setFolha('reiniciar') }}>Fechar e reiniciar</button>
-        {rodadaAberta && <AvisoRodadas quadras={quadras} estilo={{ marginTop: -4 }} />}
+        {aberto
+          ? <button type="button" className="btn primario" aria-disabled={podeFecharCartaoAgora ? undefined : true}
+            onClick={() => { if (podeFecharCartaoAgora) setFolha('fechar') }}>Fechar cartão</button>
+          : <button type="button" className="btn primario" onClick={() => setFolha('abrir')}>Abrir cartão</button>}
         {carregandoQuadras && <p role="status" style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Aguarde: ainda estamos carregando as quadras do cartão.</p>}
-        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>“Fechar e reiniciar” leva todas as casas de volta a Pendente e deixa o cartão fechado. As marcas continuam e o histórico fica guardado.</p>
-        <button type="button" className="btn secundario" aria-disabled={aberto ? true : undefined}
-          onClick={() => { if (!aberto) setFolha('abrir') }}>Abrir cartão</button>
-        {aberto && <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Só administradores abrem cartões. Abrir só fica disponível com o cartão fechado, e fica registrado quem abriu.</p>}
-        <button type="button" className="btn secundario" aria-disabled={online ? undefined : true} onClick={() => { if (online) gravar(recalcularContadores(cartao.id)) }}>Recalcular contadores</button>
-        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use se o total de casas parecer errado.' : 'Precisa de internet: o cálculo lê todas as casas no servidor.'}</p>
-        <button type="button" className="btn secundario" aria-disabled={online && !atualizando ? undefined : true} onClick={atualizarDados}>Atualizar dados</button>
-        <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use uma vez em cada cartão depois de uma atualização do app: passa as marcas Não visitar e Estudo para o formato novo e dá prazo ao histórico.' : 'Precisa de internet: a atualização lê as casas e as visitas no servidor.'}</p>
         {resumo && <p role="status">{resumo}</p>}
       </div>
+      <details className="bloco" open={suspeito || undefined} style={{ marginTop: 14 }}>
+        <summary><span>Manutenção</span><Icone nome="chev" className="ic bloco-seta" /></summary>
+        <div className="bloco-corpo pilha">
+          <button type="button" className="btn secundario" aria-disabled={podeFechar ? undefined : true}
+            onClick={() => { if (podeFechar) setFolha('reiniciar') }}>Fechar e reiniciar</button>
+          {rodadaAberta && <AvisoRodadas quadras={quadras} estilo={{ marginTop: -4 }} />}
+          <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>Leva as casas de volta a Pendente e deixa o cartão fechado.</p>
+          <button type="button" className="btn secundario" aria-disabled={online ? undefined : true} onClick={() => { if (online) gravar(recalcularContadores(cartao.id)) }}>Recalcular contadores</button>
+          <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use se o total de casas parecer errado.' : 'Precisa de internet.'}</p>
+          {!atualizado && <>
+            <button type="button" className="btn secundario" aria-disabled={online && !atualizando ? undefined : true} onClick={atualizarDados}>Atualizar dados</button>
+            <p style={{ color: 'var(--texto-suave)', marginTop: -4 }}>{online ? 'Use uma vez por cartão depois de uma atualização do app.' : 'Precisa de internet.'}</p>
+          </>}
+        </div>
+      </details>
     </div>
 
     {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} quadras={quadras} onFechar={() => setFolha(null)} />}
+    {folha === 'fechar' && quem && quadras && <ConfirmarFechamento cartao={cartao} quadras={quadras} usuario={quem}
+      onFechar={() => { setErro(false); setFolha(null) }} onReiniciar={() => setFolha('reiniciar')} onErro={() => setErro(true)} />}
     {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} quadras={quadras} podeFechar={podeFechar} onFechar={() => setFolha(null)}
       onConfirmar={(casas) => { setFolha(null); gravar(fecharEReiniciarCartao(cartao, casas, quadras, quem)) }} />}
   </>

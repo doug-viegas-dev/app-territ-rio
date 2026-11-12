@@ -18,13 +18,10 @@ export default function ConfirmarReinicio({ cartao, quadras, podeFechar, onFecha
   return <div className="veu">
     <div className="folha" role="alertdialog" aria-label="Fechar e reiniciar">
       <h2>Fechar e reiniciar o cartão {cartao.numero}?</h2>
-      <p>
-        As {reiniciadas} casas voltam a <b>Pendente</b>. As marcas de <b>Não visitar</b> e <b>Estudo</b> continuam.
-        {' '}O histórico de visitas continua guardado. Esta ação não tem desfazer.
-      </p>
-      <p>O cartão fica <b>fechado</b> depois de reiniciar. Para registrar visitas de novo, um administrador precisa abri-lo.</p>
+      <p>As {reiniciadas} casas voltam a <b>Pendente</b>. As marcas de <b>Não visitar</b> e <b>Estudo</b> continuam. Esta ação não tem desfazer.</p>
+      <p>O cartão fica <b>fechado</b>: um administrador precisa abri-lo de novo.</p>
       {!podeFechar && <AvisoRodadas quadras={quadras} />}
-      {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({reiniciadas} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem. Se o total estiver errado, use “Recalcular contadores”.</p>}
+      {carregando && <p role="status" style={{ color: 'var(--texto-suave)' }}>Aguarde: ainda estamos carregando todas as casas do cartão ({reiniciadas} de {cartao.totalCasas}). Sem internet, só as quadras já abertas neste aparelho aparecem.</p>}
       <button type="button" role="checkbox" aria-checked={entendi} className="caixa-ok" onClick={() => setEntendi(!entendi)}>
         <span className={entendi ? 'marca' : 'marca vazia'}>{entendi && <Icone nome="check" className="ic ic-20" />}</span>
         <span>Entendo que o cartão volta ao início.</span>

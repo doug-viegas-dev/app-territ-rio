@@ -45,7 +45,12 @@ function renderEstado(cartao: Cartao, qs: Quadra[] | null = quadras, papel: 'adm
   return render(arvore(cartao, qs))
 }
 
+async function abrirManutencao(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByText('Manutenção'))
+}
+
 async function abrirReinicio(user: ReturnType<typeof userEvent.setup>) {
+  await abrirManutencao(user)
   await user.click(screen.getByRole('button', { name: 'Fechar e reiniciar' }))
   return screen.getByRole('alertdialog', { name: 'Fechar e reiniciar' })
 }
@@ -63,12 +68,32 @@ describe('EstadoCartao', () => {
   })
   afterEach(cleanup)
 
-  it('Fechar cartão grava fechamento manual sem subir o ciclo', async () => {
+  it('Fechar cartão pede confirmação e grava fechamento manual sem subir o ciclo', async () => {
     renderEstado(aberto)
+    const user = userEvent.setup()
     expect(screen.getByRole('button', { name: 'Fechar cartão' })).not.toHaveAttribute('aria-disabled')
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Fechar cartão' }))
+    await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
+    expect(fecharCartaoManual).not.toHaveBeenCalled()
+    const folha = screen.getByRole('dialog', { name: 'Fechar cartão' })
+    expect(within(folha).getByText('Fechar o cartão 12?')).toBeInTheDocument()
+    await user.click(within(folha).getByRole('button', { name: 'Fechar cartão' }))
     expect(fecharCartaoManual).toHaveBeenCalledWith(aberto, usuario, quadras)
     expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('cartão aberto mostra só Fechar cartão; Abrir cartão não aparece', () => {
+    renderEstado(aberto)
+    expect(screen.queryByRole('button', { name: 'Abrir cartão' })).not.toBeInTheDocument()
+  })
+
+  it('Fechar e reiniciar, Recalcular contadores e Atualizar dados ficam no bloco Manutenção', () => {
+    renderEstado(aberto)
+    const manutencao = screen.getByText('Manutenção').closest('details')!
+    expect(manutencao).toHaveProperty('open', false)
+    for (const nome of ['Fechar e reiniciar', 'Recalcular contadores', 'Atualizar dados']) {
+      expect(within(manutencao).getByRole('button', { name: nome })).toBeInTheDocument()
+    }
   })
 
   it('Fechar e reiniciar confirma e deixa o cartão fechado', async () => {
@@ -122,17 +147,17 @@ describe('EstadoCartao', () => {
     expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
-  it('Fechar e Fechar e reiniciar ficam desativados com rodada aberta e mostram o aviso', async () => {
+  it('com rodada aberta, Fechar e reiniciar fica desativado com aviso e Fechar cartão encerra as voltas na folha', async () => {
     renderEstado(aberto, comRodadaAberta)
     const user = userEvent.setup()
-    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toHaveAttribute('aria-disabled', 'true')
+    await abrirManutencao(user)
     expect(screen.getByRole('button', { name: 'Fechar e reiniciar' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText(AVISO)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
     await user.click(screen.getByRole('button', { name: 'Fechar e reiniciar' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(fecharCartaoManual).not.toHaveBeenCalled()
     expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
+    expect(within(screen.getByRole('dialog', { name: 'Fechar cartão' })).getByText('Volta aberta em: Quadra 1.')).toBeInTheDocument()
   })
 
   it('sem rodada aberta não mostra o aviso', () => {
@@ -143,6 +168,7 @@ describe('EstadoCartao', () => {
   it('com as quadras ainda carregando, não fecha nem reinicia e avisa', async () => {
     renderEstado(aberto, null)
     const user = userEvent.setup()
+    await abrirManutencao(user)
     expect(screen.getByRole('button', { name: 'Fechar cartão' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: 'Fechar e reiniciar' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText('Aguarde: ainda estamos carregando as quadras do cartão.')).toBeInTheDocument()
@@ -154,22 +180,16 @@ describe('EstadoCartao', () => {
     expect(fecharEReiniciarCartao).not.toHaveBeenCalled()
   })
 
-  it('com cartão fechado, Fechar cartão fica desativado e Fechar e reiniciar continua disponível', () => {
+  it('com cartão fechado, só Abrir cartão aparece e Fechar e reiniciar continua disponível', () => {
     renderEstado(fechado)
-    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryByRole('button', { name: 'Fechar cartão' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir cartão' })).not.toHaveAttribute('aria-disabled')
     expect(screen.getByRole('button', { name: 'Fechar e reiniciar' })).not.toHaveAttribute('aria-disabled')
   })
 
-  it('Abrir cartão só com cartão fechado', async () => {
-    const { unmount } = renderEstado(aberto)
-    const user = userEvent.setup()
-    expect(screen.getByRole('button', { name: 'Abrir cartão' })).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByText(/Abrir só fica disponível com o cartão fechado/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Abrir cartão' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    unmount()
-
+  it('Abrir cartão abre a folha e grava a abertura', async () => {
     renderEstado(fechado)
+    const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Abrir cartão' }))
     expect(abrirCartaoManual).not.toHaveBeenCalled()
     const folha = screen.getByRole('dialog', { name: 'Abrir cartão' })
@@ -220,31 +240,39 @@ describe('EstadoCartao', () => {
 
   it('recalcular chama recalcularContadores', async () => {
     renderEstado(aberto)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Recalcular contadores' }))
+    const user = userEvent.setup()
+    await abrirManutencao(user)
+    await user.click(screen.getByRole('button', { name: 'Recalcular contadores' }))
     expect(recalcularContadores).toHaveBeenCalledWith('c12')
   })
 
   it('Atualizar dados chama a migração e mostra o resumo', async () => {
     renderEstado(aberto)
     const user = userEvent.setup()
+    await abrirManutencao(user)
     await user.click(screen.getByRole('button', { name: 'Atualizar dados' }))
     expect(atualizarDadosDoCartao).toHaveBeenCalledWith('c12', { nome: 'Maria S.' })
     expect(await screen.findByText('2 casas e 1 visitas atualizadas.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Atualizar dados' })).not.toBeInTheDocument()
   })
 
   it('Atualizar dados sem nada a mudar avisa', async () => {
     vi.mocked(atualizarDadosDoCartao).mockResolvedValue({ casas: 0, visitas: 0 })
     renderEstado(aberto)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Atualizar dados' }))
+    const user = userEvent.setup()
+    await abrirManutencao(user)
+    await user.click(screen.getByRole('button', { name: 'Atualizar dados' }))
     expect(await screen.findByText('Nada para atualizar.')).toBeInTheDocument()
   })
 
   it('Atualizar dados fica desativado sem internet', async () => {
     const spy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     renderEstado(aberto)
+    const user = userEvent.setup()
+    await abrirManutencao(user)
     const botao = screen.getByRole('button', { name: 'Atualizar dados' })
     expect(botao).toHaveAttribute('aria-disabled', 'true')
-    await userEvent.setup().click(botao)
+    await user.click(botao)
     expect(atualizarDadosDoCartao).not.toHaveBeenCalled()
     spy.mockRestore()
   })

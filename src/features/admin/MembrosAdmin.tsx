@@ -74,7 +74,7 @@ export default function MembrosAdmin() {
             <b>{m.nome}</b>
             <span className="mail">{m.email}</span><br />
             <span className="papel">{ROTULO_PAPEL[m.papel]}</span>
-            {eu && <small style={{ display: 'block', color: 'var(--texto-suave)', marginTop: 4 }}>Você não pode desativar a si mesmo.</small>}
+            {eu && <small style={{ display: 'block', fontSize: 16, color: 'var(--texto-suave)', marginTop: 4 }}>Você não pode desativar a si mesmo.</small>}
           </div>
           <button
             type="button"
