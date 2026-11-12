@@ -8,6 +8,7 @@ import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
 import { podeRegistrarNaCasa } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
+import { ruasDaQuadra } from '@/domain/ruas'
 import { contaNoTotal, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -65,7 +66,7 @@ export default function QuadraPage() {
 
   const aberto = podeRegistrar(cartao)
   const ehAdmin = membro?.papel === 'admin'
-  const ruas = [...(quadra?.ruas ?? []), ...casas.map((c) => c.rua).filter((r, i, l) => l.indexOf(r) === i && !(quadra?.ruas ?? []).includes(r))]
+  const ruas = ruasDaQuadra(quadra, casas)
   const grupos = ruas.map((rua) => ({ rua, casas: casas.filter((c) => c.rua === rua) })).filter((g) => g.casas.length > 0)
   const ordenadas = grupos.flatMap((g) => g.casas)
   const foco = ordenadas.find((c) => c.id === focoId) ?? ordenadas.find(falta) ?? ordenadas[0] ?? null

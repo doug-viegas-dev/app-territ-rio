@@ -6,6 +6,7 @@ import { trocarOrdem } from '@/domain/quadras'
 import { validarQuadra } from '@/domain/validacao'
 import { adicionarRua, atualizarQuadra, criarQuadra, trocarOrdemDeQuadras } from '@/firebase/blocks'
 import { ExcluirQuadra } from './ExcluirQuadra'
+import { RuasDaQuadra } from './RuasDaQuadra'
 import { ruasDoTexto } from './ruasDoTexto'
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
@@ -18,7 +19,7 @@ function FolhaQuadra({ cartaoId, quadra, quadras, onSalvar, onTrocar, onExcluida
   function salvar() {
     const msg = validarQuadra(rotulo, quadras, quadra?.id)
     if (msg) return setErro(msg)
-    onSalvar({ rotulo: rotulo.trim(), ruas: ruasDoTexto(ruas) })
+    onSalvar({ rotulo: rotulo.trim(), ruas: quadra ? quadra.ruas : ruasDoTexto(ruas) })
   }
 
   return <div className="veu">
@@ -28,11 +29,13 @@ function FolhaQuadra({ cartaoId, quadra, quadras, onSalvar, onTrocar, onExcluida
         <label htmlFor="quadra-rotulo">Nome da quadra</label>
         <input id="quadra-rotulo" className="entrada" placeholder="Ex.: Quadra 5" value={rotulo} onChange={(e) => { setRotulo(e.target.value); setErro(null) }} />
       </div>
-      <div className="campo">
-        <label htmlFor="quadra-ruas">Ruas</label>
-        <textarea id="quadra-ruas" className="entrada" value={ruas} onChange={(e) => setRuas(e.target.value)} />
-        <span className="dica">Uma rua por linha.</span>
-      </div>
+      {quadra
+        ? <RuasDaQuadra cartaoId={cartaoId} quadra={quadra} />
+        : <div className="campo">
+          <label htmlFor="quadra-ruas">Ruas</label>
+          <textarea id="quadra-ruas" className="entrada" value={ruas} onChange={(e) => setRuas(e.target.value)} />
+          <span className="dica">Uma rua por linha.</span>
+        </div>}
       {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
       <div className="pilha">
         <button type="button" className="btn primario" onClick={salvar}>Salvar</button>

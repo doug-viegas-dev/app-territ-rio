@@ -8,7 +8,8 @@ import { adicionarRua, atualizarQuadra, criarQuadra, excluirQuadra, observarQuad
 import QuadrasAdmin from './QuadrasAdmin'
 import { ruasDoTexto } from './ruasDoTexto'
 
-vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn(), adicionarRua: vi.fn(), atualizarQuadra: vi.fn(), criarQuadra: vi.fn(), excluirQuadra: vi.fn(), quadraTemCasas: vi.fn(), trocarOrdemDeQuadras: vi.fn() }))
+vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn(), adicionarRua: vi.fn(), atualizarQuadra: vi.fn(), criarQuadra: vi.fn(), excluirQuadra: vi.fn(), quadraTemCasas: vi.fn(), trocarOrdemDeQuadras: vi.fn(), removerRua: vi.fn(), renomearRua: vi.fn(), RenomeacaoIncompleta: class extends Error {} }))
+vi.mock('@/features/houses/useCasas', () => ({ useCasas: vi.fn(() => []) }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 
 const cartao: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 1, totalCasas: 0, resolvidas: 0, atualizadoEm: 0 }
@@ -45,7 +46,7 @@ describe('QuadrasAdmin', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Cartão' })).not.toBeInTheDocument()
   })
 
-  it('edita o rótulo e as ruas (uma por linha, sem vazias nem repetidas)', async () => {
+  it('edita o rótulo, e a folha de edição mostra as ruas em lista (sem campo de texto)', async () => {
     render(<QuadrasAdmin cartao={cartao} />)
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Editar Quadra 2' }))
@@ -53,11 +54,21 @@ describe('QuadrasAdmin', () => {
     const nome = within(folha).getByLabelText('Nome da quadra')
     await user.clear(nome)
     await user.type(nome, 'Quadra Dois')
-    const ruas = within(folha).getByLabelText('Ruas')
-    await user.clear(ruas)
-    await user.type(ruas, 'Rua A{Enter}{Enter}rua a{Enter}  Rua B  ')
+    expect(within(folha).queryByRole('textbox', { name: 'Ruas' })).toBeNull()
+    expect(within(folha).getByRole('button', { name: 'Renomear Rua Ipê Amarelo' })).toBeInTheDocument()
     await user.click(within(folha).getByRole('button', { name: 'Salvar' }))
-    expect(atualizarQuadra).toHaveBeenCalledWith('c12', 'q2', { rotulo: 'Quadra Dois', ruas: ['Rua A', 'Rua B'] })
+    expect(atualizarQuadra).toHaveBeenCalledWith('c12', 'q2', { rotulo: 'Quadra Dois', ruas: ['Rua das Acácias', 'Rua Ipê Amarelo'] })
+  })
+
+  it('a folha de nova quadra ainda aceita ruas em texto', async () => {
+    render(<QuadrasAdmin cartao={cartao} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Adicionar quadra' }))
+    const folha = screen.getByRole('dialog', { name: 'Nova quadra' })
+    await user.type(within(folha).getByLabelText('Nome da quadra'), 'Quadra 7')
+    await user.type(within(folha).getByLabelText('Ruas'), 'Rua A{Enter}{Enter}rua a{Enter}  Rua B  ')
+    await user.click(within(folha).getByRole('button', { name: 'Salvar' }))
+    expect(criarQuadra).toHaveBeenCalledWith('c12', { rotulo: 'Quadra 7', ruas: ['Rua A', 'Rua B'] })
   })
 
   it('"Adicionar rua" escolhe a quadra, normaliza o nome e chama adicionarRua', async () => {
@@ -174,7 +185,7 @@ describe('QuadrasAdmin', () => {
       const { user, folha } = await abrirEdicao('Quadra 1')
       const botao = within(folha).getByRole('button', { name: 'Excluir quadra' })
       expect(botao).toHaveAttribute('aria-disabled', 'true')
-      expect(within(folha).getByText('Precisa de internet.')).toBeInTheDocument()
+      expect(botao.parentElement?.textContent).toContain('Precisa de internet.')
       await user.click(botao)
       expect(screen.queryByRole('dialog', { name: 'Confirmar exclusão da quadra' })).not.toBeInTheDocument()
     })
