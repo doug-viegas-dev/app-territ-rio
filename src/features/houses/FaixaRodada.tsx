@@ -55,14 +55,14 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
 
   const texto = atual
     ? rodadaDeOutroDia(atual, agora)
-      ? `Rodada ${atual.numero} · aberta em ${dataCurta(atual.em)} por ${atual.porNome}`
-      : `Rodada ${atual.numero} · aberta por ${atual.porNome} às ${hora(atual.em)}`
-    : 'Nenhuma rodada aberta'
+      ? `Volta ${atual.numero} · aberta em ${dataCurta(atual.em)} por ${atual.porNome}`
+      : `Volta ${atual.numero} · aberta por ${atual.porNome} às ${hora(atual.em)}`
+    : 'Nenhuma volta aberta'
 
   return <div className="aviso faixa" style={{ alignItems: 'center' }}>
     <Icone nome={atual ? 'historico' : 'info'} />
     <p>{texto}</p>
-    {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" aria-disabled={ocupado || pausado ? true : undefined} onClick={() => executar(encerrarRodada)}>Encerrar rodada</button>}
-    {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto && !ocupado && !pausado ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir rodada</button>}
+    {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" aria-disabled={ocupado || pausado ? true : undefined} onClick={() => executar(encerrarRodada)}>Encerrar volta</button>}
+    {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto && !ocupado && !pausado ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir volta</button>}
   </div>
 }

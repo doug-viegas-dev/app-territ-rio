@@ -82,14 +82,14 @@ describe('HistoricoCartaoPage', () => {
     })
     renderPagina()
     const itens = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getAllByRole('listitem')
-    expect(within(itens[0]).getByText('Rodada encerrada')).toBeInTheDocument()
-    expect(within(itens[0]).getByText('João P. encerrou a rodada 2 da Quadra A')).toBeInTheDocument()
-    expect(within(itens[1]).getByText('Rodada aberta')).toBeInTheDocument()
+    expect(within(itens[0]).getByText('Volta encerrada')).toBeInTheDocument()
+    expect(within(itens[0]).getByText('João P. encerrou a volta 2 da Quadra A')).toBeInTheDocument()
+    expect(within(itens[1]).getByText('Volta aberta')).toBeInTheDocument()
     expect(screen.queryByText('Aberto')).not.toBeInTheDocument()
     expect(screen.queryByText('Fechado')).not.toBeInTheDocument()
-    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    const bloco = screen.getByRole('region', { name: 'Voltas por quadra' })
     expect(within(bloco).getByRole('heading', { name: 'Quadra A' })).toBeInTheDocument()
-    expect(within(bloco).getByText('Rodada 2')).toBeInTheDocument()
+    expect(within(bloco).getByText('Volta 2')).toBeInTheDocument()
     expect(within(bloco).getByText('aberta por Maria S. em 24/10 às 09:05')).toBeInTheDocument()
     expect(within(bloco).getByText('encerrada por João P. em 25/10 às 18:30')).toBeInTheDocument()
   })
@@ -103,9 +103,9 @@ describe('HistoricoCartaoPage', () => {
       return () => {}
     })
     renderPagina()
-    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    const bloco = screen.getByRole('region', { name: 'Voltas por quadra' })
     expect(within(bloco).getAllByRole('heading', { name: 'Quadra A' })).toHaveLength(2)
-    expect(within(bloco).getAllByText('Rodada 1')).toHaveLength(2)
+    expect(within(bloco).getAllByText('Volta 1')).toHaveLength(2)
     expect(within(bloco).getByText('aberta por Maria S. em 26/10 às 10:00')).toBeInTheDocument()
     expect(within(bloco).getByText('aberta por Ana P. em 24/10 às 09:05')).toBeInTheDocument()
   })
@@ -119,9 +119,46 @@ describe('HistoricoCartaoPage', () => {
       return () => {}
     })
     renderPagina()
-    const bloco = screen.getByRole('region', { name: 'Rodadas por quadra' })
+    const bloco = screen.getByRole('region', { name: 'Voltas por quadra' })
     expect(within(bloco).getAllByRole('heading', { name: 'Quadra A' })).toHaveLength(1)
-    expect(within(bloco).getAllByText('Rodada 1')).toHaveLength(1)
+    expect(within(bloco).getAllByText('Volta 1')).toHaveLength(1)
+  })
+
+  it('não mistura duas volta 1 da mesma quadra', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([
+        { id: 'e4', tipo: 'rodada', motivo: 'rodada_encerrada', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 1, em: em(28, 18, 0), porUid: 'u2', porNome: 'Bia' },
+        { id: 'e3', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 1, em: em(27, 9, 0), porUid: 'u1', porNome: 'Ana' },
+        { id: 'e2', tipo: 'rodada', motivo: 'rodada_encerrada', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 1, em: em(20, 18, 0), porUid: 'u2', porNome: 'Caio' },
+        { id: 'e1', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 1, em: em(19, 9, 0), porUid: 'u1', porNome: 'Dani' },
+      ])
+      return () => {}
+    })
+    renderPagina()
+    const bloco = screen.getByRole('region', { name: 'Voltas por quadra' })
+    const itens = within(bloco).getAllByRole('listitem')
+    expect(itens).toHaveLength(2)
+    expect(within(itens[0]).getByText('Volta 1')).toBeInTheDocument()
+    expect(within(itens[0]).getByText('aberta por Ana em 27/10 às 09:00')).toBeInTheDocument()
+    expect(within(itens[0]).getByText('encerrada por Bia em 28/10 às 18:00')).toBeInTheDocument()
+    expect(within(itens[1]).getByText('aberta por Dani em 19/10 às 09:00')).toBeInTheDocument()
+    expect(within(itens[1]).getByText('encerrada por Caio em 20/10 às 18:00')).toBeInTheDocument()
+  })
+
+  it('volta 1 seguida de volta 2 sem encerramento mantém as duas', () => {
+    vi.mocked(observarEventos).mockImplementation((_id, cb) => {
+      cb([
+        { id: 'e2', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 2, em: em(25, 9, 0), porUid: 'u1', porNome: 'Ana' },
+        { id: 'e1', tipo: 'rodada', motivo: 'rodada_aberta', quadraId: 'q1', quadraRotulo: 'Quadra 1', rodada: 1, em: em(24, 9, 0), porUid: 'u1', porNome: 'Bia' },
+      ])
+      return () => {}
+    })
+    renderPagina()
+    const itens = within(screen.getByRole('region', { name: 'Voltas por quadra' })).getAllByRole('listitem')
+    expect(itens).toHaveLength(2)
+    expect(within(itens[0]).getByText('Volta 2')).toBeInTheDocument()
+    expect(within(itens[1]).getByText('Volta 1')).toBeInTheDocument()
+    expect(within(itens[1]).queryByText(/encerrada por/)).not.toBeInTheDocument()
   })
 
   it('mostra fechou e reiniciou o território', () => {
@@ -133,7 +170,7 @@ describe('HistoricoCartaoPage', () => {
     const item = within(screen.getByRole('list', { name: 'Eventos do cartão' })).getByRole('listitem')
     expect(within(item).getByText('Fechado')).toBeInTheDocument()
     expect(within(item).getByText('Maria S. fechou e reiniciou o território')).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Rodadas por quadra' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Voltas por quadra' })).not.toBeInTheDocument()
   })
 
   it('voltar leva à tela do cartão', async () => {

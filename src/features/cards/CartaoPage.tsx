@@ -85,7 +85,7 @@ export default function CartaoPage() {
           <h3>{q.rotulo}</h3>
           {(q.totalCasas > 0 || q.rodadaAtual) && <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 14px', color: 'var(--texto-suave)' }}>
             {q.totalCasas > 0 && <span>{Math.max(0, q.faltam)} para visitar</span>}
-            {q.rodadaAtual && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}><Icone nome="historico" className="ic ic-20" />Rodada aberta</span>}
+            {q.rodadaAtual && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}><Icone nome="historico" className="ic ic-20" />Volta aberta</span>}
           </span>}
         </div>
         <Icone nome="chev" className="ic chev" />

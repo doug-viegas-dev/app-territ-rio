@@ -30,7 +30,7 @@ const casasPorQuadra: Record<string, Casa[]> = {
   q2: [{ id: 'h3', quadraId: 'q2', rua: 'Rua B', numero: '3', ordem: 1, status: 'estudo', criadoEm: 0 }],
 }
 const usuario = { uid: 'u1', nome: 'Maria S.' }
-const AVISO = 'Encerre as rodadas abertas antes de fechar.'
+const AVISO = 'Encerre as voltas abertas antes de fechar.'
 
 const arvore = (cartao: Cartao, qs: Quadra[] | null) => (
   <MemoryRouter>
@@ -211,8 +211,8 @@ describe('EstadoCartao', () => {
     const { rerender } = renderEstado(aberto)
     const folha = await abrirReinicio(userEvent.setup())
     rerender(arvore(aberto, duas))
-    expect(screen.getAllByText('Rodada aberta em: Quadra 1, Quadra 2.')).toHaveLength(2)
-    expect(within(folha).getByText('Rodada aberta em: Quadra 1, Quadra 2.')).toBeInTheDocument()
+    expect(screen.getAllByText('Volta aberta em: Quadra 1, Quadra 2.')).toHaveLength(2)
+    expect(within(folha).getByText('Volta aberta em: Quadra 1, Quadra 2.')).toBeInTheDocument()
   })
 
   it('recalcular chama recalcularContadores', async () => {

@@ -4,8 +4,8 @@ import { textoEvento } from './textoEvento'
 describe('textoEvento', () => {
   it('descreve fechamento com reinício e rodadas', () => {
     expect(textoEvento({ motivo: 'fechamento_reinicio', porNome: 'Ana' })).toBe('Ana fechou e reiniciou o território')
-    expect(textoEvento({ motivo: 'rodada_aberta', porNome: 'Ana', rodada: 2, quadraRotulo: 'Quadra 5' })).toBe('Ana abriu a rodada 2 da Quadra 5')
-    expect(textoEvento({ motivo: 'rodada_encerrada', porNome: 'Ana', rodada: 2, quadraRotulo: 'Quadra 5' })).toBe('Ana encerrou a rodada 2 da Quadra 5')
+    expect(textoEvento({ motivo: 'rodada_aberta', porNome: 'Ana', rodada: 2, quadraRotulo: 'Quadra 5' })).toBe('Ana abriu a volta 2 da Quadra 5')
+    expect(textoEvento({ motivo: 'rodada_encerrada', porNome: 'Ana', rodada: 2, quadraRotulo: 'Quadra 5' })).toBe('Ana encerrou a volta 2 da Quadra 5')
   })
   it('descreve os cinco motivos', () => {
     expect(textoEvento({ motivo: 'reinicio', porNome: 'Maria S.' })).toBe('Maria S. reiniciou o território')

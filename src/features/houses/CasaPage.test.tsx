@@ -89,18 +89,18 @@ describe('CasaPage', () => {
     expect(screen.getByText(/nenhuma visita ainda/)).toBeInTheDocument()
   })
 
-  it('mostra a faixa da rodada; sem rodada, "Nenhuma rodada aberta" e o botão "Abrir rodada"', async () => {
+  it('mostra a faixa da rodada; sem rodada, "Nenhuma volta aberta" e o botão "Abrir volta"', async () => {
     vi.mocked(abrirRodada).mockResolvedValue()
     const semRodada = { ...quadra, rodadaAtual: undefined }
     preparar(casaComNumero, { quadra: semRodada })
     renderPagina()
-    expect(screen.getByText('Nenhuma rodada aberta')).toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    expect(screen.getByText('Nenhuma volta aberta')).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
     expect(abrirRodada).toHaveBeenCalledWith('c12', semRodada, { uid: 'u1', nome: 'Maria S.' })
     cleanup()
     preparar(casaComNumero)
     renderPagina()
-    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Encerrar volta' })).toBeInTheDocument()
   })
 
   it('editar a descrição chama editarCasa', async () => {

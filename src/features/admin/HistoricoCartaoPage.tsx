@@ -19,21 +19,28 @@ function useEventos(cartaoId: string): EventoCartao[] | undefined {
 
 type Rodada = { numero: number; abertaPor?: string; abertaEm?: number; encerradaPor?: string; encerradaEm?: number }
 
-/** Agrupa os eventos de rodada por quadra (`quadraId`; sem ele, o rótulo), com as rodadas da mais recente para a mais antiga. */
+/**
+ * Agrupa os eventos de volta por quadra (`quadraId`; sem ele, o rótulo), com as voltas da mais recente para a mais antiga.
+ * O número recomeça em 1 a cada abertura do cartão, então não identifica a volta: varre os eventos em ordem cronológica,
+ * cada abertura cria uma entrada e cada encerramento fecha a entrada mais recente do mesmo número ainda aberta.
+ */
 function rodadasPorQuadra(eventos: EventoCartao[]): { chave: string; rotulo: string; rodadas: Rodada[] }[] {
-  const quadras = new Map<string, { rotulo: string; rodadas: Map<number, Rodada> }>()
-  for (const e of eventos) {
-    if (e.tipo !== 'rodada' || e.quadraRotulo === undefined || e.rodada === undefined) continue
-    const chave = e.quadraId ?? e.quadraRotulo
-    const grupo = quadras.get(chave) ?? { rotulo: e.quadraRotulo, rodadas: new Map<number, Rodada>() }
-    const rodadas = grupo.rodadas
-    const r = rodadas.get(e.rodada) ?? { numero: e.rodada }
-    if (e.motivo === 'rodada_aberta') { r.abertaPor = e.porNome; r.abertaEm = e.em }
-    if (e.motivo === 'rodada_encerrada') { r.encerradaPor = e.porNome; r.encerradaEm = e.em }
-    rodadas.set(e.rodada, r)
+  const quadras = new Map<string, { rotulo: string; rodadas: Rodada[] }>()
+  const ordenados = eventos.filter((e) => e.tipo === 'rodada' && e.quadraRotulo !== undefined && e.rodada !== undefined).sort((a, b) => a.em - b.em)
+  for (const e of ordenados) {
+    const chave = e.quadraId ?? e.quadraRotulo!
+    const grupo = quadras.get(chave) ?? { rotulo: e.quadraRotulo!, rodadas: [] }
     quadras.set(chave, grupo)
+    if (e.motivo === 'rodada_aberta') {
+      grupo.rodadas.push({ numero: e.rodada!, abertaPor: e.porNome, abertaEm: e.em })
+    } else if (e.motivo === 'rodada_encerrada') {
+      const aberta = [...grupo.rodadas].reverse().find((r) => r.numero === e.rodada && r.encerradaEm === undefined)
+      if (aberta) { aberta.encerradaPor = e.porNome; aberta.encerradaEm = e.em }
+      else grupo.rodadas.push({ numero: e.rodada!, encerradaPor: e.porNome, encerradaEm: e.em })
+    }
   }
-  return [...quadras].map(([chave, g]) => ({ chave, rotulo: g.rotulo, rodadas: [...g.rodadas.values()].sort((a, b) => b.numero - a.numero) }))
+  const inicio = (r: Rodada) => r.abertaEm ?? r.encerradaEm ?? 0
+  return [...quadras].map(([chave, g]) => ({ chave, rotulo: g.rotulo, rodadas: [...g.rodadas].sort((a, b) => inicio(b) - inicio(a)) }))
 }
 
 function Eventos({ cartaoId }: { cartaoId: string }) {
@@ -53,12 +60,12 @@ function Eventos({ cartaoId }: { cartaoId: string }) {
   const quadras = rodadasPorQuadra(eventos)
   return <>
     {quadras.length > 0 && <section aria-labelledby="rodadas-por-quadra">
-      <h2 className="titulo-secao" id="rodadas-por-quadra">Rodadas por quadra</h2>
+      <h2 className="titulo-secao" id="rodadas-por-quadra">Voltas por quadra</h2>
       {quadras.map((q) => <div key={q.chave} style={{ marginBottom: 14 }}>
         <h3 style={{ fontSize: 18 }}>{q.rotulo}</h3>
         <ul style={{ listStyle: 'none' }}>
-          {q.rodadas.map((r) => <li key={r.numero} style={{ padding: '6px 0' }}>
-            <b>Rodada {r.numero}</b>
+          {q.rodadas.map((r) => <li key={`${r.numero}-${r.abertaEm ?? r.encerradaEm}`} style={{ padding: '6px 0' }}>
+            <b>Volta {r.numero}</b>
             {r.abertaEm !== undefined && <div className="quem">aberta por {r.abertaPor} em {diaEHora(r.abertaEm)}</div>}
             {r.encerradaEm !== undefined && <div className="quem">encerrada por {r.encerradaPor} em {diaEHora(r.encerradaEm)}</div>}
           </li>)}

@@ -154,7 +154,7 @@ export default function CasaPage() {
     </div>}
     {erroRodada && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
-      <p><b>Não foi possível salvar</b>A rodada não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroRodada(false)}>Entendi</button></p>
+      <p><b>Não foi possível salvar</b>A volta não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroRodada(false)}>Entendi</button></p>
     </div>}
     {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={() => setErroRodada(true)} />}
     {!aberto && <div className="aviso faixa" role="status">

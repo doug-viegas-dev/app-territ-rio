@@ -6,7 +6,7 @@ type Props = { cartaoAberto: boolean; rodadaAberta: boolean; onTentar: () => voi
 export default function AvisoNaoEnviado({ cartaoAberto, rodadaAberta, onTentar }: Props) {
   const motivo = !cartaoAberto
     ? 'O cartão foi fechado. Um administrador precisa abri-lo para registrar de novo.'
-    : !rodadaAberta ? 'A rodada foi encerrada. Abra a rodada para registrar de novo.' : null
+    : !rodadaAberta ? 'A volta foi encerrada. Abra a volta para registrar de novo.' : null
   return <div className="aviso faixa erro" role="alert">
     <Icone nome="aviso" />
     <p>

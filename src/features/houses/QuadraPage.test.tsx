@@ -322,7 +322,7 @@ describe('QuadraPage', () => {
     expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
     act(() => emitir([quadraSemRodada]))
     expect(screen.getByText('A última anotação não foi enviada')).toBeInTheDocument()
-    expect(screen.getByText('A rodada foi encerrada. Abra a rodada para registrar de novo.')).toBeInTheDocument()
+    expect(screen.getByText('A volta foi encerrada. Abra a volta para registrar de novo.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
   })
 
@@ -365,13 +365,13 @@ describe('QuadraPage com rodadas', () => {
   it('mostra a faixa da rodada aberta', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    expect(screen.getByText(/^Rodada 2 · aberta por Ana às /)).toBeInTheDocument()
+    expect(screen.getByText(/^Volta 2 · aberta por Ana às /)).toBeInTheDocument()
   })
 
   it('sem rodada aberta os botões de status ficam bloqueados', async () => {
     preparar([casa({ numero: '1' })], { quadra: quadraSemRodada })
     renderPagina()
-    expect(screen.getByText('Nenhuma rodada aberta')).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma volta aberta')).toBeInTheDocument()
     const botao = within(barra()).getByRole('button', { name: 'Conversado' })
     expect(botao).toHaveAttribute('aria-disabled', 'true')
     await userEvent.setup().click(botao)

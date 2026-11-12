@@ -4,8 +4,8 @@ export function textoEvento(e: Pick<EventoCartao, 'motivo' | 'porNome'> & Partia
   switch (e.motivo) {
     case 'reinicio': return `${e.porNome} reiniciou o território`
     case 'fechamento_reinicio': return `${e.porNome} fechou e reiniciou o território`
-    case 'rodada_aberta': return `${e.porNome} abriu a rodada ${e.rodada} da ${e.quadraRotulo}`
-    case 'rodada_encerrada': return `${e.porNome} encerrou a rodada ${e.rodada} da ${e.quadraRotulo}`
+    case 'rodada_aberta': return `${e.porNome} abriu a volta ${e.rodada} da ${e.quadraRotulo}`
+    case 'rodada_encerrada': return `${e.porNome} encerrou a volta ${e.rodada} da ${e.quadraRotulo}`
     case 'abertura': return `${e.porNome} abriu o cartão`
     case 'fechamento_manual': return `${e.porNome} fechou manualmente`
     case 'fechamento_automatico': return `Automático: ${e.porNome} registrou a última casa`
@@ -17,8 +17,8 @@ type Tipado = Pick<EventoCartao, 'tipo' | 'motivo'>
 
 /** Rótulo curto do evento: cor nunca é o único sinal. */
 export function tituloEvento(e: Tipado): string {
-  if (e.motivo === 'rodada_aberta') return 'Rodada aberta'
-  if (e.motivo === 'rodada_encerrada') return 'Rodada encerrada'
+  if (e.motivo === 'rodada_aberta') return 'Volta aberta'
+  if (e.motivo === 'rodada_encerrada') return 'Volta encerrada'
   return e.tipo === 'aberto' ? 'Aberto' : 'Fechado'
 }
 

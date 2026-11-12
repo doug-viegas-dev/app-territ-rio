@@ -28,7 +28,7 @@ function useCasasDoCartao(cartaoId: string, quadras: Quadra[]): Casa[] {
 function AvisoRodadas({ quadras, estilo }: { quadras: Quadra[]; estilo?: React.CSSProperties }) {
   const nomes = quadrasComRodadaAberta(quadras).map((q) => q.rotulo).join(', ')
   return <p role="status" style={{ color: 'var(--texto-suave)', ...estilo }}>
-    <span>Encerre as rodadas abertas antes de fechar.</span> <span>Rodada aberta em: {nomes}.</span>
+    <span>Encerre as voltas abertas antes de fechar.</span> <span>Volta aberta em: {nomes}.</span>
   </p>
 }
 

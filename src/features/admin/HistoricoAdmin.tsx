@@ -60,7 +60,7 @@ export default function HistoricoAdmin() {
     {visiveis.length === 0
       ? <div className="sem-casas">
         <h2 style={{ fontSize: 20, marginBottom: 8 }}>Nenhum registro ainda</h2>
-        <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto' }}>Quando um cartão for aberto, fechado ou tiver uma rodada, aparece aqui.</p>
+        <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto' }}>Quando um cartão for aberto, fechado ou tiver uma volta, aparece aqui.</p>
       </div>
       : <ol className="tempo" aria-label="Eventos de todos os cartões">
         {visiveis.map((e) => {

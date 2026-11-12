@@ -30,37 +30,37 @@ describe('FaixaRodada', () => {
 
   it('mostra rodada aberta com quem e hora', () => {
     renderFaixa(comRodada(hoje()))
-    expect(screen.getByText('Rodada 2 · aberta por Ana às 14:10')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toBeInTheDocument()
+    expect(screen.getByText('Volta 2 · aberta por Ana às 14:10')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Encerrar volta' })).toBeInTheDocument()
   })
 
   it('mostra a data quando a rodada é de outro dia', () => {
     renderFaixa(comRodada(new Date(2026, 10, 2, 9, 0).getTime()))
-    expect(screen.getByText('Rodada 2 · aberta em 02/11 por Ana')).toBeInTheDocument()
+    expect(screen.getByText('Volta 2 · aberta em 02/11 por Ana')).toBeInTheDocument()
   })
 
-  it('sem rodada mostra "Nenhuma rodada aberta"', () => {
+  it('sem rodada mostra "Nenhuma volta aberta"', () => {
     renderFaixa(base)
-    expect(screen.getByText('Nenhuma rodada aberta')).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma volta aberta')).toBeInTheDocument()
   })
 
   it('Abrir rodada chama abrirRodada com a quadra e o usuário', async () => {
     renderFaixa(base)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
     expect(abrirRodada).toHaveBeenCalledWith('c12', base, usuario)
   })
 
   it('Encerrar rodada chama encerrarRodada', async () => {
     const q = comRodada(hoje())
     renderFaixa(q)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Encerrar rodada' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Encerrar volta' }))
     expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario)
   })
 
   it('falha de gravação chama onErro', async () => {
     vi.mocked(abrirRodada).mockRejectedValueOnce(new Error('falhou'))
     const onErro = renderFaixa(base)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
     await waitFor(() => expect(onErro).toHaveBeenCalledTimes(1))
   })
 
@@ -68,7 +68,7 @@ describe('FaixaRodada', () => {
     vi.mocked(abrirRodada).mockReturnValue(new Promise(() => {}))
     renderFaixa(base)
     const user = userEvent.setup()
-    const botao = screen.getByRole('button', { name: 'Abrir rodada' })
+    const botao = screen.getByRole('button', { name: 'Abrir volta' })
     await user.click(botao)
     expect(botao).toHaveAttribute('aria-disabled', 'true')
     await user.click(botao)
@@ -79,7 +79,7 @@ describe('FaixaRodada', () => {
     vi.mocked(encerrarRodada).mockReturnValue(new Promise(() => {}))
     renderFaixa(comRodada(hoje()))
     const user = userEvent.setup()
-    const botao = screen.getByRole('button', { name: 'Encerrar rodada' })
+    const botao = screen.getByRole('button', { name: 'Encerrar volta' })
     await user.click(botao)
     await user.click(botao)
     expect(encerrarRodada).toHaveBeenCalledTimes(1)
@@ -90,19 +90,19 @@ describe('FaixaRodada', () => {
     vi.mocked(abrirRodada).mockRejectedValueOnce(new Error('falhou'))
     const onErro = renderFaixa(base)
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    await user.click(screen.getByRole('button', { name: 'Abrir volta' }))
     await waitFor(() => expect(onErro).toHaveBeenCalledTimes(1))
-    expect(screen.getByRole('button', { name: 'Abrir rodada' })).not.toHaveAttribute('aria-disabled')
-    await user.click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    expect(screen.getByRole('button', { name: 'Abrir volta' })).not.toHaveAttribute('aria-disabled')
+    await user.click(screen.getByRole('button', { name: 'Abrir volta' }))
     expect(abrirRodada).toHaveBeenCalledTimes(2)
   })
 
   it('quando a rodada aberta chega pela quadra, Encerrar rodada aparece, mas só aceita toque depois da pausa', async () => {
     vi.mocked(abrirRodada).mockReturnValue(new Promise(() => {}))
     const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir rodada' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
     rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(hoje())} cartaoAberto onErro={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('button', { name: 'Encerrar volta' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   describe('depois de Abrir ou Encerrar neste aparelho', () => {
@@ -115,34 +115,34 @@ describe('FaixaRodada', () => {
     it('o botão Encerrar que aparece no lugar de Abrir ignora toques por 1500 ms e depois funciona', async () => {
         const aberta = comRodada(hoje())
       const { rerender } = render(arvore(base))
-      await tocar('Abrir rodada')
+      await tocar('Abrir volta')
       expect(abrirRodada).toHaveBeenCalledTimes(1)
       rerender(arvore(aberta))
-      const encerrar = screen.getByRole('button', { name: 'Encerrar rodada' })
+      const encerrar = screen.getByRole('button', { name: 'Encerrar volta' })
       expect(encerrar).toHaveAttribute('aria-disabled', 'true')
-      await tocar('Encerrar rodada')
+      await tocar('Encerrar volta')
       expect(encerrarRodada).not.toHaveBeenCalled()
       await act(async () => { await vi.advanceTimersByTimeAsync(1499) })
-      await tocar('Encerrar rodada')
+      await tocar('Encerrar volta')
       expect(encerrarRodada).not.toHaveBeenCalled()
       await act(async () => { await vi.advanceTimersByTimeAsync(1) })
-      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
-      await tocar('Encerrar rodada')
+      expect(screen.getByRole('button', { name: 'Encerrar volta' })).not.toHaveAttribute('aria-disabled')
+      await tocar('Encerrar volta')
       expect(encerrarRodada).toHaveBeenCalledWith('c12', aberta, usuario)
     })
 
     it('o botão Abrir que aparece no lugar de Encerrar também ignora toques por 1500 ms', async () => {
         const aberta = comRodada(hoje())
       const { rerender } = render(arvore(aberta))
-      await tocar('Encerrar rodada')
+      await tocar('Encerrar volta')
       expect(encerrarRodada).toHaveBeenCalledTimes(1)
       rerender(arvore({ ...base, rodadasTotal: 2 }))
-      const abrir = screen.getByRole('button', { name: 'Abrir rodada' })
+      const abrir = screen.getByRole('button', { name: 'Abrir volta' })
       expect(abrir).toHaveAttribute('aria-disabled', 'true')
-      await tocar('Abrir rodada')
+      await tocar('Abrir volta')
       expect(abrirRodada).not.toHaveBeenCalled()
       await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
-      await tocar('Abrir rodada')
+      await tocar('Abrir volta')
       expect(abrirRodada).toHaveBeenCalledTimes(1)
     })
 
@@ -150,27 +150,27 @@ describe('FaixaRodada', () => {
         const aberta = comRodada(hoje())
       const { rerender } = render(arvore(base))
       rerender(arvore(aberta))
-      const encerrar = screen.getByRole('button', { name: 'Encerrar rodada' })
+      const encerrar = screen.getByRole('button', { name: 'Encerrar volta' })
       expect(encerrar).not.toHaveAttribute('aria-disabled')
-      await tocar('Encerrar rodada')
+      await tocar('Encerrar volta')
       expect(encerrarRodada).toHaveBeenCalledTimes(1)
     })
 
     it('o bloqueio vale mesmo quando a gravação termina antes de a quadra mudar', async () => {
         const { rerender } = render(arvore(base))
-      await tocar('Abrir rodada')
+      await tocar('Abrir volta')
       await act(async () => {})
       rerender(arvore(comRodada(hoje())))
-      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).toHaveAttribute('aria-disabled', 'true')
+      expect(screen.getByRole('button', { name: 'Encerrar volta' })).toHaveAttribute('aria-disabled', 'true')
     })
 
     it('falha na gravação não deixa marca: uma mudança de outro aparelho depois não bloqueia', async () => {
       vi.mocked(abrirRodada).mockRejectedValueOnce(new Error('falhou'))
         const { rerender } = render(arvore(base))
-      await tocar('Abrir rodada')
+      await tocar('Abrir volta')
       await act(async () => {})
       rerender(arvore(comRodada(hoje())))
-      expect(screen.getByRole('button', { name: 'Encerrar rodada' })).not.toHaveAttribute('aria-disabled')
+      expect(screen.getByRole('button', { name: 'Encerrar volta' })).not.toHaveAttribute('aria-disabled')
     })
   })
 
@@ -181,7 +181,7 @@ describe('FaixaRodada', () => {
       const { rerender } = render(<FaixaRodada cartaoId="c12" quadra={base} cartaoAberto onErro={vi.fn()} />)
       vi.setSystemTime(new Date(2026, 10, 9, 0, 6))
       rerender(<FaixaRodada cartaoId="c12" quadra={comRodada(new Date(2026, 10, 9, 0, 5).getTime())} cartaoAberto onErro={vi.fn()} />)
-      expect(screen.getByText('Rodada 2 · aberta por Ana às 00:05')).toBeInTheDocument()
+      expect(screen.getByText('Volta 2 · aberta por Ana às 00:05')).toBeInTheDocument()
     } finally {
       vi.useRealTimers()
     }
@@ -189,7 +189,7 @@ describe('FaixaRodada', () => {
 
   it('com o cartão fechado, Abrir rodada fica desativado e não grava', async () => {
     renderFaixa(base, false)
-    const botao = screen.getByRole('button', { name: 'Abrir rodada' })
+    const botao = screen.getByRole('button', { name: 'Abrir volta' })
     expect(botao).toHaveAttribute('aria-disabled', 'true')
     await userEvent.setup().click(botao)
     expect(abrirRodada).not.toHaveBeenCalled()
@@ -198,7 +198,7 @@ describe('FaixaRodada', () => {
   it('com o cartão fechado e uma rodada aberta, Encerrar rodada continua disponível e grava', async () => {
     const q = comRodada(hoje())
     renderFaixa(q, false)
-    const botao = screen.getByRole('button', { name: 'Encerrar rodada' })
+    const botao = screen.getByRole('button', { name: 'Encerrar volta' })
     expect(botao).not.toHaveAttribute('aria-disabled')
     await userEvent.setup().click(botao)
     expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario)

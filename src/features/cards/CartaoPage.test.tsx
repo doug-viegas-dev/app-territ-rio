@@ -134,11 +134,11 @@ describe('CartaoPage', () => {
     expect(screen.queryByRole('link', { name: /Quadra 2/ })).not.toBeInTheDocument()
   })
 
-  it('mostra a etiqueta Rodada aberta só na quadra com rodada aberta', () => {
+  it('mostra a etiqueta Volta aberta só na quadra com volta aberta', () => {
     preparar(cartaoBase, comContadores)
     renderPagina()
-    expect(screen.getByRole('link', { name: /Quadra 1/ })).toHaveTextContent('Rodada aberta')
-    expect(screen.getByRole('link', { name: /Quadra 3/ })).not.toHaveTextContent('Rodada aberta')
+    expect(screen.getByRole('link', { name: /Quadra 1/ })).toHaveTextContent('Volta aberta')
+    expect(screen.getByRole('link', { name: /Quadra 3/ })).not.toHaveTextContent('Volta aberta')
   })
 
   it('cartão sem quadras mostra "Nenhuma quadra ainda"', () => {
