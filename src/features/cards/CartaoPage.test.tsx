@@ -68,6 +68,16 @@ describe('CartaoPage', () => {
     vi.useRealTimers()
   })
 
+  it('administrador vê "Fechar cartão" no alto com o cartão aberto; publicador não vê', () => {
+    preparar(cartaoBase, quadras, 'admin')
+    renderPagina()
+    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeInTheDocument()
+    cleanup()
+    preparar(cartaoBase, quadras, 'publicador')
+    renderPagina()
+    expect(screen.queryByRole('button', { name: 'Fechar cartão' })).not.toBeInTheDocument()
+  })
+
   it('mostra título e número do cartão', () => {
     preparar(cartaoBase)
     renderPagina()

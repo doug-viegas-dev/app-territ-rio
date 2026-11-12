@@ -25,9 +25,9 @@ const comRodadaAberta: Quadra[] = [{ ...quadras[0], rodadaAtual: { id: 'r1', num
 const casasPorQuadra: Record<string, Casa[]> = {
   q1: [
     { id: 'h1', quadraId: 'q1', rua: 'Rua A', numero: '1', ordem: 1, status: 'falado', criadoEm: 0 },
-    { id: 'h2', quadraId: 'q1', rua: 'Rua A', numero: '2', ordem: 2, status: 'nao_visitar', criadoEm: 0 },
+    { id: 'h2', quadraId: 'q1', rua: 'Rua A', numero: '2', ordem: 2, status: 'pendente', naoVisitar: true, criadoEm: 0 },
   ],
-  q2: [{ id: 'h3', quadraId: 'q2', rua: 'Rua B', numero: '3', ordem: 1, status: 'estudo', criadoEm: 0 }],
+  q2: [{ id: 'h3', quadraId: 'q2', rua: 'Rua B', numero: '3', ordem: 1, status: 'pendente', estudo: true, criadoEm: 0 }],
 }
 const usuario = { uid: 'u1', nome: 'Maria S.' }
 const AVISO = 'Encerre as voltas abertas antes de fechar.'
@@ -73,7 +73,7 @@ describe('EstadoCartao', () => {
     const user = userEvent.setup()
     const folha = await abrirReinicio(user)
     expect(within(folha).getByText(/Esta ação não tem desfazer/)).toBeInTheDocument()
-    expect(within(folha).getByText(/exceto 1 marcada como/)).toBeInTheDocument()
+    expect(within(folha).getByText(/As 2 casas voltam a/)).toHaveTextContent('As 2 casas voltam a Pendente. As marcas de Não visitar e Estudo continuam.')
     expect(within(folha).getByText(/O cartão fica/)).toHaveTextContent('O cartão fica fechado')
     const confirmar = within(folha).getByRole('button', { name: 'Fechar e reiniciar' })
     expect(confirmar).toHaveAttribute('aria-disabled', 'true')

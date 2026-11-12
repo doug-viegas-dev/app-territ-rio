@@ -67,6 +67,16 @@ const barra = () => screen.getByRole('region', { name: 'Registrar visita' })
 const textos = (selector: string) => Array.from(document.querySelectorAll(selector)).map((e) => e.textContent)
 
 describe('QuadraPage', () => {
+  it('administrador vê "Fechar cartão" no alto com o cartão aberto; publicador não vê', () => {
+    preparar([casa({ numero: '1' })], { papel: 'admin' })
+    renderPagina()
+    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeInTheDocument()
+    cleanup()
+    preparar([casa({ numero: '1' })], { papel: 'publicador' })
+    renderPagina()
+    expect(screen.queryByRole('button', { name: 'Fechar cartão' })).not.toBeInTheDocument()
+  })
+
   it('"+ casa" abre o cadastro; quadra vazia oferece "Cadastrar a primeira casa"', async () => {
     preparar([casa({ numero: '1' })])
     renderPagina()

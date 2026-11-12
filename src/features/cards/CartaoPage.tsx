@@ -6,6 +6,7 @@ import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
 import { quadrasParaVisitar } from '@/domain/rodada'
 import { useSessao } from '@/features/auth/AuthProvider'
+import BotaoFecharCartao from './BotaoFecharCartao'
 import ConfirmarAbertura from './ConfirmarAbertura'
 import ImagemCartao from './ImagemCartao'
 import { useCartao, useQuadrasCarregadas } from './useCartao'
@@ -52,6 +53,7 @@ export default function CartaoPage() {
       progresso={{ resolvidas: cartao.resolvidas, total: cartao.totalCasas }}
     />
     <div className="rolagem">
+      <BotaoFecharCartao cartao={cartao} quadras={quadrasCarregadas} />
       {fechado && <div className="aviso" role="status">
         <Icone nome="cadeado" className="ic ic-28" />
         <p>
