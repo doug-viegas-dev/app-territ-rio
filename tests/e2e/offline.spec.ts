@@ -89,8 +89,8 @@ test('(b) registrar a última casa pendente não fecha o cartão', async ({ page
   await entrar(page, PUBLICADOR)
   await page.getByRole('link', { name: /Jardim/ }).click()
   await page.getByRole('link', { name: /Quadra B/ }).click()
-  await page.getByRole('button', { name: 'Abrir rodada' }).click()
-  await expect(page.getByText(/Rodada 2 · aberta por/)).toBeVisible()
+  await page.getByRole('button', { name: 'Abrir volta' }).click()
+  await expect(page.getByText(/Volta 2 · aberta por/)).toBeVisible()
   await page.getByRole('button', { name: 'Conversado' }).click()
 
   await expect.poll(async () => (await lerDoc(`cards/${CARTAO_QUASE}`))?.resolvidas).toBe(2)
@@ -107,7 +107,7 @@ test('(b) registrar a última casa pendente não fecha o cartão', async ({ page
   await expect(page.getByRole('link', { name: /Jardim/ })).not.toContainText('Fechado')
 })
 
-test('(c) admin fecha e reinicia o território: casas voltam a pendente, menos "Não visitar", e o cartão fica fechado', async ({ page }) => {
+test('(c) admin fecha e reinicia o território: casas voltam a pendente, mantêm a marca "Não visitar", e o cartão fica fechado', async ({ page }) => {
   await entrar(page, ADMIN)
   await page.getByRole('link', { name: 'Administração' }).click()
   await page.getByRole('tab', { name: 'Cartões' }).click()
@@ -121,8 +121,9 @@ test('(c) admin fecha e reinicia o território: casas voltam a pendente, menos "
 
   await expect.poll(async () => (await lerDoc(`cards/${CARTAO_FECHADO}`))?.ciclo).toBe(3)
   const casas = Object.fromEntries((await lerColecao(caminhoCasas(CARTAO_FECHADO))).map((c) => [c._id, c.status]))
-  expect(casas).toEqual({ h1: 'pendente', h2: 'pendente', h3: 'nao_visitar', h4: 'pendente' })
-  expect(await lerDoc(`cards/${CARTAO_FECHADO}`)).toMatchObject({ estado: 'fechado', resolvidas: 1, totalCasas: 4, ciclo: 3 })
+  expect(casas).toEqual({ h1: 'pendente', h2: 'pendente', h3: 'pendente', h4: 'pendente' })
+  expect((await lerColecao(caminhoCasas(CARTAO_FECHADO))).find((c) => c._id === 'h3')).toMatchObject({ status: 'pendente', naoVisitar: true })
+  expect(await lerDoc(`cards/${CARTAO_FECHADO}`)).toMatchObject({ estado: 'fechado', resolvidas: 0, totalCasas: 3, ciclo: 3 })
   expect((await lerDoc(`cards/${CARTAO_FECHADO}/blocks/q1`))?.faltam).toBe(3)
   const eventos = await lerColecao(`cards/${CARTAO_FECHADO}/eventos`)
   expect(eventos.filter((e) => e.motivo === 'fechamento_reinicio')).toHaveLength(1)
@@ -180,13 +181,13 @@ test('(f) publicador cria uma rua nova pelo chip "Nova rua" e cadastra uma casa 
   expect((await lerDoc(`cards/${CARTAO_ABERTO}/blocks/q1`))?.ruas).toEqual(['Rua das Flores', 'Rua do Sol', 'Rua das Palmeiras'])
 })
 
-test('fluxo: abrir rodada, cadastrar casa já falada, encerrar rodada, ver no Histórico', async ({ browser }) => {
+test('fluxo: abrir volta, cadastrar casa já falada, encerrar volta, ver no Histórico', async ({ browser }) => {
   const publicador = await browser.newPage()
   await entrar(publicador, PUBLICADOR)
   await publicador.getByRole('link', { name: /Jardim/ }).click()
   await publicador.getByRole('link', { name: /Quadra B/ }).click()
-  await expect(publicador.getByText('Nenhuma rodada aberta')).toBeVisible()
-  await publicador.getByRole('button', { name: 'Abrir rodada' }).click()
+  await expect(publicador.getByText('Nenhuma volta aberta')).toBeVisible()
+  await publicador.getByRole('button', { name: 'Abrir volta' }).click()
   await expect(publicador.getByText(`aberta por ${PUBLICADOR.nome}`)).toBeVisible()
 
   await publicador.getByRole('button', { name: 'Adicionar casa' }).click()
@@ -205,8 +206,8 @@ test('fluxo: abrir rodada, cadastrar casa já falada, encerrar rodada, ver no Hi
   expect(visitas).toHaveLength(1)
   expect(visitas[0]).toMatchObject({ status: 'falado', porNome: PUBLICADOR.nome, ciclo: 1, rodada: 2 })
 
-  await publicador.getByRole('button', { name: 'Encerrar rodada' }).click()
-  await expect(publicador.getByText('Nenhuma rodada aberta')).toBeVisible()
+  await publicador.getByRole('button', { name: 'Encerrar volta' }).click()
+  await expect(publicador.getByText('Nenhuma volta aberta')).toBeVisible()
   await expect.poll(async () => (await lerDoc(`cards/${CARTAO_QUASE}/blocks/q1`))?.rodadaAtual).toBeUndefined()
   const rodadas = await lerColecao(`cards/${CARTAO_QUASE}/blocks/q1/rodadas`)
   expect(rodadas.find((r) => r.numero === 2)).toMatchObject({ abertaPorNome: PUBLICADOR.nome, encerradaPorNome: PUBLICADOR.nome })
@@ -217,12 +218,12 @@ test('fluxo: abrir rodada, cadastrar casa já falada, encerrar rodada, ver no Hi
   await admin.getByRole('link', { name: 'Administração' }).click()
   await admin.getByRole('tab', { name: 'Histórico' }).click()
   const geral = admin.getByRole('list', { name: 'Eventos de todos os cartões' })
-  await expect(geral.getByText(`${PUBLICADOR.nome} abriu a rodada 2 da Quadra B`, { exact: true })).toBeVisible()
-  await expect(geral.getByText(`${PUBLICADOR.nome} encerrou a rodada 2 da Quadra B`, { exact: true })).toBeVisible()
+  await expect(geral.getByText(`${PUBLICADOR.nome} abriu a volta 2 da Quadra B`, { exact: true })).toBeVisible()
+  await expect(geral.getByText(`${PUBLICADOR.nome} encerrou a volta 2 da Quadra B`, { exact: true })).toBeVisible()
 
   await admin.goto(`/admin/cartao/${CARTAO_QUASE}/historico`)
-  const porQuadra = admin.getByRole('region', { name: 'Rodadas por quadra' })
-  await expect(porQuadra.getByText('Rodada 2')).toBeVisible()
+  const porQuadra = admin.getByRole('region', { name: 'Voltas por quadra' })
+  await expect(porQuadra.getByText('Volta 2')).toBeVisible()
   await expect(porQuadra.getByText(/encerrada por Paulo Publicador/).first()).toBeVisible()
   await admin.close()
 })
@@ -230,11 +231,11 @@ test('fluxo: abrir rodada, cadastrar casa já falada, encerrar rodada, ver no Hi
 test('fluxo: fechar e reiniciar deixa o cartão fechado e aparece no Histórico', async ({ page }) => {
   await entrar(page, ADMIN)
 
-  // Com uma rodada aberta em qualquer quadra, não dá para fechar.
+  // Com uma volta aberta em qualquer quadra, não dá para fechar.
   await page.goto(`/admin/cartao/${CARTAO_ABERTO}`)
   const reiniciar = page.getByRole('button', { name: 'Fechar e reiniciar', exact: true })
   await expect(reiniciar).toHaveAttribute('aria-disabled', 'true')
-  await expect(page.getByText('Encerre as rodadas abertas antes de fechar.').first()).toBeVisible()
+  await expect(page.getByText('Encerre as voltas abertas antes de fechar.').first()).toBeVisible()
 
   await page.goto(`/admin/cartao/${CARTAO_QUASE}`)
   await expect(reiniciar).not.toHaveAttribute('aria-disabled', 'true')

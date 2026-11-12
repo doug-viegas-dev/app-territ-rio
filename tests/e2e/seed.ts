@@ -96,7 +96,7 @@ async function quadra(cartaoId: string, id: string, rotulo: string, ruas: string
   await gravar(`cards/${cartaoId}/blocks/${id}`, { rotulo, ruas, ordem: 1, totalCasas: total, ...resto, ...(rodadaAtual && { rodadaAtual }) })
 }
 
-type CasaSeed = { id: string; rua: string; numero?: string; descricao?: string; ordem: number; status: string }
+type CasaSeed = { id: string; rua: string; numero?: string; descricao?: string; ordem: number; status: string; naoVisitar?: boolean; naoVisitarPor?: string; naoVisitarEm?: Date; estudo?: boolean; estudoPor?: string; estudoEm?: Date }
 
 async function casas(cartaoId: string, quadraId: string, lista: CasaSeed[]) {
   for (const c of lista) {
@@ -125,9 +125,9 @@ async function evento(cartaoId: string, id: string, e: { tipo: string; motivo: s
 
 /**
  * - membros: um admin e um publicador; `DESCONHECIDO` fica de fora.
- * - `c-aberto`: aberto, Quadra A com a rodada 1 aberta, duas ruas e 3 casas pendentes.
- * - `c-quase`: aberto, Quadra B sem rodada aberta e com a rodada 1 já encerrada; 2 casas, uma já conversada.
- * - `c-fechado`: fechado, ciclo 2, 4 casas: conversado, estudo, não visitar e não atendeu.
+ * - `c-aberto`: aberto, Quadra A com a volta 1 aberta, duas ruas e 3 casas pendentes.
+ * - `c-quase`: aberto, Quadra B sem volta aberta e com a volta 1 já encerrada; 2 casas, uma já conversada.
+ * - `c-fechado`: fechado, ciclo 2, 4 casas: conversado, conversado com marca estudo, pendente com marca não visitar (fora das contas) e não atendeu.
  * As quadras trazem `totalCasas`, `faltam` e `rodadasTotal` coerentes com as casas.
  */
 export async function semear() {
@@ -159,12 +159,12 @@ export async function semear() {
   ])
   await visita(CARTAO_QUASE, 'q1', 'h1', 'falado', 1, 1)
 
-  await cartao(CARTAO_FECHADO, { numero: '3', titulo: 'Vila', estado: 'fechado', ciclo: 2, total: 4, resolvidas: 3 })
-  await quadra(CARTAO_FECHADO, 'q1', 'Quadra C', ['Rua das Pedras', 'Rua do Rio'], { total: 4, faltam: 1, rodadasTotal: 0 })
+  await cartao(CARTAO_FECHADO, { numero: '3', titulo: 'Vila', estado: 'fechado', ciclo: 2, total: 3, resolvidas: 2 })
+  await quadra(CARTAO_FECHADO, 'q1', 'Quadra C', ['Rua das Pedras', 'Rua do Rio'], { total: 3, faltam: 1, rodadasTotal: 0 })
   await casas(CARTAO_FECHADO, 'q1', [
     { id: 'h1', rua: 'Rua das Pedras', numero: '1', ordem: 1, status: 'falado' },
-    { id: 'h2', rua: 'Rua das Pedras', numero: '2', ordem: 2, status: 'estudo' },
-    { id: 'h3', rua: 'Rua do Rio', numero: '3', ordem: 1, status: 'nao_visitar' },
+    { id: 'h2', rua: 'Rua das Pedras', numero: '2', ordem: 2, status: 'falado', estudo: true, estudoPor: 'Bruno Semente', estudoEm: AGORA },
+    { id: 'h3', rua: 'Rua do Rio', numero: '3', ordem: 1, status: 'pendente', naoVisitar: true, naoVisitarPor: 'Bruno Semente', naoVisitarEm: AGORA },
     { id: 'h4', rua: 'Rua do Rio', numero: '4', ordem: 2, status: 'sem_resposta' },
   ])
 }
