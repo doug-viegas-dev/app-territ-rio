@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
-import type { Cartao, Casa, EventoCartao, Quadra, Rodada, RodadaAtual, Status, Visita } from '@/domain/types'
+import type { Cartao, Casa, EventoCartao, Quadra, Rodada, RodadaAtual, Status, StatusVisita, Visita } from '@/domain/types'
 
 export const paraTimestamp = (ms: number): Timestamp => Timestamp.fromMillis(ms)
 export const paraMs = (valor: unknown): number | undefined => (valor instanceof Timestamp ? valor.toMillis() : undefined)
@@ -61,10 +61,13 @@ export function rodadaDe(id: string, d: Dados): Rodada {
   }
 }
 
-const STATUS: Status[] = ['pendente', 'sem_resposta', 'falado', 'estudo', 'nao_visitar']
+const STATUS: Status[] = ['pendente', 'falado', 'sem_resposta', 'nao_em_casa', 'carta']
+const STATUS_VISITA: StatusVisita[] = [...STATUS, 'estudo', 'nao_visitar']
 const statusDe = (v: unknown): Status => (STATUS.includes(v as Status) ? (v as Status) : 'pendente')
 
 export function casaDe(id: string, quadraId: string, d: Dados): Casa {
+  const naoVisitar = d.naoVisitar === true || d.status === 'nao_visitar'
+  const estudo = d.estudo === true || d.status === 'estudo'
   return {
     id,
     quadraId,
@@ -76,19 +79,26 @@ export function casaDe(id: string, quadraId: string, d: Dados): Casa {
     ...(paraMs(d.ultimaVisitaEm) !== undefined && { ultimaVisitaEm: paraMs(d.ultimaVisitaEm) }),
     ...(typeof d.ultimoPor === 'string' && { ultimoPor: d.ultimoPor }),
     criadoEm: paraMs(d.criadoEm) ?? 0,
+    ...(naoVisitar && { naoVisitar: true }),
+    ...(naoVisitar && typeof d.naoVisitarPor === 'string' && { naoVisitarPor: d.naoVisitarPor }),
+    ...(naoVisitar && paraMs(d.naoVisitarEm) !== undefined && { naoVisitarEm: paraMs(d.naoVisitarEm) }),
+    ...(estudo && { estudo: true }),
+    ...(estudo && typeof d.estudoPor === 'string' && { estudoPor: d.estudoPor }),
+    ...(estudo && paraMs(d.estudoEm) !== undefined && { estudoEm: paraMs(d.estudoEm) }),
   }
 }
 
 export function visitaDe(id: string, d: Dados): Visita {
   return {
     id,
-    status: statusDe(d.status),
+    ...(STATUS_VISITA.includes(d.status as StatusVisita) && { status: d.status as StatusVisita }),
     em: paraMs(d.em) ?? 0,
     porUid: String(d.porUid ?? ''),
     porNome: String(d.porNome ?? ''),
     ciclo: Number(d.ciclo ?? 1),
     ...(typeof d.rodada === 'number' && { rodada: d.rodada }),
     ...(typeof d.obs === 'string' && { obs: d.obs }),
+    ...(paraMs(d.expiraEm) !== undefined && { expiraEm: paraMs(d.expiraEm) }),
   }
 }
 

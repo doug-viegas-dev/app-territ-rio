@@ -285,7 +285,7 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
 // ---------- rodadas ----------
 
 export function observarRodadas(cartaoId: string, quadraId: string, cb: (r: Rodada[]) => void): () => void {
-  return observar(() => (estado.rodadas[chaveCasas(cartaoId, quadraId)] ?? []).map((r) => ({ ...r })).sort((a, b) => b.numero - a.numero), cb)
+  return observar(() => (estado.rodadas[chaveCasas(cartaoId, quadraId)] ?? []).map((r) => ({ ...r })).sort((a, b) => b.abertaEm - a.abertaEm || b.numero - a.numero), cb)
 }
 
 function quadraPorId(cartaoId: string, quadraId: string): Quadra {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
 import { abrirRodada, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco } from './banco'
 
@@ -114,6 +114,22 @@ describe('rodadas na demonstração', () => {
     await abrirRodada(cartao.id, quadras()[0], usuario)
     expect(quadras()[0]).toMatchObject({ rodadasTotal: 2, rodadaAtual: { numero: 2 } })
     expect(ler<Rodada[]>((cb) => observarRodadas(cartao.id, q.id, cb)).map((r) => r.numero)).toEqual([2, 1])
+  })
+
+  it('observarRodadas ordena da mais recente para a mais antiga por data, não por número', async () => {
+    const { cartao, quadras } = cartaoQuadra()
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(5000)
+      await abrirRodada(cartao.id, quadras()[0], usuario)
+      await encerrarRodada(cartao.id, quadras()[0], usuario)
+      vi.setSystemTime(2000)
+      await abrirRodada(cartao.id, quadras()[0], usuario)
+    } finally {
+      vi.useRealTimers()
+    }
+    const rodadas = ler<Rodada[]>((cb) => observarRodadas(cartao.id, quadras()[0].id, cb))
+    expect(rodadas.map((r) => [r.numero, r.abertaEm])).toEqual([[1, 5000], [2, 2000]])
   })
 
   it('abrir e encerrar gravam eventos com quadra e número', async () => {

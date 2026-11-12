@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Timestamp } from 'firebase/firestore'
-import { eventoDe, quadraDe, rodadaDe, visitaDe } from './converters'
+import { casaDe, eventoDe, quadraDe, rodadaDe, visitaDe } from './converters'
 
 describe('conversores', () => {
   it('quadraDe sem campos novos usa zero e sem rodada atual', () => {
@@ -36,6 +36,34 @@ describe('conversores', () => {
   it('visitaDe devolve rodada quando numérica', () => {
     expect(visitaDe('v1', { rodada: 3 }).rodada).toBe(3)
     expect('rodada' in visitaDe('v1', {})).toBe(false)
+  })
+
+  it('casaDe converte status legados em pendente mais marca', () => {
+    expect(casaDe('c1', 'b1', { status: 'estudo' })).toMatchObject({ status: 'pendente', estudo: true })
+    const n = casaDe('c1', 'b1', { status: 'nao_visitar' })
+    expect(n).toMatchObject({ status: 'pendente', naoVisitar: true })
+    expect('estudo' in n).toBe(false)
+  })
+
+  it('casaDe lê status novos e marcas', () => {
+    const c = casaDe('c1', 'b1', { status: 'carta', naoVisitar: true, naoVisitarPor: 'Ana', naoVisitarEm: Timestamp.fromMillis(900) })
+    expect(c).toMatchObject({ status: 'carta', naoVisitar: true, naoVisitarPor: 'Ana', naoVisitarEm: 900 })
+    expect(casaDe('c1', 'b1', { status: 'nao_em_casa', estudo: true, estudoPor: 'Bia', estudoEm: Timestamp.fromMillis(7) }))
+      .toMatchObject({ status: 'nao_em_casa', estudo: true, estudoPor: 'Bia', estudoEm: 7 })
+    expect(casaDe('c1', 'b1', { status: 'qualquer' }).status).toBe('pendente')
+    const sem = casaDe('c1', 'b1', { status: 'falado' })
+    expect('naoVisitar' in sem).toBe(false)
+    expect('estudo' in sem).toBe(false)
+  })
+
+  it('visitaDe sem status é observação; mantém status antigo e expiraEm', () => {
+    const o = visitaDe('v1', { obs: 'voltar', em: Timestamp.fromMillis(1), porUid: 'u', porNome: 'Ana', ciclo: 1 })
+    expect('status' in o).toBe(false)
+    expect(o.obs).toBe('voltar')
+    expect(visitaDe('v2', { status: 'estudo' }).status).toBe('estudo')
+    expect(visitaDe('v3', { status: 'nao_visitar' }).status).toBe('nao_visitar')
+    expect(visitaDe('v4', { status: 'carta', expiraEm: Timestamp.fromMillis(99) }).expiraEm).toBe(99)
+    expect('expiraEm' in visitaDe('v5', {})).toBe(false)
   })
 
   it('eventoDe aceita tipo rodada', () => {

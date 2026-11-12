@@ -50,7 +50,7 @@ export function baixarTudo(opcoes: { admin: boolean }, forcar = false): Promise<
       guardarLista(`cards/${cartao.id}/blocks`, quadras.docs)
       await emLotes(quadras.docs, async (quadra) => {
         const qBase = [...base, 'blocks', quadra.id] as const
-        const rodadas = await tentar(() => getDocs(query(collection(db, ...qBase, 'rodadas'), orderBy('numero', 'desc'))))
+        const rodadas = await tentar(() => getDocs(query(collection(db, ...qBase, 'rodadas'), orderBy('abertaEm', 'desc'))))
         if (rodadas) guardarLista(`cards/${cartao.id}/blocks/${quadra.id}/rodadas`, rodadas.docs)
         const casas = await tentar(() => getDocs(collection(db, ...qBase, 'houses')))
         if (!casas) return
