@@ -151,13 +151,14 @@ export default function QuadraPage() {
 
     {!vazia && foco && <>
       <div className="area-lista">
-      <div className="rolagem com-fab">
+      <div className="rolagem">
         <div className="segmento" role="tablist">
           <button type="button" role="tab" aria-selected={modo === 'trabalho'} className={modo === 'trabalho' ? 'ativo' : ''} onClick={() => setModo('trabalho')}>Trabalho</button>
           <button type="button" role="tab" aria-selected={modo === 'todas'} className={modo === 'todas' ? 'ativo' : ''} onClick={() => setModo('todas')}>Todas</button>
         </div>
         {aberto && <div className="acoes-lista">
-          <button type="button" className="btn secundario medio" onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>
+          <button type="button" className="btn secundario medio reordenar" onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>
+          <button type="button" className="btn primario medio" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-20" />Adicionar casa</button>
         </div>}
 
         {modo === 'trabalho' ? <>
@@ -179,7 +180,6 @@ export default function QuadraPage() {
         </div>)}
         <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
       </div>
-      {aberto && <button type="button" className="fab" aria-label="Adicionar casa" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-28" /></button>}
       </div>
 
       <section className="barra-fixa no-fluxo" aria-label="Registrar visita">

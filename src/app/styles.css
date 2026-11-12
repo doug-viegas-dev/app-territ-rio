@@ -100,7 +100,10 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
     border-radius: 32px; box-shadow: var(--sombra-forte);
   }
 }
-.rolagem { flex: 1; overflow-y: auto; padding: 16px var(--gutter) 24px; }
+.rolagem { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px var(--gutter) 24px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--texto-suave) 45%, transparent) transparent; }
+.rolagem::-webkit-scrollbar { width: 10px; }
+.rolagem::-webkit-scrollbar-track { background: transparent; }
+.rolagem::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--texto-suave) 45%, transparent); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
 .rolagem.com-nav { padding-bottom: 24px; }
 .rolagem.centro { display: flex; flex-direction: column; justify-content: center; }
 
@@ -193,11 +196,13 @@ h1, h2, h3 { font-weight: 600; line-height: 1.3; }
 .rolagem > .aviso { border-radius: 20px; }
 .aviso.erro > .ic { color: var(--cor-erro); }
 .aviso.faixa { margin: 0; border-radius: 0; flex: none; }
-.aviso.faixa.volta { align-items: center; padding: 8px var(--gutter); }
+.aviso.faixa.volta { align-items: center; padding: 4px var(--gutter); }
 .aviso.faixa.volta p { min-width: 0; }
 .aviso.faixa.volta .detalhe { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acoes-lista { display: flex; gap: 8px; margin: 8px 0 4px; }
-.acoes-lista .btn { flex: 1; min-width: 0; padding: 0 10px; }
+.acoes-lista .btn { flex: 1 1 0; width: auto; min-width: 0; padding: 0 10px; white-space: nowrap; }
+.acoes-lista .btn.reordenar { flex: 0 1 auto; }
+.acoes-lista .btn:not(.reordenar) { flex: 1 1 auto; }
 .demo-faixa { display: flex; align-items: center; gap: 12px; flex: none; padding: 4px 8px 4px 16px; background: var(--cor-secundaria); color: var(--cor-texto); }
 .demo-faixa p { flex: 1; margin: 0; font-size: 16px; }
 .demo-faixa button { min-width: 48px; min-height: 48px; padding: 0 16px; border-radius: 999px; font-weight: 600; color: var(--cor-texto); text-decoration: underline; }
@@ -275,8 +280,9 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 
 /* barra de registro fixa */
 .barra-fixa.no-fluxo { position: relative; flex: none; }
-.barra-fixa { position: absolute; left: 0; right: 0; bottom: 0; background: var(--superficie); border-radius: 28px 28px 0 0; box-shadow: 0 -8px 28px rgba(58, 70, 140, .14); padding: 16px var(--gutter) 18px; z-index: 2; }
-.barra-fixa .quem { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; min-height: 48px; }
+.barra-fixa { position: absolute; left: 0; right: 0; bottom: 0; background: var(--superficie); border-radius: 28px 28px 0 0; box-shadow: 0 -8px 28px rgba(58, 70, 140, .14); padding: 8px var(--gutter) 12px; z-index: 2; }
+.barra-fixa .quem { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 2px; min-height: 48px; }
+.barra-fixa .bs { min-height: 48px !important; }
 .barra-fixa .quem b { font-size: 18px; display: block; line-height: 1.2; }
 .barra-fixa .quem span { color: var(--texto-suave); }
 .barra-fixa .detalhes { min-height: 48px; padding: 0 12px; margin-right: -12px; display: flex; align-items: center; gap: 4px; font-weight: 600; color: var(--cor-principal); flex: none; }

@@ -89,12 +89,12 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
   })
 
-  it('o botão de adicionar casa é flutuante, mostra só o ícone e tem nome acessível', () => {
+  it('o botão de adicionar casa fica na linha de ações da lista, com texto, e não flutua sobre ela', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
     const botao = screen.getByRole('button', { name: 'Adicionar casa' })
-    expect(botao.textContent).toBe('')
-    expect(botao).toHaveClass('fab')
+    expect(botao.textContent).toBe('Adicionar casa')
+    expect(botao).not.toHaveClass('fab')
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
@@ -117,12 +117,12 @@ describe('QuadraPage', () => {
     preparar([casa({ numero: '100' }), casa({ numero: '104' })])
     renderPagina()
     const user = userEvent.setup()
-    expect(screen.queryByLabelText(/^Arrastar /)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Segure uma casa e arraste/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Reordenar' }))
-    expect(screen.getAllByLabelText(/^Arrastar /)).toHaveLength(2)
+    expect(screen.getByText(/Segure uma casa e arraste/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Registrar visita' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
-    expect(screen.queryByLabelText(/^Arrastar /)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Segure uma casa e arraste/)).not.toBeInTheDocument()
     expect(barra()).toBeInTheDocument()
   })
 
