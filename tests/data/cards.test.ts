@@ -7,7 +7,8 @@ import { connectFirestoreEmulator, doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '@/firebase/app'
 import { abrirCartaoManual, atualizarCartao, criarCartao, fecharCartaoManual, observarCartao, observarCartoes, observarEventos } from '@/firebase/cards'
 import { adicionarRua, atualizarQuadra, criarQuadra, observarQuadras } from '@/firebase/blocks'
-import type { Cartao, EventoCartao } from '@/domain/types'
+import { abrirRodada, encerrarRodada } from '@/firebase/rodadas'
+import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
 
 vi.hoisted(() => {
   Object.assign(import.meta.env, { VITE_FIREBASE_API_KEY: 'demo-key', VITE_FIREBASE_PROJECT_ID: 'demo-meu-territorio' })
@@ -65,8 +66,8 @@ describe('cartões', () => {
     const a = await criarCartao({ numero: '20', titulo: 'A' }, admin)
     const b = await criarCartao({ numero: '10', titulo: 'B' }, admin)
     const c = await criarCartao({ numero: '15', titulo: 'C' }, admin)
-    await abrirCartaoManual(await cartaoAtual(a), admin)
-    await abrirCartaoManual(await cartaoAtual(c), admin)
+    await abrirCartaoManual(await cartaoAtual(a), admin, [])
+    await abrirCartaoManual(await cartaoAtual(c), admin, [])
     const lista = await proximo<Cartao[]>(observarCartoes, (l) => [a, b, c].every((id) => l.some((x) => x.id === id)))
     const ids = lista.filter((x) => [a, b, c].includes(x.id)).map((x) => x.id)
     expect(ids).toEqual([c, a, b])
@@ -76,7 +77,7 @@ describe('cartões', () => {
 
   it('abre sem mudar o ciclo e grava quem abriu', async () => {
     const id = await criarCartao({ numero: '2', titulo: 'Abrir' }, admin)
-    await abrirCartaoManual(await cartaoAtual(id), admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
     const c = await cartaoAtual(id)
     expect(c).toMatchObject({ estado: 'aberto', ciclo: 1, abertoPorNome: 'Admin' })
     expect(typeof c.abertoEm).toBe('number')
@@ -86,7 +87,7 @@ describe('cartões', () => {
 
   it('fecharCartaoManual não sobe o ciclo e grava o evento', async () => {
     const id = await criarCartao({ numero: '3', titulo: 'Fechar' }, admin)
-    await abrirCartaoManual(await cartaoAtual(id), admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
     await espera()
     await fecharCartaoManual(await cartaoAtual(id), admin, [])
     const c = await cartaoAtual(id)
@@ -96,10 +97,42 @@ describe('cartões', () => {
 
   it('fecharCartaoManual lança erro com rodada aberta e não grava nada', async () => {
     const id = await criarCartao({ numero: '3b', titulo: 'Rodada aberta' }, admin)
-    await abrirCartaoManual(await cartaoAtual(id), admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
     const aberta = { rodadaAtual: { id: 'r1', numero: 1, porNome: 'Ana', em: 1 } }
     await expect(fecharCartaoManual(await cartaoAtual(id), admin, [aberta])).rejects.toThrow('Rodada aberta')
     expect((await cartaoAtual(id)).estado).toBe('aberto')
+  })
+
+  it('abrir o cartão zera as voltas de todas as quadras', async () => {
+    const id = await criarCartao({ numero: '7', titulo: 'Voltas' }, admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
+    const q1 = await criarQuadra(id, { rotulo: 'Q1', ruas: ['Rua A'] })
+    const q2 = await criarQuadra(id, { rotulo: 'Q2', ruas: ['Rua B'] })
+    const real = { uid: auth.currentUser?.uid ?? '', nome: 'Admin' } // as regras exigem o uid do Auth nas rodadas
+    const quadraDe = (qid: string, pronto: (q: Quadra) => boolean = () => true) =>
+      proximo<Quadra[]>((cb) => observarQuadras(id, cb), (l) => l.some((q) => q.id === qid && pronto(q))).then((l) => l.find((q) => q.id === qid) as Quadra)
+    for (let i = 0; i < 3; i++) {
+      await abrirRodada(id, await quadraDe(q1, (q) => !q.rodadaAtual), real)
+      await encerrarRodada(id, await quadraDe(q1, (q) => !!q.rodadaAtual), real)
+      await quadraDe(q1, (q) => !q.rodadaAtual && q.rodadasTotal === i + 1)
+    }
+    for (let i = 0; i < 5; i++) {
+      await abrirRodada(id, await quadraDe(q2, (q) => !q.rodadaAtual), real)
+      await encerrarRodada(id, await quadraDe(q2, (q) => !!q.rodadaAtual), real)
+      await quadraDe(q2, (q) => !q.rodadaAtual && q.rodadasTotal === i + 1)
+    }
+    await abrirRodada(id, await quadraDe(q2, (q) => !q.rodadaAtual && q.rodadasTotal === 5), real)
+    const antes = await quadraDe(q2, (q) => !!q.rodadaAtual)
+    expect(antes.rodadasTotal).toBe(6)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [{ id: q1 }, { id: q2 }])
+    const a = await quadraDe(q1, (q) => q.rodadasTotal === 0)
+    const b = await quadraDe(q2, (q) => q.rodadasTotal === 0 && !q.rodadaAtual)
+    expect(a.rodadaAtual).toBeUndefined()
+    expect(b.rodadaAtual).toBeUndefined()
+    expect((await cartaoAtual(id)).estado).toBe('aberto')
+    expect((await eventos(id))[0]).toMatchObject({ tipo: 'aberto', motivo: 'abertura' })
+    await abrirRodada(id, a, real)
+    expect((await quadraDe(q1, (q) => !!q.rodadaAtual)).rodadaAtual).toMatchObject({ numero: 1 })
   })
 
   it('atualiza campos editáveis', async () => {
@@ -112,12 +145,12 @@ describe('cartões', () => {
     const id = await criarCartao({ numero: '5', titulo: 'Muitos' }, admin)
     for (let i = 0; i < 5; i++) {
       await espera()
-      await abrirCartaoManual(await cartaoAtual(id), admin)
+      await abrirCartaoManual(await cartaoAtual(id), admin, [])
       await espera()
       await fecharCartaoManual(await cartaoAtual(id), admin, [])
     }
     await espera()
-    await abrirCartaoManual(await cartaoAtual(id), admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
     const e = await proximo<EventoCartao[]>((cb) => observarEventos(id, cb, 10))
     expect(e).toHaveLength(10)
     expect(e[0].motivo).toBe('abertura')

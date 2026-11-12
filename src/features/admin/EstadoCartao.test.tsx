@@ -171,7 +171,7 @@ describe('EstadoCartao', () => {
     expect(abrirCartaoManual).not.toHaveBeenCalled()
     const folha = screen.getByRole('dialog', { name: 'Abrir cartão' })
     await user.click(within(folha).getByRole('button', { name: 'Abrir cartão' }))
-    expect(abrirCartaoManual).toHaveBeenCalledWith(fechado, usuario)
+    expect(abrirCartaoManual).toHaveBeenCalledWith(fechado, usuario, quadras)
   })
 
   it('contadores suspeitos mostram o aviso', () => {

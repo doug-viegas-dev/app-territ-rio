@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Cartao, Casa, EventoCartao, Quadra, Rodada, Visita } from '@/domain/types'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { faltaVisitar } from '@/domain/status'
-import { abrirRodada, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
+import { abrirCartaoManual, abrirRodada, criarCasa, criarCasasEmFaixa, criarQuadra, encerrarRodada, excluirCasa, fecharCartaoManual, fecharEReiniciarCartao, marcarCasa, observarCartao, observarCartoes, observarCasas, observarEventos, observarQuadras, observarRodadas, observarVisitas, recalcularContadores, registrarVisita, reiniciarBanco, salvarObservacao } from './banco'
 
 const usuario = { uid: 'demo', nome: 'Visitante' }
 
@@ -73,6 +73,23 @@ describe('rodadas na demonstração', () => {
     expect(rodadas.map((r) => [r.numero, r.encerradaEm !== undefined])).toEqual([[2, false], [1, true]])
     const eventos = ler<EventoCartao[]>((cb) => observarEventos(cartao.id, cb))
     expect(eventos.filter((e) => e.tipo === 'rodada').map((e) => `${e.motivo}:${e.rodada}`).sort()).toEqual(['rodada_aberta:1', 'rodada_aberta:2', 'rodada_encerrada:1'])
+  })
+
+  it('abrir o cartão zera as voltas de todas as quadras', async () => {
+    const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
+    const quadras = () => ler<Quadra[]>((cb) => observarQuadras(cartao.id, cb))
+    expect(quadras()[0]).toMatchObject({ rodadasTotal: 2, rodadaAtual: { numero: 2 } })
+    await abrirCartaoManual(cartao, usuario, quadras())
+    for (const q of quadras()) {
+      expect(q.rodadasTotal).toBe(0)
+      expect(q.rodadaAtual).toBeUndefined()
+    }
+    const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
+    expect(depois.estado).toBe('aberto')
+    expect(ler<EventoCartao[]>((cb) => observarEventos(cartao.id, cb)).some((e) => e.motivo === 'abertura')).toBe(true)
+    const [q] = quadras()
+    await abrirRodada(cartao.id, q, usuario)
+    expect(quadras()[0].rodadaAtual).toMatchObject({ numero: 1 })
   })
 
   it('a semente traz contadores das quadras coerentes com as casas', () => {

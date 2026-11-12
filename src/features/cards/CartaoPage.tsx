@@ -8,14 +8,15 @@ import { quadrasParaVisitar } from '@/domain/rodada'
 import { useSessao } from '@/features/auth/AuthProvider'
 import ConfirmarAbertura from './ConfirmarAbertura'
 import ImagemCartao from './ImagemCartao'
-import { useCartao, useQuadras } from './useCartao'
+import { useCartao, useQuadrasCarregadas } from './useCartao'
 
 const data = (ms: number) => new Date(ms).toLocaleDateString('pt-BR')
 
 export default function CartaoPage() {
   const { cartaoId = '' } = useParams()
   const cartao = useCartao(cartaoId)
-  const quadras = useQuadras(cartaoId)
+  const quadrasCarregadas = useQuadrasCarregadas(cartaoId)
+  const quadras = quadrasCarregadas ?? []
   const { usuario, membro } = useSessao()
   const [confirmando, setConfirmando] = useState(false)
   const [todas, setTodas] = useState(false)
@@ -93,6 +94,6 @@ export default function CartaoPage() {
         {todas ? 'Mostrar só as que faltam' : 'Mostrar todas as quadras'}
       </button>}
     </div>
-    {confirmando && usuario && <ConfirmarAbertura cartao={cartao} uid={usuario.uid} nome={membro?.nome ?? usuario.nome} onFechar={() => setConfirmando(false)} />}
+    {confirmando && usuario && <ConfirmarAbertura cartao={cartao} uid={usuario.uid} quadras={quadrasCarregadas} nome={membro?.nome ?? usuario.nome} onFechar={() => setConfirmando(false)} />}
   </>
 }

@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, limit, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, deleteField, doc, limit, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore'
 import { abrirCartao, fecharCartao } from '@/domain/ciclo'
 import { podeFecharCartao } from '@/domain/rodada'
 import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
@@ -62,10 +62,12 @@ export async function fecharCartaoManual(c: Cartao, usuario: Usuario, quadras: P
   await batch.commit()
 }
 
-export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
-  if (demoAtivo()) return demo.abrirCartaoManual(c, usuario)
+/** Abrir recomeça a contagem: cada quadra volta a zero voltas e perde a rodada aberta, no mesmo lote. */
+export async function abrirCartaoManual(c: Cartao, usuario: Usuario, quadras: Pick<Quadra, 'id'>[]): Promise<void> {
+  if (demoAtivo()) return demo.abrirCartaoManual(c, usuario, quadras)
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
+  for (const q of quadras) batch.update(doc(db, 'cards', c.id, 'blocks', q.id), { rodadasTotal: 0, rodadaAtual: deleteField() })
   batch.update(doc(db, 'cards', c.id), { ...abrirCartao(c), atualizadoEm: agora, abertoPorNome: usuario.nome, abertoEm: agora })
   batch.set(doc(collection(db, 'cards', c.id, 'eventos')), { tipo: 'aberto', motivo: 'abertura', em: agora, porUid: usuario.uid, porNome: usuario.nome })
   await batch.commit()

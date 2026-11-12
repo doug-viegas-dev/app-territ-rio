@@ -110,7 +110,7 @@ export default function EstadoCartao({ cartao, quadras }: { cartao: Cartao; quad
       </div>
     </div>
 
-    {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} onFechar={() => setFolha(null)} />}
+    {folha === 'abrir' && quem && <ConfirmarAbertura cartao={cartao} uid={quem.uid} nome={quem.nome} quadras={quadras} onFechar={() => setFolha(null)} />}
     {folha === 'reiniciar' && quem && quadras && <ConfirmarReinicio cartao={cartao} casas={casas} quadras={quadras} podeFechar={podeFechar} onFechar={() => setFolha(null)}
       onConfirmar={() => { setFolha(null); gravar(fecharEReiniciarCartao(cartao, casas, quadras, quem)) }} />}
   </>

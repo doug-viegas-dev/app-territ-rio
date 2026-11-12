@@ -252,8 +252,12 @@ export async function fecharCartaoManual(c: Cartao, usuario: Usuario, quadras: P
   mudou()
 }
 
-export async function abrirCartaoManual(c: Cartao, usuario: Usuario): Promise<void> {
+export async function abrirCartaoManual(c: Cartao, usuario: Usuario, quadras: Pick<Quadra, 'id'>[]): Promise<void> {
   const atual = cartaoPorId(c.id)
+  for (const { id } of quadras) {
+    const q = estado.quadras[c.id]?.find((x) => x.id === id)
+    if (q) { q.rodadasTotal = 0; delete q.rodadaAtual }
+  }
   Object.assign(atual, abrirCartao(atual))
   tocar(atual)
   atual.abertoPorNome = usuario.nome

@@ -82,7 +82,7 @@ afterAll(async () => { if (env) await env.cleanup() })
 let seq = 0
 async function cenario(abrir = true) {
   const cartaoId = await criarCartao({ numero: String(++seq), titulo: `Cartão ${seq}` }, admin)
-  if (abrir) await abrirCartaoManual(await cartaoAtual(cartaoId), admin)
+  if (abrir) await abrirCartaoManual(await cartaoAtual(cartaoId), admin, [])
   const quadraId = await criarQuadra(cartaoId, { rotulo: 'Q1', ruas: ['Rua A', 'Rua B'] })
   return { cartaoId, quadraId }
 }

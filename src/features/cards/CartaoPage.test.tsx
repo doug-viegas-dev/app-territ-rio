@@ -179,8 +179,21 @@ describe('CartaoPage', () => {
     expect(folha).toHaveTextContent('Fica registrado que foi você, Maria S., em 06/11/2026 às 14:20.')
     expect(abrirCartaoManual).not.toHaveBeenCalled()
     await user.click(screen.getAllByRole('button', { name: 'Abrir cartão' }).at(-1)!)
-    expect(abrirCartaoManual).toHaveBeenCalledWith(cartao, { uid: 'u1', nome: 'Maria S.' })
+    expect(abrirCartaoManual).toHaveBeenCalledWith(cartao, { uid: 'u1', nome: 'Maria S.' }, quadras)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('com as quadras ainda carregando, Abrir cartão fica desativado e não abre', async () => {
+    const cartao: Cartao = { ...cartaoBase, estado: 'fechado' }
+    preparar(cartao, quadras, 'admin')
+    vi.mocked(observarQuadras).mockImplementation(() => () => {})
+    const user = userEvent.setup()
+    renderPagina()
+    await user.click(screen.getByRole('button', { name: 'Abrir cartão' }))
+    const confirmar = screen.getAllByRole('button', { name: 'Abrir cartão' }).at(-1)!
+    expect(confirmar).toBeDisabled()
+    await user.click(confirmar)
+    expect(abrirCartaoManual).not.toHaveBeenCalled()
   })
 
   it('cancelar a abertura não chama abrirCartaoManual', async () => {
