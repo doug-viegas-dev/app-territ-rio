@@ -1,9 +1,10 @@
-import { collection, deleteField, doc, getDocsFromServer, increment, orderBy, query, updateDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
-import { estadoAposFecharEReiniciar, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
+import { collection, deleteField, doc, getDocsFromServer, increment, orderBy, query, setDoc, updateDoc, writeBatch, type Timestamp, type WriteBatch } from 'firebase/firestore'
+import { contadoresAposReinicio, estadoAposFecharEReiniciar, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
+import { vencimentoDoRegistro } from '@/domain/historico'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
 import { podeFecharCartao } from '@/domain/rodada'
-import { deltaFaltam, deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
+import { contribuicao, deltaContadores } from '@/domain/status'
 import type { Cartao, Casa, Quadra, Status, Visita } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
@@ -43,6 +44,25 @@ function exigirValida(d: { numero?: string; descricao?: string }): void {
 
 const textoOuNada = (s?: string) => (s?.trim() ? { valor: s.trim() } : null)
 
+/** `em` e `expiraEm` de um documento novo em `visits`: o registro vale por 2 anos. */
+function quando(ms: number): { em: Timestamp; expiraEm: Timestamp } {
+  return { em: paraTimestamp(ms), expiraEm: paraTimestamp(vencimentoDoRegistro(ms)) }
+}
+
+/** Soma o delta no cartão (totalCasas, resolvidas) e na quadra (totalCasas, faltam), se a quadra tiver contadores. */
+function aplicarDelta(batch: WriteBatch, cartaoId: string, quadraId: string, d: ReturnType<typeof deltaContadores>, agora: Timestamp, op: OpcoesQuadra): void {
+  batch.update(cartaoRef(cartaoId), {
+    ...(d.total !== 0 && { totalCasas: increment(d.total) }),
+    ...(d.resolvidas !== 0 && { resolvidas: increment(d.resolvidas) }),
+    atualizadoEm: agora,
+  })
+  if (op.quadraSemContadores || (d.total === 0 && d.faltam === 0)) return
+  batch.update(quadraRef(cartaoId, quadraId), {
+    ...(d.total !== 0 && { totalCasas: increment(d.total) }),
+    ...(d.faltam !== 0 && { faltam: increment(d.faltam) }),
+  })
+}
+
 export async function criarCasa(
   cartaoId: string,
   quadraId: string,
@@ -59,7 +79,8 @@ export async function criarCasa(
   else ordem = ordemFim(daRua.map((c) => c.ordem))
   const numero = textoOuNada(d.numero)
   const descricao = textoOuNada(d.descricao)
-  const agora = paraTimestamp(Date.now())
+  const ms = Date.now()
+  const agora = paraTimestamp(ms)
   const ref = doc(casasRef(cartaoId, quadraId))
   const batch = writeBatch(db)
   const vizinha = i >= 0 ? daRua[i + 1] : undefined
@@ -80,11 +101,9 @@ export async function criarCasa(
     ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }),
   })
   if (r) {
-    batch.set(doc(collection(ref, 'visits')), { status, em: agora, porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada })
+    batch.set(doc(collection(ref, 'visits')), { status, ...quando(ms), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada })
   }
-  const resolvida = deltaResolvidas('pendente', status)
-  batch.update(cartaoRef(cartaoId), { totalCasas: increment(1), ...(resolvida !== 0 && { resolvidas: increment(resolvida) }), atualizadoEm: agora })
-  if (!op.quadraSemContadores) batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(1), ...(faltaVisitar(status) && { faltam: increment(1) }) })
+  aplicarDelta(batch, cartaoId, quadraId, deltaContadores(null, { status }), agora, op)
   await batch.commit()
   return ref.id
 }
@@ -144,42 +163,65 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
   const agora = paraTimestamp(Date.now())
   const batch = writeBatch(db)
   batch.delete(doc(casasRef(cartaoId, quadraId), casa.id))
-  batch.update(cartaoRef(cartaoId), {
-    totalCasas: increment(-1),
-    ...(isResolvida(casa.status) && { resolvidas: increment(-1) }),
-    atualizadoEm: agora,
-  })
-  if (!op.quadraSemContadores) batch.update(quadraRef(cartaoId, quadraId), { totalCasas: increment(-1), ...(faltaVisitar(casa.status) && { faltam: increment(-1) }) })
+  aplicarDelta(batch, cartaoId, quadraId, deltaContadores(casa, null), agora, op)
   await batch.commit()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   if (demoAtivo()) return demo.registrarVisita(a)
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
-  const agora = paraTimestamp(Date.now())
-  const delta = deltaResolvidas(casa.status, novoStatus)
-  const faltam = deltaFaltam(casa.status, novoStatus)
-  const obs = a.obs?.trim()
+  if (casa.naoVisitar) throw new Error('Casa marcada como não visitar')
+  const ms = Date.now()
+  const agora = paraTimestamp(ms)
   const batch = writeBatch(db)
   batch.set(doc(collection(casasRef(cartao.id, quadraId), casa.id, 'visits')), {
     status: novoStatus,
-    em: agora,
+    ...quando(ms),
     porUid: usuario.uid,
     porNome: usuario.nome,
     ciclo: cartao.ciclo,
     rodada: a.rodada,
-    ...(obs && { obs }),
   })
   batch.update(doc(casasRef(cartao.id, quadraId), casa.id), { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  batch.update(cartaoRef(cartao.id), { resolvidas: increment(delta), atualizadoEm: agora })
-  if (faltam !== 0 && !a.quadraSemContadores) batch.update(quadraRef(cartao.id, quadraId), { faltam: increment(faltam) })
+  aplicarDelta(batch, cartao.id, quadraId, deltaContadores(casa, { ...casa, status: novoStatus }), agora, a)
   await batch.commit()
+}
+
+/** Liga ou desliga uma marca da casa com quem e quando. "Não visitar" tira a casa (ou devolve) das contas; repetir a mesma marcação não faz nada. */
+export async function marcarCasa(a: { cartaoId: string; quadraId: string; casa: Casa; marca: 'naoVisitar' | 'estudo'; ligada: boolean; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+  if (demoAtivo()) return demo.marcarCasa(a)
+  const { cartaoId, quadraId, casa, marca, ligada, usuario } = a
+  if (!!casa[marca] === ligada) return
+  const agora = paraTimestamp(Date.now())
+  const batch = writeBatch(db)
+  batch.update(
+    doc(casasRef(cartaoId, quadraId), casa.id),
+    ligada
+      ? { [marca]: true, [`${marca}Por`]: usuario.nome, [`${marca}Em`]: agora }
+      : { [marca]: deleteField(), [`${marca}Por`]: deleteField(), [`${marca}Em`]: deleteField() },
+  )
+  if (marca === 'naoVisitar') aplicarDelta(batch, cartaoId, quadraId, deltaContadores(casa, { ...casa, naoVisitar: ligada }), agora, a)
+  await batch.commit()
+}
+
+/** Observação: um registro no histórico sem status; não muda a casa nem os contadores. */
+export async function salvarObservacao(a: { cartaoId: string; quadraId: string; casaId: string; ciclo: number; texto: string; usuario: Usuario }): Promise<void> {
+  if (demoAtivo()) return demo.salvarObservacao(a)
+  const obs = a.texto.trim()
+  if (!obs) throw new Error('Observação vazia')
+  await setDoc(doc(collection(casasRef(a.cartaoId, a.quadraId), a.casaId, 'visits')), {
+    obs,
+    ...quando(Date.now()),
+    porUid: a.usuario.uid,
+    porNome: a.usuario.nome,
+    ciclo: a.ciclo,
+  })
 }
 
 const LOTE = 400
 
-/** Fecha o cartão e começa o ciclo seguinte: as casas voltam a Pendente (menos Não visitar) e o cartão fica fechado até um administrador abri-lo. */
+/** Fecha o cartão e começa o ciclo seguinte: todas as casas voltam a Pendente (as marcas ficam) e o cartão fica fechado até um administrador abri-lo. */
 export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quadras: Quadra[], usuario: Usuario): Promise<void> {
   if (!podeFecharCartao(quadras)) throw new Error('Rodada aberta')
   if (demoAtivo()) return demo.fecharEReiniciarCartao(cartao, casas, quadras, usuario)
@@ -197,13 +239,13 @@ export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quad
   if (!lotes.length) lotes.push(ultimo)
   ultimo.update(cartaoRef(cartao.id), {
     ...estadoAposFecharEReiniciar(cartao),
-    resolvidas: casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length,
+    totalCasas: contadoresAposReinicio(casas).totalCasas,
+    resolvidas: 0,
     atualizadoEm: agora,
   })
   for (const q of quadras) {
-    // depois do reinício só ficam sem falta as casas de Não visitar; gravar totalCasas também conserta quadras antigas, sem contadores
-    const daQuadra = casas.filter((c) => c.quadraId === q.id)
-    ultimo.update(quadraRef(cartao.id, q.id), { totalCasas: daQuadra.length, faltam: daQuadra.filter((c) => c.status !== 'nao_visitar').length })
+    // gravar totalCasas também conserta quadras antigas, sem contadores
+    ultimo.update(quadraRef(cartao.id, q.id), contadoresAposReinicio(casas.filter((c) => c.quadraId === q.id)))
   }
   ultimo.set(doc(collection(cartaoRef(cartao.id), 'eventos')), { tipo: 'fechado', motivo: 'fechamento_reinicio', em: agora, porUid: usuario.uid, porNome: usuario.nome })
   for (const batch of lotes) await batch.commit()
@@ -218,14 +260,16 @@ export async function recalcularContadores(cartaoId: string): Promise<void> {
   let resolvidas = 0
   for (const q of quadras.docs) {
     const casas = await getDocsFromServer(casasRef(cartaoId, q.id))
+    let totalQuadra = 0
     let faltam = 0
     for (const c of casas.docs) {
-      const status = casaDe(c.id, q.id, c.data()).status
-      if (isResolvida(status)) resolvidas++
-      if (faltaVisitar(status)) faltam++
+      const conta = contribuicao(casaDe(c.id, q.id, c.data()))
+      totalQuadra += conta.total
+      resolvidas += conta.resolvidas
+      faltam += conta.faltam
     }
-    total += casas.size
-    batch.update(q.ref, { totalCasas: casas.size, faltam })
+    total += totalQuadra
+    batch.update(q.ref, { totalCasas: totalQuadra, faltam })
   }
   batch.update(cartaoRef(cartaoId), { totalCasas: total, resolvidas, atualizadoEm: paraTimestamp(Date.now()) })
   await batch.commit()

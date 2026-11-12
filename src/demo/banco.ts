@@ -1,8 +1,9 @@
-import { abrirCartao, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
+import { abrirCartao, contadoresAposReinicio, estadoAposFecharEReiniciar, fecharCartao, idsParaReiniciar, podeRegistrar } from '@/domain/ciclo'
 import { validarCasa } from '@/domain/casa'
+import { vencimentoDoRegistro } from '@/domain/historico'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
 import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
-import { deltaFaltam, deltaResolvidas, faltaVisitar, isResolvida } from '@/domain/status'
+import { contribuicao, deltaContadores } from '@/domain/status'
 import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
 import { MAPA_DEMO_URL } from './mapa'
 
@@ -46,20 +47,27 @@ function semear(): Estado {
     e.rodadas[`${cartaoId}/${id}`] = []
     return id
   }
-  function casa(cartaoId: string, quadraId: string, rua: string, numero: string, status: Status, extra: { dias?: number; por?: string; obs?: string; descricao?: string; rodada?: number } = {}) {
+  function casa(cartaoId: string, quadraId: string, rua: string, numero: string, status: Status, extra: { dias?: number; por?: string; obs?: string; descricao?: string; rodada?: number; naoVisitar?: boolean; estudo?: boolean } = {}) {
     const lista = e.casas[`${cartaoId}/${quadraId}`]
     const id = novoId()
     const ordem = ordemFim(lista.filter((c) => c.rua === rua).map((c) => c.ordem))
     const em = agora - (extra.dias ?? 1) * DIA
+    const por = extra.por ?? 'Ana Souza'
     const ciclo = (e.cartoes.find((c) => c.id === cartaoId) as Cartao).ciclo
     lista.push({
       id, quadraId, rua, numero, ordem, status, criadoEm: agora - 40 * DIA,
       ...(extra.descricao && { descricao: extra.descricao }),
-      ...(status !== 'pendente' && { ultimaVisitaEm: em, ultimoPor: extra.por ?? 'Ana Souza' }),
+      ...(status !== 'pendente' && { ultimaVisitaEm: em, ultimoPor: por }),
+      ...(extra.naoVisitar && { naoVisitar: true, naoVisitarPor: por, naoVisitarEm: em }),
+      ...(extra.estudo && { estudo: true, estudoPor: por, estudoEm: em }),
     })
+    const visitas: Visita[] = []
     if (status !== 'pendente') {
-      e.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em, porUid: 'u-demo', porNome: extra.por ?? 'Ana Souza', ciclo, ...(extra.rodada !== undefined && { rodada: extra.rodada }), ...(extra.obs && { obs: extra.obs }) }]
+      visitas.push({ id: novoId(), status, em, expiraEm: vencimentoDoRegistro(em), porUid: 'u-demo', porNome: por, ciclo, ...(extra.rodada !== undefined && { rodada: extra.rodada }) })
     }
+    // observação: registro sem status, um pouco depois da visita
+    if (extra.obs) visitas.push({ id: novoId(), obs: extra.obs, em: em + 60_000, expiraEm: vencimentoDoRegistro(em + 60_000), porUid: 'u-demo', porNome: por, ciclo })
+    if (visitas.length) e.visitas[`${cartaoId}/${quadraId}/${id}`] = visitas
   }
   function evento(cartaoId: string, tipo: EventoCartao['tipo'], motivo: EventoCartao['motivo'], dias: number, porNome: string) {
     e.eventos[cartaoId].push({ id: novoId(), tipo, motivo, em: agora - dias * DIA, porUid: 'u-demo', porNome })
@@ -91,8 +99,8 @@ function semear(): Estado {
   casa(c12, qa, 'Rua das Palmeiras', '100', 'falado', { dias: 5, obs: 'Aceitou uma publicação.' })
   casa(c12, qa, 'Rua das Palmeiras', '102', 'sem_resposta', { dias: 3, por: 'Bruno Alves' })
   casa(c12, qa, 'Rua das Palmeiras', '104', 'pendente')
-  casa(c12, qa, 'Rua das Palmeiras', '106', 'estudo', { dias: 2, obs: 'Combinou continuar na próxima semana.' })
-  casa(c12, qa, 'Rua das Palmeiras', '108', 'nao_visitar', { dias: 4, por: 'Carla Dias', descricao: 'portão verde' })
+  casa(c12, qa, 'Rua das Palmeiras', '106', 'pendente', { dias: 2, estudo: true, obs: 'Combinou continuar na próxima semana.' })
+  casa(c12, qa, 'Rua das Palmeiras', '108', 'pendente', { dias: 4, por: 'Carla Dias', descricao: 'portão verde', naoVisitar: true })
   casa(c12, qa, 'Rua das Palmeiras', '110', 'pendente')
   casa(c12, qa, 'Rua dos Ipês', '15', 'falado', { dias: 5, por: 'Bruno Alves' })
   casa(c12, qa, 'Rua dos Ipês', '17', 'pendente', { descricao: 'casa amarela' })
@@ -121,9 +129,9 @@ function semear(): Estado {
   evento(c14, 'fechado', 'fechamento_automatico', 12, 'Carla Dias')
   const q14 = quadra(c14, 'A', ['Avenida Brasil'])
   casa(c14, q14, 'Avenida Brasil', '200', 'falado', { dias: 14 })
-  casa(c14, q14, 'Avenida Brasil', '202', 'nao_visitar', { dias: 20 })
+  casa(c14, q14, 'Avenida Brasil', '202', 'pendente', { dias: 20, naoVisitar: true })
   casa(c14, q14, 'Avenida Brasil', '204', 'falado', { dias: 13, por: 'Carla Dias' })
-  casa(c14, q14, 'Avenida Brasil', '206', 'estudo', { dias: 12, por: 'Carla Dias' })
+  casa(c14, q14, 'Avenida Brasil', '206', 'pendente', { dias: 12, por: 'Carla Dias', estudo: true })
 
   for (const c of e.cartoes) {
     recontar(e, c.id)
@@ -142,16 +150,36 @@ function recontar(e: Estado, cartaoId: string): void {
   const c = e.cartoes.find((x) => x.id === cartaoId)
   if (!c) return
   const todas = Object.entries(e.casas).filter(([k]) => k.startsWith(`${cartaoId}/`)).flatMap(([, v]) => v)
-  c.totalCasas = todas.length
-  c.resolvidas = todas.filter((x) => isResolvida(x.status)).length
+  const conta = somar(todas)
+  c.totalCasas = conta.total
+  c.resolvidas = conta.resolvidas
 }
 
 function recontarQuadra(e: Estado, cartaoId: string, quadraId: string): void {
   const q = e.quadras[cartaoId]?.find((x) => x.id === quadraId)
   if (!q) return
-  const casas = e.casas[`${cartaoId}/${quadraId}`] ?? []
-  q.totalCasas = casas.length
-  q.faltam = casas.filter((x) => faltaVisitar(x.status)).length
+  const conta = somar(e.casas[`${cartaoId}/${quadraId}`] ?? [])
+  q.totalCasas = conta.total
+  q.faltam = conta.faltam
+}
+
+function somar(casas: Casa[]): { total: number; resolvidas: number; faltam: number } {
+  const s = { total: 0, resolvidas: 0, faltam: 0 }
+  for (const x of casas.map(contribuicao)) {
+    s.total += x.total
+    s.resolvidas += x.resolvidas
+    s.faltam += x.faltam
+  }
+  return s
+}
+
+/** Soma o delta no cartão (totalCasas, resolvidas) e na quadra (totalCasas, faltam), se a quadra tiver contadores. */
+function aplicarDelta(cartao: Cartao, quadra: Quadra, d: ReturnType<typeof deltaContadores>, op: OpcoesQuadra): void {
+  cartao.totalCasas += d.total
+  cartao.resolvidas += d.resolvidas
+  if (op.quadraSemContadores) return
+  quadra.totalCasas += d.total
+  quadra.faltam += d.faltam
 }
 
 // ---------- armazenamento e observadores ----------
@@ -357,15 +385,9 @@ export async function criarCasa(
   const status: Status = r ? r.status : 'pendente'
   const agora = Date.now()
   lista.push({ id, quadraId, rua: d.rua, ...(numero && { numero }), ...(descricao && { descricao }), ordem, status, criadoEm: agora, ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }) })
-  if (r) estado.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em: agora, porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada }]
+  if (r) estado.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada }]
   const cartao = cartaoPorId(cartaoId)
-  const quadra = quadraPorId(cartaoId, quadraId)
-  cartao.totalCasas += 1
-  cartao.resolvidas += deltaResolvidas('pendente', status)
-  if (!op.quadraSemContadores) {
-    quadra.totalCasas += 1
-    if (faltaVisitar(status)) quadra.faltam += 1
-  }
+  aplicarDelta(cartao, quadraPorId(cartaoId, quadraId), deltaContadores(null, { status }), op)
   tocar(cartao)
   mudou()
   return id
@@ -427,33 +449,48 @@ export async function editarCasa(cartaoId: string, quadraId: string, casaId: str
 export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa, op: OpcoesQuadra = {}): Promise<void> {
   estado.casas[chaveCasas(cartaoId, quadraId)] = listaCasas(cartaoId, quadraId).filter((c) => c.id !== casa.id)
   const cartao = cartaoPorId(cartaoId)
-  const quadra = quadraPorId(cartaoId, quadraId)
-  cartao.totalCasas -= 1
-  if (isResolvida(casa.status)) cartao.resolvidas -= 1
-  if (!op.quadraSemContadores) {
-    quadra.totalCasas -= 1
-    if (faltaVisitar(casa.status)) quadra.faltam -= 1
-  }
+  aplicarDelta(cartao, quadraPorId(cartaoId, quadraId), deltaContadores(casa, null), op)
   tocar(cartao)
   mudou()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; obs?: string; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   const { quadraId, casa, novoStatus, usuario } = a
   const cartao = cartaoPorId(a.cartao.id)
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
   const alvo = listaCasas(cartao.id, quadraId).find((c) => c.id === casa.id)
   if (!alvo) throw new Error('Casa não encontrada')
+  if (alvo.naoVisitar) throw new Error('Casa marcada como não visitar')
   const agora = Date.now()
-  const delta = deltaResolvidas(alvo.status, novoStatus)
-  const faltam = deltaFaltam(alvo.status, novoStatus)
-  const obs = a.obs?.trim()
   const chave = `${cartao.id}/${quadraId}/${casa.id}`
-  ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada, ...(obs && { obs }) })
+  ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada })
+  aplicarDelta(cartao, quadraPorId(cartao.id, quadraId), deltaContadores(alvo, { ...alvo, status: novoStatus }), a)
   Object.assign(alvo, { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
-  cartao.resolvidas += delta
-  if (!a.quadraSemContadores) quadraPorId(cartao.id, quadraId).faltam += faltam
   tocar(cartao)
+  mudou()
+}
+
+export async function marcarCasa(a: { cartaoId: string; quadraId: string; casa: Casa; marca: 'naoVisitar' | 'estudo'; ligada: boolean; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+  const { cartaoId, quadraId, marca, ligada, usuario } = a
+  const alvo = listaCasas(cartaoId, quadraId).find((c) => c.id === a.casa.id)
+  if (!alvo) throw new Error('Casa não encontrada')
+  if (!!alvo[marca] === ligada) return
+  const antes = { ...alvo }
+  if (ligada) Object.assign(alvo, { [marca]: true, [`${marca}Por`]: usuario.nome, [`${marca}Em`]: Date.now() })
+  else for (const k of [marca, `${marca}Por`, `${marca}Em`]) delete (alvo as Record<string, unknown>)[k]
+  const cartao = cartaoPorId(cartaoId)
+  if (marca === 'naoVisitar') {
+    aplicarDelta(cartao, quadraPorId(cartaoId, quadraId), deltaContadores(antes, alvo), a)
+    tocar(cartao)
+  }
+  mudou()
+}
+
+export async function salvarObservacao(a: { cartaoId: string; quadraId: string; casaId: string; ciclo: number; texto: string; usuario: Usuario }): Promise<void> {
+  const obs = a.texto.trim()
+  if (!obs) throw new Error('Observação vazia')
+  const agora = Date.now()
+  ;(estado.visitas[`${a.cartaoId}/${a.quadraId}/${a.casaId}`] ??= []).push({ id: novoId(), obs, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: a.usuario.uid, porNome: a.usuario.nome, ciclo: a.ciclo })
   mudou()
 }
 
@@ -467,11 +504,9 @@ export async function fecharEReiniciarCartao(cartao: Cartao, casas: Casa[], quad
     if (real) real.status = 'pendente'
   }
   Object.assign(atual, estadoAposFecharEReiniciar(atual))
-  atual.resolvidas = casas.filter((c) => isResolvida(c.status) && !ids.has(c.id)).length
-  for (const q of quadras) {
-    const daQuadra = casas.filter((c) => c.quadraId === q.id)
-    Object.assign(quadraPorId(cartao.id, q.id), { totalCasas: daQuadra.length, faltam: daQuadra.filter((c) => c.status !== 'nao_visitar').length })
-  }
+  atual.totalCasas = contadoresAposReinicio(casas).totalCasas
+  atual.resolvidas = 0
+  for (const q of quadras) Object.assign(quadraPorId(cartao.id, q.id), contadoresAposReinicio(casas.filter((c) => c.quadraId === q.id)))
   tocar(atual)
   registrarEvento(cartao.id, 'fechado', 'fechamento_reinicio', usuario)
   mudou()
