@@ -173,7 +173,7 @@ describe('CartaoPage', () => {
   it('publicador vê a orientação e nenhum botão de abrir', () => {
     preparar({ ...cartaoBase, estado: 'fechado' }, quadras, 'publicador')
     renderPagina()
-    expect(screen.getByText('Só um administrador pode abrir o cartão. Peça a um deles.')).toBeInTheDocument()
+    expect(screen.getByText('Peça a um administrador para abrir.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Abrir cartão' })).not.toBeInTheDocument()
   })
 
@@ -220,6 +220,7 @@ describe('CartaoPage', () => {
     preparar({ ...cartaoBase, imagemPath: 'cards/c12/mapa.webp' })
     const user = userEvent.setup()
     renderPagina()
+    await user.click(screen.getByRole('button', { name: 'Ver mapa' }))
     const abrir = await screen.findByRole('button', { name: 'Ampliar o mapa do cartão 12' })
     expect(urlDaImagem).toHaveBeenCalledWith('cards/c12/mapa.webp')
     await user.click(abrir)
@@ -232,6 +233,7 @@ describe('CartaoPage', () => {
   it('sem imagemPath não mostra mapa', () => {
     preparar(cartaoBase)
     renderPagina()
+    expect(screen.queryByRole('button', { name: 'Ver mapa' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Ampliar o mapa/ })).not.toBeInTheDocument()
     expect(urlDaImagem).not.toHaveBeenCalled()
   })

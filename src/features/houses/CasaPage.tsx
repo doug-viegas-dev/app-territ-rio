@@ -11,7 +11,6 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import { useCartao, useQuadras } from '@/features/cards/useCartao'
 import { aindaNoHistorico } from '@/domain/historico'
 import { editarCasa, excluirCasa, marcarCasa, observarVisitas, salvarObservacao } from '@/firebase/houses'
-import FaixaRodada from './FaixaRodada'
 import HistoricoVisitas from './HistoricoVisitas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { SeloMarcas } from './SeloMarcas'
@@ -41,7 +40,7 @@ function Interruptor({ rotulo, ligada, bloqueado, onClick }: { rotulo: string; l
   ><span>{rotulo}</span><i /></button>
 }
 
-function FolhaEditar({ casa, onSalvar, onCancelar }: { casa: Casa; onSalvar: (d: { numero: string; descricao: string }) => void; onCancelar: () => void }) {
+function FolhaEditar({ casa, onSalvar, onCancelar, onExcluir }: { casa: Casa; onSalvar: (d: { numero: string; descricao: string }) => void; onCancelar: () => void; onExcluir?: () => void }) {
   const [numero, setNumero] = useState(casa.numero ?? '')
   const [descricao, setDescricao] = useState(casa.descricao ?? '')
   const [erro, setErro] = useState<string | null>(null)
@@ -67,6 +66,7 @@ function FolhaEditar({ casa, onSalvar, onCancelar }: { casa: Casa; onSalvar: (d:
       <div className="pilha">
         <button type="button" className="btn primario" onClick={salvar}>Salvar</button>
         <button type="button" className="btn secundario" onClick={onCancelar}>Cancelar</button>
+        {onExcluir && <button type="button" className="btn perigo" onClick={onExcluir}>Excluir casa</button>}
       </div>
     </div>
   </div>
@@ -81,10 +81,7 @@ export default function CasaPage() {
   const { usuario, membro } = useSessao()
   const [obs, setObs] = useState('')
   const [editando, setEditando] = useState(false)
-  const [erroEdicao, setErroEdicao] = useState(false)
-  const [erroRodada, setErroRodada] = useState(false)
-  const [erroMarca, setErroMarca] = useState(false)
-  const [erroObs, setErroObs] = useState(false)
+  const [erro, setErro] = useState<'edicao' | 'marca' | 'obs' | null>(null)
   const [confirmandoNaoVisitar, setConfirmandoNaoVisitar] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
   const navigate = useNavigate()
@@ -108,24 +105,24 @@ export default function CasaPage() {
   /** A escrita offline não resolve até haver rede, então a tela não espera por ela. */
   function marcar(marca: 'naoVisitar' | 'estudo', ligada: boolean) {
     if (!cartao || !casa || !usuario || !aberto) return
-    setErroMarca(false)
-    marcarCasa({ cartaoId, quadraId, casa, marca, ligada, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra?.semContadores === true }).catch(() => setErroMarca(true))
+    setErro(null)
+    marcarCasa({ cartaoId, quadraId, casa, marca, ligada, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra?.semContadores === true }).catch(() => setErro('marca'))
   }
 
   function salvarObs() {
     const texto = obs.trim()
     if (!cartao || !usuario || !aberto || !texto) return
-    setErroObs(false)
+    setErro(null)
     salvarObservacao({ cartaoId, quadraId, casaId, ciclo: cartao.ciclo, texto, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome } }).catch(() => {
-      setErroObs(true)
+      setErro('obs')
       setObs((atual) => (atual === '' ? obs : atual))
     })
     setObs('')
   }
 
   function salvarEdicao(d: { numero: string; descricao: string }) {
-    setErroEdicao(false)
-    editarCasa(cartaoId, quadraId, casaId, d).catch(() => setErroEdicao(true))
+    setErro(null)
+    editarCasa(cartaoId, quadraId, casaId, d).catch(() => setErro('edicao'))
     setEditando(false)
   }
 
@@ -140,29 +137,20 @@ export default function CasaPage() {
   const nome = classeStatus(casa.status)
   return <>
     <Topo titulo="Casa" {...voltar} sub={`${quadra?.rotulo ?? 'Quadra'} · ${casa.rua}`} />
-    {erroEdicao && <div className="aviso faixa erro" role="alert">
+    {erro && <div className="aviso faixa erro" role="alert">
       <Icone nome="aviso" />
-      <p><b>Não foi possível salvar a edição</b>O número e a descrição voltaram ao que estava. Tente de novo.</p>
+      <p>
+        {erro === 'edicao'
+          ? <><b>Não foi possível salvar a edição</b>O número e a descrição voltaram ao que estava. Tente de novo.</>
+          : <><b>Não foi possível salvar</b>{erro === 'marca' ? 'A marca da casa não mudou.' : 'A observação não foi enviada.'} Tente de novo. <button type="button" className="btn link" style={{ minHeight: 48 }} onClick={() => setErro(null)}>Entendi</button></>}
+      </p>
     </div>}
-    {erroMarca && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>Não foi possível salvar</b>A marca da casa não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroMarca(false)}>Entendi</button></p>
-    </div>}
-    {erroObs && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>Não foi possível salvar</b>A observação não foi enviada. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroObs(false)}>Entendi</button></p>
-    </div>}
-    {erroRodada && <div className="aviso faixa erro" role="alert">
-      <Icone nome="aviso" />
-      <p><b>Não foi possível salvar</b>A volta não mudou. Tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroRodada(false)}>Entendi</button></p>
-    </div>}
-    {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={() => setErroRodada(true)} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />
       <p>
         <b>Cartão fechado</b>
-        {ehAdmin ? 'Abra o cartão para registrar visitas e marcar a casa. ' : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
-        {ehAdmin && <Link className="btn link" style={{ minHeight: 40 }} to={`/cartao/${cartaoId}`}>Abrir cartão</Link>}
+        {ehAdmin ? 'Abra o cartão para registrar. ' : 'Peça a um administrador para abrir.'}
+        {ehAdmin && <Link className="btn link" style={{ minHeight: 48 }} to={`/cartao/${cartaoId}`}>Abrir cartão</Link>}
       </p>
     </div>}
 
@@ -185,23 +173,20 @@ export default function CasaPage() {
 
       <h2 className="titulo-secao" style={{ marginTop: 18 }}>Sobre esta casa</h2>
       <Interruptor rotulo="Pediu para não ser visitado" ligada={!!casa.naoVisitar} bloqueado={!aberto} onClick={() => (casa.naoVisitar ? marcar('naoVisitar', false) : setConfirmandoNaoVisitar(true))} />
-      {casa.naoVisitar && (casa.naoVisitarPor || casa.naoVisitarEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)' }}>Marcado{casa.naoVisitarPor && ` por ${casa.naoVisitarPor}`}{casa.naoVisitarEm !== undefined && ` em ${dia(casa.naoVisitarEm)}`}</p>}
+      {casa.naoVisitar && (casa.naoVisitarPor || casa.naoVisitarEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)', margin: '2px 0 8px' }}>Marcado{casa.naoVisitarPor && ` por ${casa.naoVisitarPor}`}{casa.naoVisitarEm !== undefined && ` em ${dia(casa.naoVisitarEm)}`}</p>}
       <Interruptor rotulo="Aqui há um estudo de alguém" ligada={!!casa.estudo} bloqueado={!aberto} onClick={() => marcar('estudo', !casa.estudo)} />
-      {casa.estudo && (casa.estudoPor || casa.estudoEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)' }}>Marcado{casa.estudoPor && ` por ${casa.estudoPor}`}{casa.estudoEm !== undefined && ` em ${dia(casa.estudoEm)}`}</p>}
+      {casa.estudo && (casa.estudoPor || casa.estudoEm !== undefined) && <p className="dica" style={{ color: 'var(--texto-suave)', margin: '2px 0 8px' }}>Marcado{casa.estudoPor && ` por ${casa.estudoPor}`}{casa.estudoEm !== undefined && ` em ${dia(casa.estudoEm)}`}</p>}
 
       <div className="campo" style={{ marginTop: 18 }}>
-        <span className="dica">Não anote nenhum dado pessoal: nem nomes, telefones ou documentos de moradores.</span>
         <label htmlFor="casa-obs">Observação <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>(opcional)</span></label>
         <textarea id="casa-obs" className="entrada" placeholder="Ex.: voltar à tarde" value={obs} onChange={(e) => setObs(e.target.value)} />
+        <span className="dica">Não anote nomes, telefones nem documentos.</span>
         <button type="button" className="btn secundario" aria-disabled={aberto ? undefined : true} onClick={salvarObs}>Salvar</button>
       </div>
 
       <h2 className="titulo-secao divisor">Histórico</h2>
       <HistoricoVisitas visitas={visitas} />
 
-      {ehAdmin && aberto && <div style={{ marginTop: 28 }}>
-        <button type="button" className="btn perigo" aria-disabled={quadra ? undefined : true} onClick={() => { if (quadra) setExcluindo(true) }}>Excluir casa</button>
-      </div>}
     </div>
 
     {excluindo && <div className="veu">
@@ -226,6 +211,6 @@ export default function CasaPage() {
       </div>
     </div>}
 
-    {editando && <FolhaEditar casa={casa} onSalvar={salvarEdicao} onCancelar={() => setEditando(false)} />}
+    {editando && <FolhaEditar casa={casa} onSalvar={salvarEdicao} onCancelar={() => setEditando(false)} onExcluir={ehAdmin && aberto ? () => { if (!quadra) return; setEditando(false); setExcluindo(true) } : undefined} />}
   </>
 }

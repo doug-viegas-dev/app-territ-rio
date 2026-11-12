@@ -7,7 +7,6 @@ import { useSessao } from '@/features/auth/AuthProvider'
 import { observarQuadras } from '@/firebase/blocks'
 import { observarCartao } from '@/firebase/cards'
 import { editarCasa, excluirCasa, marcarCasa, observarCasas, observarVisitas, salvarObservacao } from '@/firebase/houses'
-import { abrirRodada } from '@/firebase/rodadas'
 import type { Cartao, Casa, Quadra, Visita } from '@/domain/types'
 import CasaPage from './CasaPage'
 
@@ -16,7 +15,6 @@ vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), observarVisitas: vi.fn(), marcarCasa: vi.fn(), salvarObservacao: vi.fn(), editarCasa: vi.fn(), excluirCasa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
-vi.mock('@/firebase/rodadas', () => ({ abrirRodada: vi.fn(), encerrarRodada: vi.fn() }))
 
 const aberto: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 3, resolvidas: 0, atualizadoEm: 0 }
 const quadra: Quadra = { id: 'q3', rotulo: 'Quadra 3', ruas: ['Rua das Acácias'], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 2, rodadaAtual: { id: 'r2', numero: 2, porNome: 'Ana', em: Date.now() } }
@@ -48,6 +46,11 @@ function renderPagina() {
       </Routes>
     </MemoryRouter>,
   )
+}
+
+async function abrirExcluir(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Editar número e descrição' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Editar casa' })).getByRole('button', { name: 'Excluir casa' }))
 }
 
 describe('CasaPage', () => {
@@ -89,18 +92,11 @@ describe('CasaPage', () => {
     expect(screen.getByText(/nenhuma visita ainda/)).toBeInTheDocument()
   })
 
-  it('mostra a faixa da rodada; sem rodada, "Nenhuma volta aberta" e o botão "Abrir volta"', async () => {
-    vi.mocked(abrirRodada).mockResolvedValue()
-    const semRodada = { ...quadra, rodadaAtual: undefined }
-    preparar(casaComNumero, { quadra: semRodada })
-    renderPagina()
-    expect(screen.getByText('Nenhuma volta aberta')).toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
-    expect(abrirRodada).toHaveBeenCalledWith('c12', semRodada, { uid: 'u1', nome: 'Maria S.' })
-    cleanup()
+  it('não mostra a faixa da volta na casa', () => {
     preparar(casaComNumero)
     renderPagina()
-    expect(screen.getByRole('button', { name: 'Encerrar volta' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Encerrar volta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Abrir volta' })).not.toBeInTheDocument()
   })
 
   it('editar a descrição chama editarCasa', async () => {
@@ -141,20 +137,19 @@ describe('CasaPage', () => {
     vi.mocked(excluirCasa).mockResolvedValue()
     renderPagina()
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    expect(screen.queryByRole('button', { name: 'Excluir casa' })).not.toBeInTheDocument()
+    await abrirExcluir(user)
     expect(excluirCasa).not.toHaveBeenCalled()
     const folha = screen.getByRole('dialog', { name: 'Excluir casa' })
     await user.click(within(folha).getByRole('button', { name: 'Excluir casa' }))
     expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: false })
   })
 
-  it('sem a quadra carregada, Excluir casa fica desativado e não abre a confirmação nem grava', async () => {
+  it('sem a quadra carregada, Excluir casa não abre a confirmação nem grava', async () => {
     preparar(casaComNumero, { papel: 'admin' })
     vi.mocked(observarQuadras).mockImplementation((_id, cb) => { cb([]); return () => {} })
     renderPagina()
-    const botao = screen.getByRole('button', { name: 'Excluir casa' })
-    expect(botao).toHaveAttribute('aria-disabled', 'true')
-    await userEvent.setup().click(botao)
+    await abrirExcluir(userEvent.setup())
     expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
     expect(excluirCasa).not.toHaveBeenCalled()
   })
@@ -165,7 +160,7 @@ describe('CasaPage', () => {
     vi.mocked(observarQuadras).mockImplementation((_id, cb) => { enviarQuadras = cb; cb([quadra]); return () => {} })
     renderPagina()
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await abrirExcluir(user)
     act(() => enviarQuadras([]))
     await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
     expect(excluirCasa).not.toHaveBeenCalled()
@@ -175,15 +170,16 @@ describe('CasaPage', () => {
     preparar(casaComNumero, { papel: 'admin' })
     renderPagina()
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await abrirExcluir(user)
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(excluirCasa).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog', { name: 'Excluir casa' })).not.toBeInTheDocument()
   })
 
-  it('publicador não vê "Excluir casa"', () => {
+  it('publicador não vê "Excluir casa" nem na folha Editar', async () => {
     preparar(casaComNumero)
     renderPagina()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Editar número e descrição' }))
     expect(screen.queryByRole('button', { name: 'Excluir casa' })).not.toBeInTheDocument()
   })
 
@@ -219,7 +215,7 @@ describe('CasaPage', () => {
   it('cartão fechado (publicador): aviso sem link "Abrir cartão" e sem "Editar número e descrição"', () => {
     preparar(casaComNumero, { cartao: { ...aberto, estado: 'fechado' } })
     renderPagina()
-    expect(screen.getByText(/Só um administrador pode abrir o cartão/)).toBeInTheDocument()
+    expect(screen.getByText(/Peça a um administrador para abrir/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Abrir cartão' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar número e descrição' })).not.toBeInTheDocument()
   })
@@ -231,7 +227,7 @@ describe('CasaPage', () => {
     const user = userEvent.setup()
     await user.click(screen.getByRole('switch', { name: 'Aqui há um estudo de alguém' }))
     expect(marcarCasa).toHaveBeenCalledWith(expect.objectContaining({ quadraSemContadores: true }))
-    await user.click(screen.getByRole('button', { name: 'Excluir casa' }))
+    await abrirExcluir(user)
     await user.click(within(screen.getByRole('dialog', { name: 'Excluir casa' })).getByRole('button', { name: 'Excluir casa' }))
     expect(excluirCasa).toHaveBeenCalledWith('c12', 'q3', casaComNumero, { quadraSemContadores: true })
   })
@@ -309,12 +305,12 @@ describe('CasaPage', () => {
     expect(salvarObservacao).not.toHaveBeenCalled()
   })
 
-  it('o aviso de dados pessoais aparece acima do campo Observação', () => {
+  it('o aviso de dados pessoais aparece abaixo do campo Observação', () => {
     preparar(casaComNumero)
     renderPagina()
-    const aviso = screen.getByText('Não anote nenhum dado pessoal: nem nomes, telefones ou documentos de moradores.')
+    const aviso = screen.getByText('Não anote nomes, telefones nem documentos.')
     const campo = screen.getByLabelText(/^Observação/)
-    expect(aviso.compareDocumentPosition(campo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(campo.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('"Salvar" com texto vazio ou só espaços não grava', async () => {

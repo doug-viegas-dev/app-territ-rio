@@ -21,6 +21,7 @@ export default function CartaoPage() {
   const { usuario, membro } = useSessao()
   const [confirmando, setConfirmando] = useState(false)
   const [todas, setTodas] = useState(false)
+  const [mapa, setMapa] = useState(false)
   const ehAdmin = membro?.papel === 'admin'
   const online = useOnline()
 
@@ -59,23 +60,13 @@ export default function CartaoPage() {
         <p>
           <b>Cartão fechado</b>
           {ehAdmin
-            ? 'Para registrar visitas, um administrador precisa abrir o cartão. Fica registrado quem abriu.'
-            : 'Só um administrador pode abrir o cartão. Peça a um deles.'}
+            ? 'Abra o cartão para registrar visitas.'
+            : 'Peça a um administrador para abrir.'}
           {ehAdmin && <span className="acoes">
             <button type="button" className="btn primario medio auto" onClick={() => setConfirmando(true)}><Icone nome="cadeado-aberto" className="ic ic-20" />Abrir cartão</button>
           </span>}
         </p>
       </div>}
-
-      {cartao.imagemPath && <ImagemCartao key={cartao.imagemPath} path={cartao.imagemPath} numero={cartao.numero} />}
-
-      {cartao.mapsUrl && <p style={{ margin: '14px 0 0' }}>
-        <a className="btn secundario" href={cartao.mapsUrl} target="_blank" rel="noopener noreferrer"><Icone nome="pin" />Abrir no Google Maps</a>
-      </p>}
-
-      {!fechado && cartao.abertoPorNome && cartao.abertoEm !== undefined && <p className="estado" style={{ marginTop: 16, color: 'var(--texto-suave)' }}>
-        <Icone nome="cadeado-aberto" className="ic ic-20" />Aberto por {cartao.abertoPorNome} em {data(cartao.abertoEm)}
-      </p>}
 
       <h2 className="titulo-secao divisor">Quadras {quadras.length > 0 && <small>{quadras.length} {quadras.length === 1 ? 'quadra' : 'quadras'}</small>}</h2>
       {quadras.length === 0 && <div className="sem-casas">
@@ -95,6 +86,17 @@ export default function CartaoPage() {
       {quadras.length > 0 && (todas || visiveis.length < quadras.length) && <button type="button" className="btn secundario" onClick={() => setTodas((v) => !v)}>
         {todas ? 'Mostrar só as que faltam' : 'Mostrar todas as quadras'}
       </button>}
+      {cartao.imagemPath && <button type="button" className="btn secundario" aria-expanded={mapa} onClick={() => setMapa((v) => !v)}><Icone nome="pin" />{mapa ? 'Esconder mapa' : 'Ver mapa'}</button>}
+      {mapa && cartao.imagemPath && <ImagemCartao key={cartao.imagemPath} path={cartao.imagemPath} numero={cartao.numero} />}
+
+      {cartao.mapsUrl && <p style={{ margin: '14px 0 0' }}>
+        <a className="btn secundario" href={cartao.mapsUrl} target="_blank" rel="noopener noreferrer"><Icone nome="pin" />Abrir no Google Maps</a>
+      </p>}
+
+      {!fechado && cartao.abertoPorNome && cartao.abertoEm !== undefined && <p className="estado" style={{ marginTop: 12, color: 'var(--texto-suave)' }}>
+        <Icone nome="cadeado-aberto" className="ic ic-20" />Aberto por {cartao.abertoPorNome} em {data(cartao.abertoEm)}
+      </p>}
+
     </div>
     {confirmando && usuario && <ConfirmarAbertura cartao={cartao} uid={usuario.uid} quadras={quadrasCarregadas} nome={membro?.nome ?? usuario.nome} onFechar={() => setConfirmando(false)} />}
   </>
