@@ -44,7 +44,7 @@ describe('BotaoFecharCartao', () => {
     expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeDisabled()
   })
 
-  it('o aviso de erro some ao cancelar e reabrir a folha', async () => {
+  it('rejeição ao encerrar as voltas: a folha fecha e o aviso fica; reabrir a folha limpa o aviso', async () => {
     sessao('admin')
     const comVolta: Quadra[] = [{ ...quadras[0], rodadaAtual: { id: 'r1', numero: 1, porNome: 'Ana', em: 1 } }]
     const { encerrarRodada } = await import('@/firebase/rodadas')
@@ -54,7 +54,9 @@ describe('BotaoFecharCartao', () => {
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
     await user.click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar')
+    await user.click(screen.getByRole('button', { name: 'Fechar cartão' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

@@ -97,6 +97,13 @@ describe('QuadraPage', () => {
     expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
   })
 
+  it('"Fechar cartão" fica desativado até as quadras chegarem', () => {
+    preparar([casa({ numero: '1' })], { papel: 'admin' })
+    vi.mocked(observarQuadras).mockImplementation(() => () => {})
+    renderPagina()
+    expect(screen.getByRole('button', { name: 'Fechar cartão' })).toBeDisabled()
+  })
+
   it('o botão Não em casa usa o ícone e a classe de cor existentes', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()

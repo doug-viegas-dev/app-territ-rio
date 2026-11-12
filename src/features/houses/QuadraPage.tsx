@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
@@ -12,7 +12,7 @@ import { contaNoTotal, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import BotaoFecharCartao from '@/features/cards/BotaoFecharCartao'
-import { useCartao, useQuadras } from '@/features/cards/useCartao'
+import { useCartao, useQuadrasCarregadas } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
 import AvisoNaoEnviado from './AvisoNaoEnviado'
 import FaixaRodada from './FaixaRodada'
@@ -34,7 +34,8 @@ function proximaDoTrabalho(ordenadas: Casa[], atual: Casa): Casa | null {
 export default function QuadraPage() {
   const { cartaoId = '', quadraId = '' } = useParams()
   const cartao = useCartao(cartaoId)
-  const quadras = useQuadras(cartaoId)
+  const quadrasCarregadas = useQuadrasCarregadas(cartaoId)
+  const quadras = useMemo(() => quadrasCarregadas ?? [], [quadrasCarregadas])
   const { casas, semDados } = useCasasInfo(cartaoId, quadraId)
   const online = useOnline()
   const { usuario, membro } = useSessao()
@@ -117,7 +118,7 @@ export default function QuadraPage() {
       <p><b>Não foi possível salvar</b>A última alteração não foi aceita. Confira o que aparece na lista e tente de novo. <button type="button" className="btn link" style={{ minHeight: 40 }} onClick={() => setErroEscrita(false)}>Entendi</button></p>
     </div>}
     {falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => void enviar(falha.casa, falha.novoStatus, false)} />}
-    <div style={{ padding: '0 16px' }}><BotaoFecharCartao cartao={cartao} quadras={quadras} /></div>
+    <div style={{ padding: '0 16px' }}><BotaoFecharCartao cartao={cartao} quadras={quadrasCarregadas} /></div>
     {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />

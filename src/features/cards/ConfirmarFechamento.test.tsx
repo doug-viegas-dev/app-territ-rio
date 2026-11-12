@@ -65,25 +65,22 @@ describe('ConfirmarFechamento', () => {
     expect(p.onFechar).toHaveBeenCalled()
   })
 
-  it('enquanto encerra as voltas, Cancelar fica desativado e a folha não fecha', async () => {
+  it('offline (escritas que nunca resolvem): encerra, fecha o cartão na mesma ordem e fecha a folha sem esperar', async () => {
     vi.mocked(encerrarRodada).mockReturnValue(new Promise(() => {}))
+    vi.mocked(fecharCartaoManual).mockReturnValue(new Promise(() => {}))
     const p = renderizar([q2, q3])
-    const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
-    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    await user.click(document.querySelector('.veu') as Element)
-    expect(p.onFechar).not.toHaveBeenCalled()
-    expect(fecharCartaoManual).not.toHaveBeenCalled()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
+    expect(encerrarRodada).toHaveBeenCalledWith('c12', q3, usuario)
+    expect(fecharCartaoManual).toHaveBeenCalledWith(cartao, usuario, [q2, { ...q3, rodadaAtual: undefined }])
+    expect(vi.mocked(encerrarRodada).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(fecharCartaoManual).mock.invocationCallOrder[0])
+    expect(p.onFechar).toHaveBeenCalled()
   })
 
-  it('se encerrarRodada rejeitar, não fecha o cartão e chama onErro', async () => {
+  it('se encerrarRodada rejeitar depois, chama onErro (o aviso fica no botão do cartão)', async () => {
     vi.mocked(encerrarRodada).mockRejectedValue(new Error('x'))
     const p = renderizar([q2, q3])
     await userEvent.setup().click(screen.getByRole('button', { name: 'Encerrar voltas e fechar' }))
-    expect(fecharCartaoManual).not.toHaveBeenCalled()
-    expect(p.onErro).toHaveBeenCalled()
-    expect(p.onFechar).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível')
+    expect(p.onFechar).toHaveBeenCalled()
+    await waitFor(() => expect(p.onErro).toHaveBeenCalled())
   })
 })
