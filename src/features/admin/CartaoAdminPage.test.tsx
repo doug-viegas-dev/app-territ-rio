@@ -15,8 +15,8 @@ import CartaoAdminPage from './CartaoAdminPage'
 vi.mock('@/firebase/auth', () => ({ entrarComGoogle: vi.fn(), sair: vi.fn(), observarUsuario: vi.fn() }))
 vi.mock('@/firebase/members', () => ({ observarMembro: vi.fn() }))
 vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn(), adicionarRua: vi.fn(), atualizarQuadra: vi.fn(), criarQuadra: vi.fn() }))
-vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn(), observarCartoes: vi.fn(), observarEventos: vi.fn(), abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn(), atualizarCartao: vi.fn() }))
-vi.mock('@/firebase/storage', () => ({ enviarArquivosDoCartao: vi.fn(), apagarArquivos: vi.fn() }))
+vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn(), observarCartoes: vi.fn(), observarEventos: vi.fn(), abrirCartaoManual: vi.fn(), fecharCartaoManual: vi.fn(), atualizarCartao: vi.fn(), cartaoTemCasas: vi.fn(), excluirCartao: vi.fn() }))
+vi.mock('@/firebase/storage', () => ({ enviarArquivosDoCartao: vi.fn(), apagarArquivos: vi.fn(), apagarArquivosDoCartao: vi.fn() }))
 vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), fecharEReiniciarCartao: vi.fn(), recalcularContadores: vi.fn() }))
 
 const cartao: Cartao = { id: 'c12', numero: '12', titulo: 'Jardim', estado: 'aberto', ciclo: 2, totalCasas: 0, resolvidas: 0, atualizadoEm: 0 }
@@ -47,10 +47,10 @@ describe('CartaoAdminPage', () => {
   })
   afterEach(cleanup)
 
-  it('mostra o bloco Dados do cartão, fechado, entre Estado e Quadras e ruas', () => {
+  it('mostra o bloco Dados do cartão, fechado, entre Estado e Quadras e ruas; Excluir cartão é o último', () => {
     renderPagina()
     const titulos = [...document.querySelectorAll('.rolagem > details.bloco > summary span')].map((e) => e.textContent)
-    expect(titulos).toEqual(['Estado', 'Dados do cartão', 'Quadras e ruas', 'Histórico'])
+    expect(titulos).toEqual(['Estado', 'Dados do cartão', 'Quadras e ruas', 'Histórico', 'Excluir cartão'])
     expect(screen.getByText('Dados do cartão').closest('details')).toHaveProperty('open', false)
   })
 

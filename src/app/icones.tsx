@@ -39,6 +39,7 @@ const simbolos =
   `<symbol id="i-cartoes" viewBox="0 0 24 24"><rect ${forma} x="4" y="4" width="7" height="7" rx="2"/><rect ${forma} x="13" y="4" width="7" height="7" rx="2"/><rect ${forma} x="4" y="13" width="7" height="7" rx="2"/><rect ${forma} x="13" y="13" width="7" height="7" rx="2"/></symbol>` +
   `<symbol id="i-admin" viewBox="0 0 24 24"><path ${forma} d="M4 7h9M19 7h1M4 17h2M11 17h9"/><circle ${forma} cx="16" cy="7" r="2.4"/><circle ${forma} cx="8.5" cy="17" r="2.4"/></symbol>` +
   `<symbol id="i-aviso" viewBox="0 0 24 24"><path ${forma} d="M12 3.5l9.5 16.5h-19zM12 10v4.5M12 17.4v.1"/></symbol>` +
+  `<symbol id="i-lixeira" viewBox="0 0 24 24"><path ${forma} d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></symbol>` +
   `<symbol id="i-info" viewBox="0 0 24 24"><circle ${forma} cx="12" cy="12" r="9.5"/><path ${forma} d="M12 11v5.5M12 7.7v.1"/></symbol>` +
   // conexão
   `<symbol id="i-offline" viewBox="0 0 24 24"><path ${forma} d="${nuvem}"/><path ${forma} d="M4 4l16 16"/></symbol>` +

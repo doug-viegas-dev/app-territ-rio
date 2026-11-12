@@ -28,6 +28,14 @@ describe('AdminPage', () => {
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Membros', 'Cartões', 'Histórico'])
   })
 
+  it('abre a aba indicada em location.state.aba; sem state, Membros', () => {
+    const { unmount } = render(<MemoryRouter initialEntries={[{ pathname: '/admin', state: { aba: 'cartoes' } }]}><AdminPage /></MemoryRouter>)
+    expect(screen.getByRole('tab', { name: 'Cartões' })).toHaveAttribute('aria-selected', 'true')
+    unmount()
+    render(<MemoryRouter><AdminPage /></MemoryRouter>)
+    expect(screen.getByRole('tab', { name: 'Membros' })).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('não existe mais a aba Ciclo', () => {
     render(<MemoryRouter><AdminPage /></MemoryRouter>)
     expect(screen.queryByRole('tab', { name: 'Ciclo' })).not.toBeInTheDocument()

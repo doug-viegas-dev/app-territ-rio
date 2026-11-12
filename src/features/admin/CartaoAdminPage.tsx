@@ -5,6 +5,7 @@ import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { useCartao, useQuadrasCarregadas } from '@/features/cards/useCartao'
 import { EditarCartao } from './EditarCartao'
+import { ExcluirCartao } from './ExcluirCartao'
 import EstadoCartao from './EstadoCartao'
 import QuadrasAdmin from './QuadrasAdmin'
 
@@ -45,6 +46,7 @@ export default function CartaoAdminPage() {
           <Icone nome="historico" className="ic ic-20" />Ver quando foi aberto e fechado
         </Link>
       </Bloco>
+      <Bloco titulo="Excluir cartão"><ExcluirCartao cartao={cartao} quadras={quadras} /></Bloco>
     </div>
   </>
 }
