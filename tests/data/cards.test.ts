@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { connectAuthEmulator, GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
-import { connectFirestoreEmulator, doc, setDoc } from 'firebase/firestore'
+import { collection, connectFirestoreEmulator, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
 import { auth, db } from '@/firebase/app'
-import { abrirCartaoManual, atualizarCartao, criarCartao, fecharCartaoManual, observarCartao, observarCartoes, observarEventos } from '@/firebase/cards'
+import { abrirCartaoManual, atualizarCartao, cartaoTemCasas, criarCartao, excluirCartao, fecharCartaoManual, observarCartao, observarCartoes, observarEventos } from '@/firebase/cards'
 import { adicionarRua, atualizarQuadra, criarQuadra, observarQuadras } from '@/firebase/blocks'
 import { abrirRodada, encerrarRodada } from '@/firebase/rodadas'
+import { criarCasa, marcarCasa, observarCasas as observarCasasDe } from '@/firebase/houses'
+import { ExclusaoBloqueada } from '@/domain/exclusao'
 import type { Cartao, EventoCartao, Quadra } from '@/domain/types'
 
 vi.hoisted(() => {
@@ -183,5 +185,82 @@ describe('quadras e ruas', () => {
     await adicionarRua(cartao, id, 'rua nova')
     const q = await proximo((cb) => observarQuadras(cartao, cb), (l) => (l[0]?.ruas.length ?? 0) >= 2)
     expect(q[0].ruas).toEqual(['Rua das Acácias', 'Rua Nova'])
+  })
+})
+
+describe('editar e excluir cartão', () => {
+  const real = () => ({ uid: auth.currentUser?.uid ?? '', nome: 'Admin' })
+  const existe = async (path: string) => (await getDoc(doc(db, path))).exists()
+  const quantos = async (path: string) => (await getDocs(collection(db, path))).size
+  const casaComum = (cartao: string, quadra: string) => criarCasa(cartao, quadra, { rua: 'Rua A', numero: '1' }, [])
+
+  it('atualizarCartao com mapsUrl null remove o campo', async () => {
+    const id = await criarCartao({ numero: 'm1', titulo: 'Link', mapsUrl: 'https://maps.example/1' }, admin)
+    await atualizarCartao(id, { mapsUrl: null })
+    const snap = await getDoc(doc(db, 'cards', id))
+    expect(snap.data()).not.toHaveProperty('mapsUrl')
+  })
+
+  it('exclui cartão fechado, vazio e sem volta, com quadras e eventos', async () => {
+    const id = await criarCartao({ numero: 'x1', titulo: 'Vazio' }, admin)
+    const q1 = await criarQuadra(id, { rotulo: 'Q1', ruas: [] })
+    await criarQuadra(id, { rotulo: 'Q2', ruas: [] })
+    expect(await quantos(`cards/${id}/eventos`)).toBe(1)
+    await excluirCartao(id)
+    expect(await existe(`cards/${id}`)).toBe(false)
+    expect(await existe(`cards/${id}/blocks/${q1}`)).toBe(false)
+    expect(await quantos(`cards/${id}/blocks`)).toBe(0)
+    expect(await quantos(`cards/${id}/eventos`)).toBe(0)
+  })
+
+  it('com casa comum rejeita com casas e não apaga nada', async () => {
+    const id = await criarCartao({ numero: 'x2', titulo: 'Com casa' }, admin)
+    const q = await criarQuadra(id, { rotulo: 'Q1', ruas: ['Rua A'] })
+    await casaComum(id, q)
+    await expect(excluirCartao(id)).rejects.toMatchObject({ motivo: 'casas' })
+    await expect(excluirCartao(id)).rejects.toBeInstanceOf(ExclusaoBloqueada)
+    expect(await existe(`cards/${id}`)).toBe(true)
+    expect(await existe(`cards/${id}/blocks/${q}`)).toBe(true)
+    expect(await quantos(`cards/${id}/eventos`)).toBe(1)
+  })
+
+  it('casa "não visitar" (totalCasas 0) também bloqueia', async () => {
+    const id = await criarCartao({ numero: 'x3', titulo: 'Não visitar' }, admin)
+    const q = await criarQuadra(id, { rotulo: 'Q1', ruas: ['Rua A'] })
+    const casaId = await casaComum(id, q)
+    const casa = (await proximo<import('@/domain/types').Casa[]>((cb) => observarCasasDe(id, q, cb), (l) => l.some((c) => c.id === casaId))).find((c) => c.id === casaId) as import('@/domain/types').Casa
+    await marcarCasa({ cartaoId: id, quadraId: q, casa, marca: 'naoVisitar', ligada: true, usuario: admin })
+    expect((await cartaoAtual(id)).totalCasas).toBe(0)
+    await expect(excluirCartao(id)).rejects.toMatchObject({ motivo: 'casas' })
+    expect(await existe(`cards/${id}`)).toBe(true)
+  })
+
+  it('cartão aberto rejeita com aberto', async () => {
+    const id = await criarCartao({ numero: 'x4', titulo: 'Aberto' }, admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
+    await expect(excluirCartao(id)).rejects.toMatchObject({ motivo: 'aberto' })
+    expect(await existe(`cards/${id}`)).toBe(true)
+  })
+
+  it('quadra com volta aberta rejeita com volta', async () => {
+    const id = await criarCartao({ numero: 'x5', titulo: 'Volta' }, admin)
+    await abrirCartaoManual(await cartaoAtual(id), admin, [])
+    const q = await criarQuadra(id, { rotulo: 'Q1', ruas: [] })
+    const quadra = (await proximo<Quadra[]>((cb) => observarQuadras(id, cb), (l) => l.some((x) => x.id === q))).find((x) => x.id === q) as Quadra
+    await abrirRodada(id, quadra, real())
+    await proximo<Quadra[]>((cb) => observarQuadras(id, cb), (l) => !!l.find((x) => x.id === q)?.rodadaAtual)
+    await setDoc(doc(db, 'cards', id), { estado: 'fechado' }, { merge: true }) // fechado à força: só a volta deve bloquear
+    await expect(excluirCartao(id)).rejects.toMatchObject({ motivo: 'volta' })
+    expect(await existe(`cards/${id}/blocks/${q}`)).toBe(true)
+  })
+
+  it('cartaoTemCasas', async () => {
+    const id = await criarCartao({ numero: 'x6', titulo: 'Tem casas' }, admin)
+    const q1 = await criarQuadra(id, { rotulo: 'Q1', ruas: [] })
+    const q2 = await criarQuadra(id, { rotulo: 'Q2', ruas: ['Rua A'] })
+    expect(await cartaoTemCasas(id)).toBe(false)
+    await casaComum(id, q2)
+    expect(await cartaoTemCasas(id)).toBe(true)
+    expect(q1).not.toBe(q2)
   })
 })

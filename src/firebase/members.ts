@@ -1,4 +1,4 @@
-import { clearIndexedDbPersistence, collection, doc, onSnapshot, setDoc, terminate } from 'firebase/firestore'
+import { clearIndexedDbPersistence, collection, deleteDoc, doc, onSnapshot, setDoc, terminate } from 'firebase/firestore'
 import type { Papel } from '@/domain/types'
 import { db } from './app'
 import * as demo from '@/demo/banco'
@@ -36,6 +36,11 @@ export function observarMembros(cb: (m: (MembroObservado & { email: string })[])
 export async function salvarMembro(email: string, d: { nome: string; papel: Papel; ativo: boolean }): Promise<void> {
   if (demoAtivo()) return demo.salvarMembro(email, d)
   await setDoc(doc(db, 'members', email.trim().toLowerCase()), { nome: d.nome.trim(), papel: d.papel, ativo: d.ativo })
+}
+
+export async function removerMembro(email: string): Promise<void> {
+  if (demoAtivo()) return demo.removerMembro(email)
+  await deleteDoc(doc(db, 'members', email.trim().toLowerCase()))
 }
 
 /** Botão "Verificar de novo": descarta o cache local do Firestore (que pode guardar um "não existe" antigo) e recarrega. */

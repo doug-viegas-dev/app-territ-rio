@@ -9,8 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run src tests/arquitetura.test.ts",
-    "e2e": "firebase emulators:exec \"playwright test\"",
-    "deploy:regras": "firebase deploy --only firestore:rules,storage"
+    "e2e": "npm run build:funcoes && firebase emulators:exec \"playwright test\"",
+    "deploy:regras": "firebase deploy --only firestore:rules,storage",
+    "build:funcoes": "npm --prefix functions run build",
+    "test:funcoes": "npm run build:funcoes && npx firebase emulators:exec --only auth,firestore,functions \"npx vitest run tests/functions\"",
+    "deploy:funcoes": "npm run build:funcoes && firebase deploy --only functions"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -2,19 +2,24 @@ import { useState } from 'react'
 import { Icone } from '@/app/icones'
 import type { Cartao, Quadra } from '@/domain/types'
 import { useQuadras } from '@/features/cards/useCartao'
-import { adicionarRua, atualizarQuadra, criarQuadra } from '@/firebase/blocks'
+import { trocarOrdem } from '@/domain/quadras'
+import { validarQuadra } from '@/domain/validacao'
+import { adicionarRua, atualizarQuadra, criarQuadra, trocarOrdemDeQuadras } from '@/firebase/blocks'
+import { ExcluirQuadra } from './ExcluirQuadra'
+import { RuasDaQuadra } from './RuasDaQuadra'
 import { ruasDoTexto } from './ruasDoTexto'
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
 
-function FolhaQuadra({ quadra, onSalvar, onCancelar }: { quadra: Quadra | null; onSalvar: (d: { rotulo: string; ruas: string[] }) => void; onCancelar: () => void }) {
+function FolhaQuadra({ cartaoId, quadra, quadras, onSalvar, onTrocar, onExcluida, onCancelar }: { cartaoId: string; quadra: Quadra | null; quadras: Quadra[]; onSalvar: (d: { rotulo: string; ruas: string[] }) => void; onTrocar: (sentido: 'subir' | 'descer') => void; onExcluida: () => void; onCancelar: () => void }) {
   const [rotulo, setRotulo] = useState(quadra?.rotulo ?? '')
   const [ruas, setRuas] = useState((quadra?.ruas ?? []).join('\n'))
   const [erro, setErro] = useState<string | null>(null)
 
   function salvar() {
-    if (!rotulo.trim()) return setErro('Digite o nome da quadra.')
-    onSalvar({ rotulo: rotulo.trim(), ruas: ruasDoTexto(ruas) })
+    const msg = validarQuadra(rotulo, quadras, quadra?.id)
+    if (msg) return setErro(msg)
+    onSalvar({ rotulo: rotulo.trim(), ruas: quadra ? quadra.ruas : ruasDoTexto(ruas) })
   }
 
   return <div className="veu">
@@ -24,16 +29,31 @@ function FolhaQuadra({ quadra, onSalvar, onCancelar }: { quadra: Quadra | null; 
         <label htmlFor="quadra-rotulo">Nome da quadra</label>
         <input id="quadra-rotulo" className="entrada" placeholder="Ex.: Quadra 5" value={rotulo} onChange={(e) => { setRotulo(e.target.value); setErro(null) }} />
       </div>
-      <div className="campo">
-        <label htmlFor="quadra-ruas">Ruas</label>
-        <textarea id="quadra-ruas" className="entrada" value={ruas} onChange={(e) => setRuas(e.target.value)} />
-        <span className="dica">Uma rua por linha.</span>
-      </div>
+      {quadra
+        ? <RuasDaQuadra cartaoId={cartaoId} quadra={quadra} />
+        : <div className="campo">
+          <label htmlFor="quadra-ruas">Ruas</label>
+          <textarea id="quadra-ruas" className="entrada" value={ruas} onChange={(e) => setRuas(e.target.value)} />
+          <span className="dica">Uma rua por linha.</span>
+        </div>}
       {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
       <div className="pilha">
         <button type="button" className="btn primario" onClick={salvar}>Salvar</button>
         <button type="button" className="btn secundario" onClick={onCancelar}>Cancelar</button>
       </div>
+      {quadra && <div className="campo" style={{ marginTop: 16 }}>
+        <span className="rotulo-campo">Ordem na lista</span>
+        <div className="pilha">
+          {(['subir', 'descer'] as const).map((sentido) => {
+            const sem = trocarOrdem(quadras, quadra.id, sentido) === null
+            return <div key={sentido}>
+              <button type="button" className="btn secundario medio" aria-disabled={sem ? true : undefined} onClick={() => { if (!sem) onTrocar(sentido) }}>{sentido === 'subir' ? 'Subir' : 'Descer'}</button>
+              {sem && <span className="dica" style={{ display: 'block' }}>{sentido === 'subir' ? 'Já é a primeira' : 'Já é a última'}</span>}
+            </div>
+          })}
+        </div>
+      </div>}
+      {quadra && <div style={{ marginTop: 16 }}><ExcluirQuadra cartaoId={cartaoId} quadra={quadra} onExcluida={onExcluida} /></div>}
     </div>
   </div>
 }
@@ -107,7 +127,7 @@ export default function QuadrasAdmin({ cartao }: { cartao: Cartao }) {
     </div>
 
     {folha === 'rua' && <FolhaNovaRua quadras={quadras} onCancelar={() => setFolha(null)} onSalvar={(quadraId, rua) => gravar(adicionarRua(cartao.id, quadraId, rua))} />}
-    {folha === 'nova' && <FolhaQuadra quadra={null} onCancelar={() => setFolha(null)} onSalvar={(d) => gravar(criarQuadra(cartao.id, d))} />}
-    {folha !== null && typeof folha === 'object' && <FolhaQuadra quadra={folha} onCancelar={() => setFolha(null)} onSalvar={(d) => gravar(atualizarQuadra(cartao.id, folha.id, d))} />}
+    {folha === 'nova' && <FolhaQuadra cartaoId={cartao.id} quadra={null} quadras={quadras} onTrocar={() => {}} onExcluida={() => setFolha(null)} onCancelar={() => setFolha(null)} onSalvar={(d) => gravar(criarQuadra(cartao.id, d))} />}
+    {folha !== null && typeof folha === 'object' && <FolhaQuadra cartaoId={cartao.id} quadra={folha} quadras={quadras} onCancelar={() => setFolha(null)} onSalvar={(d) => gravar(atualizarQuadra(cartao.id, folha.id, d))} onTrocar={(sentido) => { const par = trocarOrdem(quadras, folha.id, sentido); if (par) gravar(trocarOrdemDeQuadras(cartao.id, par)) }} onExcluida={() => setFolha(null)} />}
   </>
 }

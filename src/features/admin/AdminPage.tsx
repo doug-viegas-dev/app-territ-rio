@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Topo from '@/app/Topo'
 import HistoricoAdmin from './HistoricoAdmin'
 import ListaCartoesAdmin from './ListaCartoesAdmin'
@@ -12,7 +13,8 @@ const ABAS = [
 type AbaId = typeof ABAS[number]['id']
 
 export default function AdminPage() {
-  const [aba, setAba] = useState<AbaId>('membros')
+  const pedida = (useLocation().state as { aba?: string } | null)?.aba
+  const [aba, setAba] = useState<AbaId>(ABAS.find((a) => a.id === pedida)?.id ?? 'membros')
   return <>
     <Topo titulo="Administração" />
     <div className="rolagem com-nav">

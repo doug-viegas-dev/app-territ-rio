@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
+import { useCartoes } from '@/features/cards/useCartoes'
 import { atualizarCartao, criarCartao } from '@/firebase/cards'
 import { enviarArquivosDoCartao } from '@/firebase/storage'
 import CartaoForm from './CartaoForm'
@@ -14,6 +15,7 @@ vi.mock('@/firebase/storage', () => ({ enviarArquivosDoCartao: vi.fn() }))
 vi.mock('./pdfParaImagem', () => ({ pdfParaImagem: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
+vi.mock('@/features/cards/useCartoes', () => ({ useCartoes: vi.fn() }))
 
 const imagem = new Blob(['img'], { type: 'image/webp' })
 const pdf = new File(['%PDF'], 'mapa-cartao-13.pdf', { type: 'application/pdf' })
@@ -29,6 +31,7 @@ describe('CartaoForm', () => {
     vi.clearAllMocks()
     vi.mocked(useOnline).mockReturnValue(true)
     vi.mocked(useSessao).mockReturnValue({ carregando: false, usuario: { uid: 'u1', email: 'm@x.com', nome: 'Maria Souza' }, membro: { papel: 'admin', ativo: true, nome: 'Maria S.' } })
+    vi.mocked(useCartoes).mockReturnValue([{ id: 'x12', numero: '12', titulo: 'Outro', estado: 'fechado', ciclo: 1, totalCasas: 0, resolvidas: 0, atualizadoEm: 0 }])
     vi.mocked(pdfParaImagem).mockResolvedValue({ imagem, paginas: 3 })
     vi.mocked(criarCartao).mockResolvedValue('novo')
     vi.mocked(enviarArquivosDoCartao).mockResolvedValue({ pdfPath: 'cards/novo/mapa.pdf', imagemPath: 'cards/novo/mapa.webp' })
@@ -116,6 +119,35 @@ describe('CartaoForm', () => {
     renderForm()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Criar cartão' }))
     expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(criarCartao).not.toHaveBeenCalled()
+  })
+
+  it('número repetido de outro cartão não cria', async () => {
+    renderForm()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Número'), '12')
+    await user.type(screen.getByLabelText('Título'), 'Novo')
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Já existe o cartão 12.')
+    expect(criarCartao).not.toHaveBeenCalled()
+  })
+
+  it('PDF acima de 20 MB mostra o limite e não lê o arquivo', async () => {
+    renderForm()
+    const grande = new File(['x'], 'grande.pdf', { type: 'application/pdf' })
+    Object.defineProperty(grande, 'size', { value: 20 * 1024 * 1024 + 1 })
+    await userEvent.setup().upload(screen.getByLabelText('Arquivo PDF do mapa'), grande)
+    expect(await screen.findByText('O arquivo passa de 20 MB. Escolha outro.')).toBeInTheDocument()
+    expect(pdfParaImagem).not.toHaveBeenCalled()
+  })
+
+  it('link do Maps sem https:// não cria', async () => {
+    renderForm()
+    const user = userEvent.setup()
+    await preencher(user, false)
+    await user.type(screen.getByLabelText('Link do Google Maps'), 'maps.app/x')
+    await user.click(screen.getByRole('button', { name: 'Criar cartão' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Cole o link completo, começando com https://.')
     expect(criarCartao).not.toHaveBeenCalled()
   })
 

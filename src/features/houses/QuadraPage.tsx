@@ -8,6 +8,7 @@ import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
 import { podeRegistrarNaCasa } from '@/domain/rodada'
 import { rotuloStatus } from '@/domain/rotulos'
+import { ruasDaQuadra } from '@/domain/ruas'
 import { contaNoTotal, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
@@ -49,7 +50,7 @@ export default function QuadraPage() {
   const quadra = quadras.find((q) => q.id === quadraId)
   const voltar = { voltarPara: `/cartao/${cartaoId}`, voltarRotulo: cartao ? `Voltar para o Cartão ${cartao.numero}` : 'Voltar' }
 
-  if (cartao === undefined || casas === null) return <>
+  if (cartao === undefined || casas === null || quadrasCarregadas === null) return <>
     <Topo titulo={quadra?.rotulo ?? 'Quadra'} {...voltar} />
     <div className="rolagem"><Carregando /></div>
   </>
@@ -58,9 +59,14 @@ export default function QuadraPage() {
     <div className="rolagem"><div className="sem-casas"><h2 style={{ fontSize: 22 }}>Cartão não encontrado</h2></div></div>
   </>
 
+  if (!quadra) return <>
+    <Topo titulo="Quadra" {...voltar} />
+    <div className="rolagem"><div className="sem-casas"><h2 style={{ fontSize: 22 }}>Quadra não encontrada</h2><p style={{ color: 'var(--texto-suave)' }}>Ela pode ter sido removida por outra pessoa.</p></div></div>
+  </>
+
   const aberto = podeRegistrar(cartao)
   const ehAdmin = membro?.papel === 'admin'
-  const ruas = [...(quadra?.ruas ?? []), ...casas.map((c) => c.rua).filter((r, i, l) => l.indexOf(r) === i && !(quadra?.ruas ?? []).includes(r))]
+  const ruas = ruasDaQuadra(quadra, casas)
   const grupos = ruas.map((rua) => ({ rua, casas: casas.filter((c) => c.rua === rua) })).filter((g) => g.casas.length > 0)
   const ordenadas = grupos.flatMap((g) => g.casas)
   const foco = ordenadas.find((c) => c.id === focoId) ?? ordenadas.find(falta) ?? ordenadas[0] ?? null

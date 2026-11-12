@@ -2,6 +2,8 @@ import { abrirCartao, contadoresAposReinicio, estadoAposFecharEReiniciar, fechar
 import { validarCasa } from '@/domain/casa'
 import { vencimentoDoRegistro } from '@/domain/historico'
 import { ordemEntre, ordemFim, ordenarCasas, precisaRenumerar } from '@/domain/ordem'
+import { bloqueioDaQuadra, bloqueiosDoCartao, ExclusaoBloqueada } from '@/domain/exclusao'
+import { renomearRuaNaLista } from '@/domain/ruas'
 import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
 import { contribuicao, deltaContadores } from '@/domain/status'
 import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
@@ -236,10 +238,34 @@ export async function criarCartao(d: { numero: string; titulo: string; mapsUrl?:
   return id
 }
 
-export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numero' | 'titulo' | 'mapsUrl' | 'imagemPath' | 'pdfPath'>>): Promise<void> {
+export async function atualizarCartao(id: string, d: Partial<Pick<Cartao, 'numero' | 'titulo' | 'imagemPath' | 'pdfPath'>> & { mapsUrl?: string | null }): Promise<void> {
   const c = cartaoPorId(id)
-  Object.assign(c, d)
+  const { mapsUrl, ...resto } = d
+  Object.assign(c, resto)
+  if (mapsUrl === null) delete c.mapsUrl
+  else if (mapsUrl !== undefined) c.mapsUrl = mapsUrl
   tocar(c)
+  mudou()
+}
+
+export async function cartaoTemCasas(cartaoId: string): Promise<boolean> {
+  return (estado.quadras[cartaoId] ?? []).some((q) => listaCasas(cartaoId, q.id).length > 0)
+}
+
+export async function excluirCartao(cartaoId: string): Promise<void> {
+  const c = estado.cartoes.find((x) => x.id === cartaoId)
+  if (!c) return
+  const quadras = estado.quadras[cartaoId] ?? []
+  const bloqueio = bloqueiosDoCartao(c, quadras)[0]
+  if (bloqueio) throw new ExclusaoBloqueada(bloqueio)
+  if (await cartaoTemCasas(cartaoId)) throw new ExclusaoBloqueada('casas')
+  for (const q of quadras) {
+    delete estado.casas[chaveCasas(cartaoId, q.id)]
+    delete estado.rodadas[chaveCasas(cartaoId, q.id)]
+  }
+  delete estado.quadras[cartaoId]
+  delete estado.eventos[cartaoId]
+  estado.cartoes = estado.cartoes.filter((x) => x.id !== cartaoId)
   mudou()
 }
 
@@ -311,6 +337,45 @@ export async function adicionarRua(cartaoId: string, quadraId: string, rua: stri
   const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
   if (q.ruas.some((r) => chave(r) === chave(nome))) return
   q.ruas.push(nome)
+  mudou()
+}
+
+export async function quadraTemCasas(cartaoId: string, quadraId: string): Promise<boolean> {
+  return listaCasas(cartaoId, quadraId).length > 0
+}
+
+export async function excluirQuadra(cartaoId: string, quadraId: string): Promise<void> {
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (!q) return
+  if (bloqueioDaQuadra(q)) throw new ExclusaoBloqueada('volta')
+  if (await quadraTemCasas(cartaoId, quadraId)) throw new ExclusaoBloqueada('casas')
+  estado.quadras[cartaoId] = estado.quadras[cartaoId].filter((x) => x.id !== quadraId)
+  delete estado.casas[chaveCasas(cartaoId, quadraId)]
+  delete estado.rodadas[chaveCasas(cartaoId, quadraId)]
+  mudou()
+}
+
+export async function trocarOrdemDeQuadras(cartaoId: string, troca: [{ id: string; ordem: number }, { id: string; ordem: number }]): Promise<void> {
+  for (const { id, ordem } of troca) {
+    const q = estado.quadras[cartaoId]?.find((x) => x.id === id)
+    if (q) q.ordem = ordem
+  }
+  mudou()
+}
+
+export async function renomearRua(cartaoId: string, quadraId: string, de: string, para: string): Promise<{ casas: number }> {
+  const alvo = listaCasas(cartaoId, quadraId).filter((c) => c.rua === de)
+  for (const c of alvo) c.rua = para
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (q) q.ruas = renomearRuaNaLista(q.ruas, de, para)
+  mudou()
+  return { casas: alvo.length }
+}
+
+export async function removerRua(cartaoId: string, quadraId: string, rua: string): Promise<void> {
+  if (listaCasas(cartaoId, quadraId).some((c) => c.rua === rua)) throw new ExclusaoBloqueada('casas')
+  const q = estado.quadras[cartaoId]?.find((x) => x.id === quadraId)
+  if (q) q.ruas = q.ruas.filter((r) => r !== rua)
   mudou()
 }
 
@@ -544,6 +609,12 @@ export async function salvarMembro(email: string, d: { nome: string; papel: Pape
   mudou()
 }
 
+export async function removerMembro(email: string): Promise<void> {
+  const chave = email.trim().toLowerCase()
+  estado.membros = estado.membros.filter((m) => m.email !== chave)
+  mudou()
+}
+
 // ---------- arquivos ----------
 
 export async function urlDoArquivo(path: string): Promise<string> {
@@ -553,8 +624,9 @@ export async function urlDoArquivo(path: string): Promise<string> {
 }
 
 export async function guardarArquivos(cartaoId: string, arquivos: { pdf: Blob; imagem: Blob }): Promise<{ pdfPath: string; imagemPath: string }> {
-  const pdfPath = `cards/${cartaoId}/mapa.pdf`
-  const imagemPath = `cards/${cartaoId}/mapa.webp`
+  const quando = Date.now()
+  const pdfPath = `cards/${cartaoId}/mapa-${quando}.pdf`
+  const imagemPath = `cards/${cartaoId}/mapa-${quando}.webp`
   estado.arquivos[pdfPath] = URL.createObjectURL(arquivos.pdf)
   estado.arquivos[imagemPath] = URL.createObjectURL(arquivos.imagem)
   return { pdfPath, imagemPath }

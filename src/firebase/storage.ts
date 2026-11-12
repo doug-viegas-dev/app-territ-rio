@@ -1,4 +1,4 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage'
 import { storage } from './app'
 import * as demo from '@/demo/banco'
 import { demoAtivo } from '@/demo/modo'
@@ -40,11 +40,30 @@ export async function baixarImagem(path: string): Promise<void> {
 
 export async function enviarArquivosDoCartao(cartaoId: string, arquivos: { pdf: Blob; imagem: Blob }): Promise<{ pdfPath: string; imagemPath: string }> {
   if (demoAtivo()) return demo.guardarArquivos(cartaoId, arquivos)
-  const pdfPath = `cards/${cartaoId}/mapa.pdf`
-  const imagemPath = `cards/${cartaoId}/mapa.webp`
+  const quando = Date.now()
+  const pdfPath = `cards/${cartaoId}/mapa-${quando}.pdf`
+  const imagemPath = `cards/${cartaoId}/mapa-${quando}.webp`
   await Promise.all([
     uploadBytes(ref(storage, pdfPath), arquivos.pdf, { contentType: 'application/pdf' }),
     uploadBytes(ref(storage, imagemPath), arquivos.imagem, { contentType: 'image/webp' }),
   ])
   return { pdfPath, imagemPath }
+}
+
+/** Apaga os arquivos dados; ignora `undefined` e arquivo que já não existe. Outro erro sobe. */
+export async function apagarArquivos(paths: (string | undefined)[]): Promise<void> {
+  if (demoAtivo()) return
+  for (const p of paths) {
+    if (!p) continue
+    try { await deleteObject(ref(storage, p)) } catch (e) {
+      if ((e as { code?: string }).code !== 'storage/object-not-found') throw e
+    }
+  }
+}
+
+/** Apaga tudo em `cards/{id}`, inclusive o `mapa.pdf` e `mapa.webp` de antes da troca de caminho. */
+export async function apagarArquivosDoCartao(cartaoId: string): Promise<void> {
+  if (demoAtivo()) return
+  const { items } = await listAll(ref(storage, `cards/${cartaoId}`))
+  await apagarArquivos(items.map((i) => i.fullPath))
 }

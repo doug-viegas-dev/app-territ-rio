@@ -23,6 +23,12 @@ const cartoes: Cartao[] = [
 ]
 const quadra = (id: string): Quadra => ({ id, rotulo: id, ruas: [], ordem: 1, totalCasas: 0, faltam: 0, rodadasTotal: 0 })
 
+function renderListaComEstado(state: object) {
+  return render(<MemoryRouter initialEntries={[{ pathname: '/admin', state }]}>
+    <Routes><Route path="/admin" element={<ListaCartoesAdmin />} /></Routes>
+  </MemoryRouter>)
+}
+
 function renderLista() {
   return render(<MemoryRouter initialEntries={['/admin']}>
     <Routes>
@@ -43,6 +49,18 @@ describe('ListaCartoesAdmin', () => {
     vi.mocked(enviarArquivosDoCartao).mockResolvedValue({ pdfPath: 'a', imagemPath: 'b' })
   })
   afterEach(cleanup)
+
+  it('depois de excluir um cartão, mostra o aviso em role=status', () => {
+    renderListaComEstado({ aba: 'cartoes', excluido: '12' })
+    expect(screen.getByRole('status')).toHaveTextContent('Cartão 12 excluído.')
+    expect(screen.queryByText(/arquivos do mapa/)).not.toBeInTheDocument()
+  })
+
+  it('se os arquivos do mapa ficaram, avisa também', () => {
+    renderListaComEstado({ aba: 'cartoes', excluido: '12', arquivosFicaram: true })
+    expect(screen.getByRole('status')).toHaveTextContent('Cartão 12 excluído.')
+    expect(screen.getByRole('status')).toHaveTextContent('Os arquivos do mapa ficaram guardados.')
+  })
 
   it('lista os cartões com estado e casas que faltam', () => {
     renderLista()
