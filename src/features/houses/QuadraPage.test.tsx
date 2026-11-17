@@ -4,15 +4,15 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useOnline } from '@/app/useOnline'
 import { useSessao } from '@/features/auth/AuthProvider'
-import { observarQuadras } from '@/firebase/blocks'
+import { adicionarRua, observarQuadras } from '@/firebase/blocks'
 import { observarCartao } from '@/firebase/cards'
-import { observarCasas, registrarVisita } from '@/firebase/houses'
+import { criarCasa, observarCasas, registrarVisita } from '@/firebase/houses'
 import type { Cartao, Casa, Quadra, Status } from '@/domain/types'
 import QuadraPage from './QuadraPage'
 
 vi.mock('@/firebase/cards', () => ({ observarCartao: vi.fn() }))
-vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn() }))
-vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), registrarVisita: vi.fn() }))
+vi.mock('@/firebase/blocks', () => ({ observarQuadras: vi.fn(), adicionarRua: vi.fn() }))
+vi.mock('@/firebase/houses', () => ({ observarCasas: vi.fn(), registrarVisita: vi.fn(), criarCasa: vi.fn(), criarCasasEmFaixa: vi.fn() }))
 vi.mock('@/app/useOnline', () => ({ useOnline: vi.fn() }))
 vi.mock('@/features/auth/AuthProvider', () => ({ useSessao: vi.fn() }))
 vi.mock('@/firebase/rodadas', () => ({ abrirRodada: vi.fn(), encerrarRodada: vi.fn() }))
@@ -77,25 +77,88 @@ describe('QuadraPage', () => {
     expect(screen.queryByRole('button', { name: 'Fechar cartão' })).not.toBeInTheDocument()
   })
 
-  it('"+ casa" abre o cadastro; quadra vazia oferece "Cadastrar a primeira casa"', async () => {
+  it('"Mais opções" abre o cadastro completo já na rua escolhida', async () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Adicionar casa' }))
+    const botoes = screen.getAllByRole('button', { name: 'Mais opções' })
+    await userEvent.setup().click(botoes[1])
     expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
-    cleanup()
-    preparar([])
-    renderPagina()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Cadastrar a primeira casa' }))
-    expect(screen.getByRole('dialog', { name: 'Nova casa' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' })).toBeChecked()
   })
 
-  it('o botão de adicionar casa fica na linha de ações da lista, com texto, e não flutua sobre ela', () => {
+  it('o botão "Adicionar casa" do topo não existe mais', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    const botao = screen.getByRole('button', { name: 'Adicionar casa' })
-    expect(botao.textContent).toBe('Adicionar casa')
-    expect(botao).not.toHaveClass('fab')
-    expect(botao.querySelector('use')?.getAttribute('href')).toBe('#i-casa-mais')
+    expect(screen.queryByRole('button', { name: 'Adicionar casa' })).not.toBeInTheDocument()
+  })
+
+  it('mostra o campo de cadastro no fim de cada rua do cartão aberto, mesmo sem nenhuma casa na rua', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(2)
+  })
+
+  it('cartão fechado não mostra campo de cadastro nem Nova rua', () => {
+    preparar([casa({ numero: '1' })], { cartao: { ...cartaoAberto, estado: 'fechado' } })
+    renderPagina()
+    expect(screen.queryByRole('textbox', { name: 'Número' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nova rua' })).not.toBeInTheDocument()
+  })
+
+  it('adicionar 232 faz a 232 virar a casa em foco', async () => {
+    const existente = casa({ numero: '231' })
+    let aoMudar: (c: Casa[]) => void = () => {}
+    preparar([existente])
+    vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([existente]); aoMudar = (l) => cb(l); return () => {} })
+    vi.mocked(criarCasa).mockImplementation(() => Promise.resolve('novo'))
+    renderPagina()
+    await userEvent.setup().type(screen.getAllByRole('textbox', { name: 'Número' })[0], '232{Enter}')
+    expect(criarCasa).toHaveBeenCalledTimes(1)
+    act(() => aoMudar([existente, casa({ numero: '232' })]))
+    await waitFor(() => expect(within(barra()).getByText('232')).toBeInTheDocument())
+  })
+
+  it('não troca o foco por casa de outra pessoa com outro número', async () => {
+    const existente = casa({ numero: '231' })
+    let aoMudar: (c: Casa[]) => void = () => {}
+    preparar([existente])
+    vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([existente]); aoMudar = (l) => cb(l); return () => {} })
+    vi.mocked(criarCasa).mockImplementation(() => Promise.resolve('novo'))
+    renderPagina()
+    await userEvent.setup().type(screen.getAllByRole('textbox', { name: 'Número' })[0], '232{Enter}')
+    const dela = casa({ numero: '999' })
+    act(() => aoMudar([existente, dela]))
+    expect(within(barra()).queryByText('999')).not.toBeInTheDocument()
+    act(() => aoMudar([existente, dela, casa({ numero: '232' })]))
+    await waitFor(() => expect(within(barra()).getByText('232')).toBeInTheDocument())
+  })
+
+  it('offline: criarCasa nunca resolve e mesmo assim a casa nova vira a casa em foco', async () => {
+    const existente = casa({ numero: '231' })
+    let aoMudar: (c: Casa[]) => void = () => {}
+    preparar([existente])
+    vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([existente]); aoMudar = (l) => cb(l); return () => {} })
+    vi.mocked(criarCasa).mockImplementation(() => new Promise(() => {}))
+    renderPagina()
+    await userEvent.setup().type(screen.getAllByRole('textbox', { name: 'Número' })[0], '232{Enter}')
+    act(() => aoMudar([existente, casa({ numero: '232' })]))
+    await waitFor(() => expect(within(barra()).getByText('232')).toBeInTheDocument())
+  })
+
+  it('Nova rua aparece no fim da lista e adiciona a rua', async () => {
+    vi.mocked(adicionarRua).mockResolvedValue(undefined)
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Nova rua' }))
+    await user.type(screen.getByLabelText('Nome da rua'), 'Rua Nova{Enter}')
+    expect(adicionarRua).toHaveBeenCalledWith('c12', 'q3', 'Rua Nova')
+  })
+
+  it('a barra de resultados cede o lugar ao teclado (classe esconde-no-teclado)', () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    expect(barra()).toHaveClass('esconde-no-teclado')
   })
 
   it('"Fechar cartão" não aparece até as quadras chegarem (a tela fica em carregando)', () => {
@@ -292,14 +355,14 @@ describe('QuadraPage', () => {
     expect(within(barra()).getByRole('button', { name: 'Conversado' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('cartão fechado desativa os botões, não registra e esconde "+ casa"', async () => {
+  it('cartão fechado desativa os botões, não registra e esconde o cadastro', async () => {
     preparar([casa({ numero: '1' })], { cartao: { ...cartaoAberto, estado: 'fechado' }, papel: 'publicador' })
     renderPagina()
     const botao = within(barra()).getByRole('button', { name: 'Conversado' })
     expect(botao).toHaveAttribute('aria-disabled', 'true')
     await userEvent.setup().click(botao)
     expect(registrarVisita).not.toHaveBeenCalled()
-    expect(screen.queryByRole('button', { name: 'Adicionar casa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Número' })).not.toBeInTheDocument()
     expect(screen.getByText('Cartão fechado')).toBeInTheDocument()
     expect(screen.getByText('Só um administrador pode abrir o cartão. Peça a um deles.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Abrir cartão' })).not.toBeInTheDocument()
@@ -311,17 +374,18 @@ describe('QuadraPage', () => {
     expect(screen.getByRole('link', { name: 'Abrir cartão' })).toHaveAttribute('href', '/cartao/c12')
   })
 
-  it('cartão aberto mostra o botão "+ casa"', () => {
+  it('cartão aberto mostra o campo de cadastro', () => {
     preparar([casa({ numero: '1' })])
     renderPagina()
-    expect(screen.getByRole('button', { name: 'Adicionar casa' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Adicionar' }).length).toBeGreaterThan(0)
   })
 
-  it('quadra sem casas mostra a orientação e "Cadastrar a primeira casa"', () => {
+  it('quadra sem casas mostra a orientação e o campo de cadastro de cada rua', () => {
     preparar([])
     renderPagina()
     expect(screen.getByText('Nenhuma casa nesta quadra')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cadastrar a primeira casa' })).toBeInTheDocument()
+    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Cadastrar a primeira casa' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Registrar visita' })).not.toBeInTheDocument()
   })
 

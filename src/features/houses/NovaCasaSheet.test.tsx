@@ -297,4 +297,9 @@ describe('NovaCasaSheet', () => {
       expect(criarCasasEmFaixa).not.toHaveBeenCalled()
     })
   })
+
+  it('ruaInicial seleciona a rua pedida ao abrir', () => {
+    abrir({ ruaInicial: 'Rua Ipê Amarelo' })
+    expect(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' })).toBeChecked()
+  })
 })

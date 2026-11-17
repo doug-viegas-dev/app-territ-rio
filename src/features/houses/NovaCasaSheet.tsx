@@ -15,7 +15,7 @@ import { classeStatus, rotuloCasa } from './rotuloCasa'
 
 type Props = {
   quadra: Quadra; casas: Casa[]; cartaoId: string; cartao: Cartao; usuario: { uid: string; nome: string }
-  depoisDe?: Casa; onFechar: () => void; onErro?: () => void
+  depoisDe?: Casa; ruaInicial?: string; onFechar: () => void; onErro?: () => void
 }
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
@@ -64,13 +64,13 @@ function FolhaEscolherRua({ ruas, rua, onEscolher, onNova, onCancelar }: { ruas:
   </div>
 }
 
-export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario, depoisDe, onFechar, onErro }: Props) {
+export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario, depoisDe, ruaInicial, onFechar, onErro }: Props) {
   const campanha = useCampanhaAtiva()
   const [aba, setAba] = useState<'uma' | 'faixa'>('uma')
   const [extras, setExtras] = useState<string[]>([])
   const todas = [...quadra.ruas, ...casas.map((c) => c.rua), ...extras]
   const ruas = todas.filter((r, i) => todas.findIndex((x) => chave(x) === chave(r)) === i)
-  const [rua, setRua] = useState(depoisDe?.rua ?? ruas[0] ?? '')
+  const [rua, setRua] = useState(depoisDe?.rua ?? ruaInicial ?? ruas[0] ?? '')
   const [numero, setNumero] = useState('')
   const [descricao, setDescricao] = useState('')
   const [depoisId, setDepoisId] = useState(depoisDe?.id)

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Logo from '@/app/Logo'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
+import { casaNova } from '@/domain/casa'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
 import { podeRegistrarNaCasa } from '@/domain/rodada'
 import { resultadosDisponiveis } from '@/domain/campanha'
@@ -18,6 +19,8 @@ import BotaoFecharCartao from '@/features/cards/BotaoFecharCartao'
 import { useCartao, useQuadrasCarregadas } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
 import AvisoNaoEnviado from './AvisoNaoEnviado'
+import CadastroRapido, { type CasaEsperada } from './CadastroRapido'
+import NovaRuaInline from './NovaRuaInline'
 import FaixaRodada from './FaixaRodada'
 import CasaLinha from './CasaLinha'
 import NovaCasaSheet from './NovaCasaSheet'
@@ -45,9 +48,18 @@ export default function QuadraPage() {
   const [modo, setModo] = useState<'trabalho' | 'todas'>('trabalho')
   const [focoId, setFocoId] = useState<string | null>(null)
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status } | null>(null)
-  const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa } | null>(null)
+  const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa; ruaInicial?: string } | null>(null)
   const [reordenando, setReordenando] = useState(false)
   const [erroEscrita, setErroEscrita] = useState(false)
+  // casa recém-cadastrada aqui: quando ela aparece na lista (também offline), vira a casa em foco
+  const aguardando = useRef<{ antes: string[]; esperada: CasaEsperada } | null>(null)
+  useEffect(() => {
+    if (!aguardando.current || !casas) return
+    const achada = casaNova(aguardando.current.antes, casas, aguardando.current.esperada)
+    if (!achada) return
+    aguardando.current = null
+    setFocoId(achada.id)
+  }, [casas])
 
   const quadra = quadras.find((q) => q.id === quadraId)
   const voltar = { voltarPara: `/cartao/${cartaoId}`, voltarRotulo: cartao ? `Voltar para o Cartão ${cartao.numero}` : 'Voltar' }
@@ -95,8 +107,14 @@ export default function QuadraPage() {
   // Sem rede e sem cache desta quadra: a lista vazia não é a verdade, então não convida a cadastrar.
   const semCache = vazia && semDados && !online
   const aoFalharEscrita = () => setErroEscrita(true)
+  const cadastro = (rua: string) => aberto && quadra && <CadastroRapido
+    rua={rua} quadra={quadra} casas={casas} cartaoId={cartaoId} onErro={aoFalharEscrita}
+    onAdicionada={(esperada) => { aguardando.current = { antes: casas.map((c) => c.id), esperada } }}
+    onMaisOpcoes={(r) => setNovaCasa({ ruaInicial: r })}
+  />
+  const novaRua = aberto && quadra && <NovaRuaInline cartaoId={cartaoId} quadra={quadra} ruas={ruas} onErro={aoFalharEscrita} />
   const sheet = aberto && novaCasa && quadra && usuario
-    ? <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} cartao={cartao} usuario={{ uid: usuario.uid, nome: membro?.nome ?? usuario.nome }} depoisDe={novaCasa.depoisDe} onFechar={() => setNovaCasa(null)} onErro={aoFalharEscrita} />
+    ? <NovaCasaSheet quadra={quadra} casas={casas} cartaoId={cartaoId} cartao={cartao} usuario={{ uid: usuario.uid, nome: membro?.nome ?? usuario.nome }} depoisDe={novaCasa.depoisDe} ruaInicial={novaCasa.ruaInicial} onFechar={() => setNovaCasa(null)} onErro={aoFalharEscrita} />
     : null
 
   if (reordenando && aberto && !vazia) return <>
@@ -153,8 +171,12 @@ export default function QuadraPage() {
         <Logo tamanho={72} className="logo-vazio" />
         <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhuma casa nesta quadra</h2>
         <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
-        {aberto && <button type="button" className="btn primario" style={{ maxWidth: 260, margin: '0 auto' }} onClick={() => setNovaCasa({})}><Icone nome="mais" />Cadastrar a primeira casa</button>}
       </div>
+      {aberto && ruas.map((rua) => <div key={rua}>
+        <h2 className="titulo-secao">{rua} <small>nenhuma casa</small></h2>
+        {cadastro(rua)}
+      </div>)}
+      {novaRua}
       <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
     </div>}
 
@@ -167,31 +189,28 @@ export default function QuadraPage() {
         </div>
         {aberto && <div className="acoes-lista">
           <button type="button" className="btn secundario medio reordenar" onClick={() => setReordenando(true)}><Icone nome="ordem" className="ic ic-20" />Reordenar</button>
-          <button type="button" className="btn primario medio" onClick={() => setNovaCasa({})}><Icone nome="casa-mais" className="ic ic-20" />Adicionar casa</button>
         </div>}
 
-        {modo === 'trabalho' ? <>
-          {semFaltar && <div className="sem-casas" style={{ paddingTop: 24 }}>
-            <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nada para visitar nesta quadra</h2>
-            <button type="button" className="btn secundario medio auto" style={{ margin: '0 auto' }} onClick={() => setModo('todas')}>Ver todas as casas</button>
-          </div>}
-          {grupos.map((g) => {
-            const lista = listaDeTrabalho(g.casas)
-            if (lista.length === 0) return null
-            return <div key={g.rua}>
-              <h2 className="titulo-secao">{g.rua} <small>{lista.filter(falta).length} para visitar</small></h2>
-              {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
-            </div>
-          })}
-        </> : grupos.map((g) => <div key={g.rua}>
-          <h2 className="titulo-secao">{g.rua} <small>{g.casas.length} {g.casas.length === 1 ? 'casa' : 'casas'}</small></h2>
-          {g.casas.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
-        </div>)}
+        {modo === 'trabalho' && semFaltar && <div className="sem-casas" style={{ paddingTop: 24 }}>
+          <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nada para visitar nesta quadra</h2>
+          <button type="button" className="btn secundario medio auto" style={{ margin: '0 auto' }} onClick={() => setModo('todas')}>Ver todas as casas</button>
+        </div>}
+        {ruas.map((rua) => {
+          const doRua = casas.filter((c) => c.rua === rua)
+          const lista = modo === 'trabalho' ? listaDeTrabalho(doRua) : doRua
+          const resumo = modo === 'trabalho' ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
+          return <div key={rua}>
+            <h2 className="titulo-secao">{rua} <small>{resumo}</small></h2>
+            {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
+            {cadastro(rua)}
+          </div>
+        })}
+        {novaRua}
         <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
       </div>
       </div>
 
-      <section className="barra-fixa no-fluxo" aria-label="Registrar visita">
+      <section className="barra-fixa no-fluxo esconde-no-teclado" aria-label="Registrar visita">
         <div className="quem">
           <div><b>{rotuloCasa(foco)}</b><span>{foco.rua}</span></div>
           <Link className="detalhes" to={paraCasa(foco)}>Detalhes<Icone nome="chev" className="ic ic-20" /></Link>
