@@ -416,3 +416,12 @@ html, body, #root { min-height: 100%; }
 
 /* teclado aberto no celular: a barra de resultados da quadra cede o lugar ao campo */
 @media (max-width: 919px) { html[data-teclado="aberto"] .esconde-no-teclado { display: none; } }
+
+/* cadastro rápido no fim da rua (tela da quadra) */
+.cadastro-rapido { margin: 12px 0 8px; }
+.cadastro-rapido .linha { display: flex; gap: 8px; }
+.cadastro-rapido .linha .entrada { flex: 1; min-width: 0; min-height: 52px; }
+.cadastro-rapido .linha .btn { flex: none; width: auto; padding: 0 16px; }
+.cadastro-rapido .aviso { margin: 8px 0 0; }
+.cadastro-rapido .atalhos { display: flex; gap: 8px; margin-top: 8px; }
+.cadastro-rapido .atalhos .btn { flex: 1; min-height: 48px; }
