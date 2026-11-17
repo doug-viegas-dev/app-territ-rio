@@ -425,3 +425,4 @@ html, body, #root { min-height: 100%; }
 .cadastro-rapido .aviso { margin: 8px 0 0; }
 .cadastro-rapido .atalhos { display: flex; gap: 8px; margin-top: 8px; }
 .cadastro-rapido .atalhos .btn { flex: 1; min-height: 48px; }
+.nova-rua-inline { margin: 12px 0 8px; border-style: dashed; min-height: 48px; }
