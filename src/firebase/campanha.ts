@@ -22,6 +22,8 @@ export function observarCampanha(cb: (c: Campanha | null) => void, onErro?: (e: 
 }
 
 async function gravar(escritas: Escrita[], tipo: 'update' | 'set' | 'delete' = 'update'): Promise<void> {
+  // lotes em paralelo: cada documento aparece em um lote só, então a ordem entre lotes não importa
+  const lotes: Promise<void>[] = []
   for (let i = 0; i < escritas.length; i += LOTE) {
     const batch = writeBatch(db)
     for (const e of escritas.slice(i, i + LOTE)) {
@@ -29,8 +31,9 @@ async function gravar(escritas: Escrita[], tipo: 'update' | 'set' | 'delete' = '
       else if (tipo === 'set' || e.novo) batch.set(e.ref, e.dados)
       else batch.update(e.ref, e.dados)
     }
-    await batch.commit()
+    lotes.push(batch.commit())
   }
+  await Promise.all(lotes)
 }
 
 /** Tudo o que o território tem agora, lido do servidor (o cache pode estar incompleto e gravaria números errados). */
@@ -38,17 +41,15 @@ type Territorio = { id: string; dados: DocumentData; ref: DocumentReference; qua
 
 async function lerTerritorio(): Promise<Territorio> {
   const cartoes = await getDocsFromServer(collection(db, 'cards'))
-  const saida: Territorio = []
-  for (const c of cartoes.docs) {
+  // cartões, quadras e casas lidos em paralelo: em série seriam uma ida ao servidor por quadra
+  return Promise.all(cartoes.docs.map(async (c) => {
     const quadras = await getDocsFromServer(collection(c.ref, 'blocks'))
-    const lista: Territorio[number]['quadras'] = []
-    for (const q of quadras.docs) {
+    const lista = await Promise.all(quadras.docs.map(async (q) => {
       const casas = await getDocsFromServer(collection(q.ref, 'houses'))
-      lista.push({ id: q.id, dados: q.data(), ref: q.ref, casas: casas.docs.map((x) => ({ id: x.id, dados: x.data(), ref: x.ref })) })
-    }
-    saida.push({ id: c.id, dados: c.data(), ref: c.ref, quadras: lista })
-  }
-  return saida
+      return { id: q.id, dados: q.data(), ref: q.ref, casas: casas.docs.map((x) => ({ id: x.id, dados: x.data(), ref: x.ref })) }
+    }))
+    return { id: c.id, dados: c.data(), ref: c.ref, quadras: lista }
+  }))
 }
 
 async function apagarCopia(): Promise<void> {
@@ -195,14 +196,16 @@ async function lerCampanha(): Promise<Campanha | null> {
 export async function iniciarCampanha(d: { nome: string; resultados: Status[]; guardar: boolean }, usuario: Usuario): Promise<void> {
   if (demoAtivo()) return demo.iniciarCampanha(d, usuario)
   if (await lerCampanha()) throw new Error('Já existe uma campanha')
-  const t = await lerTerritorio()
-  await apagarCopia()
+  // ler o território e limpar cópias antigas não dependem um do outro
+  const [t] = await Promise.all([lerTerritorio(), apagarCopia()])
   if (d.guardar) await guardarCopia(t)
   await setDoc(campanhaRef(), {
     nome: d.nome.trim(), resultados: d.resultados, fase: 'iniciando', guardou: d.guardar,
     iniciadaEm: paraTimestamp(Date.now()), iniciadaPorNome: usuario.nome,
   })
-  await continuarCampanha(usuario)
+  // o território não mudou desde a leitura: não lê de novo
+  await aplicar(t, null, false, usuario)
+  await updateDoc(campanhaRef(), { fase: 'ativa' })
 }
 
 /** Termina o que uma execução interrompida deixou no meio (iniciando ou encerrando). Também é o passo final de iniciar e de encerrar. */
