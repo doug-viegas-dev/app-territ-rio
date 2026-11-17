@@ -145,6 +145,21 @@ describe('QuadraPage', () => {
     await waitFor(() => expect(within(barra()).getByText('232')).toBeInTheDocument())
   })
 
+  it('o primeiro cadastro numa quadra vazia mantém o foco no campo (a tela não troca de estrutura)', async () => {
+    let aoMudar: (c: Casa[]) => void = () => {}
+    preparar([])
+    vi.mocked(observarCasas).mockImplementation((_c, _q, cb) => { cb([]); aoMudar = (l) => cb(l); return () => {} })
+    vi.mocked(criarCasa).mockResolvedValue('novo')
+    renderPagina()
+    const user = userEvent.setup()
+    await user.type(screen.getAllByRole('textbox', { name: 'Número' })[0], '230{Enter}')
+    act(() => aoMudar([casa({ numero: '230' })]))
+    await waitFor(() => expect(within(barra()).getByText('230')).toBeInTheDocument())
+    const ativo = document.activeElement as HTMLElement
+    expect(ativo.tagName).toBe('INPUT')
+    expect(ativo).toHaveAttribute('aria-label', 'Número')
+  })
+
   it('Nova rua aparece no fim da lista e adiciona a rua', async () => {
     vi.mocked(adicionarRua).mockResolvedValue(undefined)
     preparar([casa({ numero: '1' })])

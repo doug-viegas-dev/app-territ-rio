@@ -166,23 +166,14 @@ export default function QuadraPage() {
       </div>
     </div>}
 
-    {vazia && !semCache && <div className="rolagem">
-      <div className="sem-casas" style={{ paddingTop: 48 }}>
-        <Logo tamanho={72} className="logo-vazio" />
-        <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhuma casa nesta quadra</h2>
-        <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
-      </div>
-      {aberto && ruas.map((rua) => <div key={rua}>
-        <h2 className="titulo-secao">{rua} <small>nenhuma casa</small></h2>
-        {cadastro(rua)}
-      </div>)}
-      {novaRua}
-      <BotaoFecharCartao discreto cartao={cartao} quadras={quadrasCarregadas} />
-    </div>}
-
-    {!vazia && foco && <>
+    {!semCache && (vazia || foco) && <>
       <div className="area-lista">
       <div className="rolagem">
+        {vazia ? <div className="sem-casas" style={{ paddingTop: 48 }}>
+          <Logo tamanho={72} className="logo-vazio" />
+          <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nenhuma casa nesta quadra</h2>
+          <p style={{ color: 'var(--texto-suave)', maxWidth: '30ch', margin: '0 auto 22px' }}>Cadastre as casas na ordem em que aparecem na rua.</p>
+        </div> : <>
         <div className="segmento" role="tablist">
           <button type="button" role="tab" aria-selected={modo === 'trabalho'} className={modo === 'trabalho' ? 'ativo' : ''} onClick={() => setModo('trabalho')}>Trabalho</button>
           <button type="button" role="tab" aria-selected={modo === 'todas'} className={modo === 'todas' ? 'ativo' : ''} onClick={() => setModo('todas')}>Todas</button>
@@ -195,13 +186,15 @@ export default function QuadraPage() {
           <h2 style={{ fontSize: 22, marginBottom: 8 }}>Nada para visitar nesta quadra</h2>
           <button type="button" className="btn secundario medio auto" style={{ margin: '0 auto' }} onClick={() => setModo('todas')}>Ver todas as casas</button>
         </div>}
+        </>}
         {ruas.map((rua) => {
           const doRua = casas.filter((c) => c.rua === rua)
-          const lista = modo === 'trabalho' ? listaDeTrabalho(doRua) : doRua
-          const resumo = modo === 'trabalho' ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
+          const trabalho = modo === 'trabalho' && !vazia
+          const lista = trabalho ? listaDeTrabalho(doRua) : doRua
+          const resumo = trabalho ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
           return <div key={rua}>
             <h2 className="titulo-secao">{rua} <small>{resumo}</small></h2>
-            {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco.id} onSelecionar={(x) => setFocoId(x.id)} />)}
+            {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco?.id} onSelecionar={(x) => setFocoId(x.id)} />)}
             {cadastro(rua)}
           </div>
         })}
@@ -210,7 +203,7 @@ export default function QuadraPage() {
       </div>
       </div>
 
-      <section className="barra-fixa no-fluxo esconde-no-teclado" aria-label="Registrar visita">
+      {!vazia && foco && <section className="barra-fixa no-fluxo esconde-no-teclado" aria-label="Registrar visita">
         <div className="quem">
           <div><b>{rotuloCasa(foco)}</b><span>{foco.rua}</span></div>
           <Link className="detalhes" to={paraCasa(foco)}>Detalhes<Icone nome="chev" className="ic ic-20" /></Link>
@@ -233,7 +226,7 @@ export default function QuadraPage() {
             </button>
           })}
         </div>
-      </section>
+      </section>}
     </>}
     {sheet}
   </>
