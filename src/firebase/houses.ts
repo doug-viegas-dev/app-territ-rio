@@ -66,7 +66,7 @@ function aplicarDelta(batch: WriteBatch, cartaoId: string, quadraId: string, d: 
 export async function criarCasa(
   cartaoId: string,
   quadraId: string,
-  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
+  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number; rodadaId: string; campanha?: string } },
   existentes: Casa[],
   op: OpcoesQuadra = {},
 ): Promise<string> {
@@ -101,7 +101,7 @@ export async function criarCasa(
     ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }),
   })
   if (r) {
-    batch.set(doc(collection(ref, 'visits')), { status, ...quando(ms), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada })
+    batch.set(doc(collection(ref, 'visits'), r.rodadaId), { status, ...quando(ms), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada, ...(r.campanha && { campanha: r.campanha }) })
   }
   aplicarDelta(batch, cartaoId, quadraId, deltaContadores(null, { status }), agora, op)
   await batch.commit()
@@ -167,7 +167,8 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
   await batch.commit()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+/** Uma entrada por casa em cada volta: o documento da visita tem o id da volta, então mudar o status na mesma volta o regrava em vez de criar outro. */
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; rodadaId: string; campanha?: string; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   if (demoAtivo()) return demo.registrarVisita(a)
   const { cartao, quadraId, casa, novoStatus, usuario } = a
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
@@ -175,13 +176,14 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rod
   const ms = Date.now()
   const agora = paraTimestamp(ms)
   const batch = writeBatch(db)
-  batch.set(doc(collection(casasRef(cartao.id, quadraId), casa.id, 'visits')), {
+  batch.set(doc(collection(casasRef(cartao.id, quadraId), casa.id, 'visits'), a.rodadaId), {
     status: novoStatus,
     ...quando(ms),
     porUid: usuario.uid,
     porNome: usuario.nome,
     ciclo: cartao.ciclo,
     rodada: a.rodada,
+    ...(a.campanha && { campanha: a.campanha }),
   })
   // Casa ainda gravada com status antigo 'estudo': o novo status o substitui, então a marca é regravada junto (com quem e quando, se já existiam).
   batch.update(doc(casasRef(cartao.id, quadraId), casa.id), {

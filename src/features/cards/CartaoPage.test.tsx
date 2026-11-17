@@ -144,6 +144,15 @@ describe('CartaoPage', () => {
     expect(screen.queryByRole('link', { name: /Quadra 2/ })).not.toBeInTheDocument()
   })
 
+  it('cada quadra mostra quantas voltas tem, contando a que está aberta', async () => {
+    preparar(cartaoBase, comContadores)
+    renderPagina()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Mostrar todas as quadras' }))
+    expect(screen.getByRole('link', { name: /Quadra 1/ })).toHaveTextContent('1 volta')
+    expect(screen.getByRole('link', { name: /Quadra 2/ })).toHaveTextContent('1 volta')
+    expect(screen.getByRole('link', { name: /Quadra 3/ })).toHaveTextContent('Nenhuma volta')
+  })
+
   it('mostra a etiqueta Volta aberta só na quadra com volta aberta', () => {
     preparar(cartaoBase, comContadores)
     renderPagina()

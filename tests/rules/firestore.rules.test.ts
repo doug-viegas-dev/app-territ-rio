@@ -64,7 +64,7 @@ describe('regras Firestore', () => {
     await assertFails(setDoc(doc(db, 'cards/c2'), card))
     await assertFails(setDoc(doc(db, 'members', 'new@example.com'), member()))
     await assertFails(deleteDoc(doc(db, 'cards/c1/blocks/b1/houses/h1')))
-    await assertFails(updateDoc(doc(db, 'cards/c1/blocks/b1/houses/h1/visits/v1'), { status: 'estudo' }))
+    await assertFails(updateDoc(doc(db, 'cards/c1/blocks/b1/houses/h1/visits/v1'), { ciclo: 2 }))
     await assertFails(setDoc(doc(db, 'cards/c1/blocks/b1/houses/h1/visits/vx'), { status: 'falado', porUid: 'someone-else', ciclo: 1 }))
     await env.withSecurityRulesDisabled(async (context) => updateDoc(doc(context.firestore(), 'cards/c1'), { estado: 'fechado' }))
     await assertFails(updateDoc(doc(db, 'cards/c1'), { estado: 'aberto' }))
@@ -148,9 +148,17 @@ describe('regras Firestore', () => {
     await assertFails(updateDoc(doc(adminDb(), visitaV1), { status: 'carta' }))
   })
 
-  it('publicador não altera a visita nem o expiraEm', async () => {
+  it('publicador troca o status da propria visita na mesma volta, mas nao o ciclo nem a volta', async () => {
     await criarVisitaV1()
-    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { expiraEm }))
+    await assertSucceeds(updateDoc(doc(publisherDb(), visitaV1), { status: 'carta', expiraEm }))
+    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { ciclo: 5 }))
+    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { rodada: 9 }))
+    await assertFails(updateDoc(doc(publisherDb(), visitaV1), { porUid: 'outro' }))
+  })
+
+  it('publicador nao troca o status de observacao (sem status)', async () => {
+    await env.withSecurityRulesDisabled(async (context) =>
+      setDoc(doc(context.firestore(), visitaV1), { obs: 'texto', porUid: 'publisher', porNome: 'Publicador', ciclo: 1 }))
     await assertFails(updateDoc(doc(publisherDb(), visitaV1), { status: 'carta' }))
   })
 
@@ -290,5 +298,38 @@ describe('regras Firestore', () => {
     await assertSucceeds(getDoc(doc(publisherDb(), 'members/publisher@example.com')))
     await assertFails(getDoc(doc(publisherDb(), 'members/admin@example.com')))
     await assertFails(getDocs(collection(publisherDb(), 'members')))
+  })
+})
+
+describe('regras Firestore: campanha', () => {
+  const nova = { nome: 'Convites', resultados: ['falado', 'carta'], fase: 'ativa', guardou: true }
+
+  it('qualquer membro le a campanha, mas so o administrador a cria, muda e apaga', async () => {
+    await assertSucceeds(setDoc(doc(adminDb(), 'campanhas/atual'), nova))
+    await assertSucceeds(getDoc(doc(publisherDb(), 'campanhas/atual')))
+    await assertFails(updateDoc(doc(publisherDb(), 'campanhas/atual'), { nome: 'Outra' }))
+    await assertFails(deleteDoc(doc(publisherDb(), 'campanhas/atual')))
+    await assertFails(setDoc(doc(publisherDb(), 'campanhas/atual'), nova))
+    await assertSucceeds(updateDoc(doc(adminDb(), 'campanhas/atual'), { fase: 'encerrando' }))
+    await assertSucceeds(deleteDoc(doc(adminDb(), 'campanhas/atual')))
+  })
+
+  it('o administrador fecha e reabre uma volta (campanha); o publicador nao reabre', async () => {
+    const rodada = 'cards/c1/blocks/b1/rodadas/r1'
+    await env.withSecurityRulesDisabled(async (context) =>
+      setDoc(doc(context.firestore(), rodada), { numero: 1, abertaPorUid: 'publisher', abertaPorNome: 'P', encerradaPorUid: 'publisher', encerradaPorNome: 'P', encerradaEm: Timestamp.now() }))
+    await assertFails(updateDoc(doc(publisherDb(), rodada), { encerradaPorUid: deleteField(), encerradaPorNome: deleteField(), encerradaEm: deleteField() }))
+    await assertSucceeds(updateDoc(doc(adminDb(), rodada), { encerradaPorUid: deleteField(), encerradaPorNome: deleteField(), encerradaEm: deleteField() }))
+    await assertSucceeds(updateDoc(doc(adminDb(), rodada), { encerradaPorUid: 'admin', encerradaPorNome: 'A', encerradaEm: Timestamp.now() }))
+    await assertFails(updateDoc(doc(adminDb(), rodada), { encerradaPorUid: 'admin', encerradaPorNome: 'A', encerradaEm: Timestamp.now() }))
+    await assertFails(updateDoc(doc(adminDb(), rodada), { numero: 9 }))
+  })
+
+  it('a copia do territorio e so do administrador', async () => {
+    await assertSucceeds(setDoc(doc(adminDb(), 'campanhas/atual/casas/h1'), { cartaoId: 'c1', quadraId: 'b1', status: 'falado' }))
+    await assertSucceeds(setDoc(doc(adminDb(), 'campanhas/atual/cartoes/c1'), { estado: 'aberto', ciclo: 1, quadras: {} }))
+    await assertFails(getDoc(doc(publisherDb(), 'campanhas/atual/casas/h1')))
+    await assertFails(setDoc(doc(publisherDb(), 'campanhas/atual/casas/h2'), { status: 'falado' }))
+    await assertFails(getDoc(doc(publisherDb(), 'campanhas/atual/cartoes/c1')))
   })
 })

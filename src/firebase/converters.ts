@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
-import type { Cartao, Casa, EventoCartao, Quadra, Rodada, RodadaAtual, Status, StatusVisita, Visita } from '@/domain/types'
+import type { Campanha, Cartao, Casa, EventoCartao, Quadra, Rodada, RodadaAtual, Status, StatusVisita, Visita } from '@/domain/types'
 
 export const paraTimestamp = (ms: number): Timestamp => Timestamp.fromMillis(ms)
 export const paraMs = (valor: unknown): number | undefined => (valor instanceof Timestamp ? valor.toMillis() : undefined)
@@ -58,6 +58,7 @@ export function rodadaDe(id: string, d: Dados): Rodada {
     ...(typeof d.encerradaPorUid === 'string' && { encerradaPorUid: d.encerradaPorUid }),
     ...(typeof d.encerradaPorNome === 'string' && { encerradaPorNome: d.encerradaPorNome }),
     ...(paraMs(d.encerradaEm) !== undefined && { encerradaEm: paraMs(d.encerradaEm) }),
+    ...(typeof d.campanha === 'string' && { campanha: d.campanha }),
   }
 }
 
@@ -99,6 +100,7 @@ export function visitaDe(id: string, d: Dados): Visita {
     ...(typeof d.rodada === 'number' && { rodada: d.rodada }),
     ...(typeof d.obs === 'string' && { obs: d.obs }),
     ...(paraMs(d.expiraEm) !== undefined && { expiraEm: paraMs(d.expiraEm) }),
+    ...(typeof d.campanha === 'string' && { campanha: d.campanha }),
   }
 }
 
@@ -113,5 +115,18 @@ export function eventoDe(id: string, d: Dados): EventoCartao {
     ...(typeof d.quadraId === 'string' && { quadraId: d.quadraId }),
     ...(typeof d.quadraRotulo === 'string' && { quadraRotulo: d.quadraRotulo }),
     ...(typeof d.rodada === 'number' && { rodada: d.rodada }),
+  }
+}
+
+export function campanhaDe(d: Dados): Campanha {
+  const fase = d.fase === 'iniciando' || d.fase === 'encerrando' ? d.fase : 'ativa'
+  return {
+    nome: String(d.nome ?? ''),
+    resultados: Array.isArray(d.resultados) ? d.resultados.filter((s): s is Status => STATUS.includes(s as Status)) : [],
+    fase,
+    guardou: d.guardou === true,
+    ...(typeof d.retomar === 'boolean' && { retomar: d.retomar }),
+    iniciadaEm: paraMs(d.iniciadaEm) ?? 0,
+    iniciadaPorNome: String(d.iniciadaPorNome ?? ''),
   }
 }

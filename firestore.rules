@@ -29,6 +29,19 @@ service cloud.firestore {
       allow delete: if ehAdmin() && email != request.auth.token.email;
     }
 
+    // Campanha especial: todos os membros leem o nome e os resultados; só administradores começam, encerram e guardam o estado do território.
+    match /campanhas/{campanhaId} {
+      allow read: if ehMembro();
+      allow create, update, delete: if ehAdmin();
+
+      match /cartoes/{id} {
+        allow read, write: if ehAdmin();
+      }
+      match /casas/{id} {
+        allow read, write: if ehAdmin();
+      }
+    }
+
     match /cards/{cardId} {
       allow read: if ehMembro();
       allow create, delete: if ehAdmin();
@@ -79,10 +92,14 @@ service cloud.firestore {
           allow read: if ehMembro();
           allow create: if ehMembro() && request.resource.data.abertaPorUid == request.auth.uid;
           // encerra uma vez só: rodada já encerrada não muda mais
-          allow update: if ehMembro()
+          allow update: if (ehMembro()
             && resource.data.get('encerradaPorUid', null) == null
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['encerradaPorUid', 'encerradaPorNome', 'encerradaEm'])
-            && request.resource.data.encerradaPorUid == request.auth.uid;
+            && request.resource.data.encerradaPorUid == request.auth.uid)
+            // ao retomar a campanha o administrador reabre a volta: tira os três campos de encerramento
+            || (ehAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['encerradaPorUid', 'encerradaPorNome', 'encerradaEm'])
+            && !('encerradaPorUid' in request.resource.data));
           allow delete: if false;
         }
 
@@ -95,8 +112,14 @@ service cloud.firestore {
             allow read: if ehMembro();
             allow create: if ehMembro() && request.resource.data.porUid == request.auth.uid;
             // O administrador só preenche expiraEm (visitas antigas); nada mais muda.
-            allow update: if ehAdmin()
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiraEm']);
+            // Na mesma volta, quem registra pode trocar o status: o documento tem o id da volta e é regravado (volta e ciclo não mudam).
+            allow update: if (ehAdmin()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiraEm']))
+              || (ehMembro()
+              && resource.data.get('status', null) != null
+              && request.resource.data.porUid == request.auth.uid
+              && request.resource.data.status != null
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'em', 'expiraEm', 'porUid', 'porNome']));
             allow delete: if false;
           }
         }

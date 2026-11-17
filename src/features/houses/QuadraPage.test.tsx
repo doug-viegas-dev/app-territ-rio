@@ -252,7 +252,7 @@ describe('QuadraPage', () => {
     await userEvent.setup().click(within(barra()).getByRole('button', { name: 'Conversado' }))
     expect(registrarVisita).toHaveBeenCalledTimes(1)
     expect(registrarVisita).toHaveBeenCalledWith({
-      cartao: cartaoAberto, quadraId: 'q3', rodada: 2, casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
+      cartao: cartaoAberto, quadraId: 'q3', rodada: 2, rodadaId: 'r2', casa: primeira, novoStatus: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, quadraSemContadores: false,
     })
   })
 

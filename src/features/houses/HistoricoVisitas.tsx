@@ -1,5 +1,5 @@
 import { Icone } from '@/app/icones'
-import { rotuloStatus } from '@/domain/rotulos'
+import { rotuloResultado } from '@/domain/rotulos'
 import type { Visita } from '@/domain/types'
 import { classeStatus } from './rotuloCasa'
 
@@ -16,8 +16,8 @@ export default function HistoricoVisitas({ visitas }: { visitas: Visita[] }) {
       return <li key={v.id}>
         <span className={v.status ? `c-${icone}` : undefined}><Icone nome={icone} className="ic ic-32" /></span>
         <div>
-          <b>{v.status ? rotuloStatus(v.status) : 'Observação'}</b>
-          <div className="quando">{data(v.em)} · {v.porNome}{v.rodada !== undefined && ` · Volta ${v.rodada}`}</div>
+          <b>{v.status ? rotuloResultado(v.status, !!v.campanha) : 'Observação'}</b>
+          <div className="quando">{data(v.em)} · {v.porNome}{v.rodada !== undefined && ` · Volta ${v.rodada}`}{v.campanha && ` · Campanha ${v.campanha}`}</div>
           {v.obs && <p className="obs">{v.obs}</p>}
         </div>
       </li>

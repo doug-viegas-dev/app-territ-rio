@@ -1,5 +1,6 @@
 import { Icone } from '@/app/icones'
-import { rotuloStatus } from '@/domain/rotulos'
+import { rotuloResultado, rotuloStatus } from '@/domain/rotulos'
+import { useCampanhaAtiva } from '@/features/campanha/CampanhaProvider'
 import type { Casa } from '@/domain/types'
 import { SeloMarcas } from './SeloMarcas'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
@@ -7,6 +8,7 @@ import { classeStatus, rotuloCasa } from './rotuloCasa'
 const dia = (ms: number) => new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
 function Estado({ casa }: { casa: Casa }) {
+  const naCampanha = !!useCampanhaAtiva()
   const nome = classeStatus(casa.status)
   if (casa.status === 'pendente') {
     return <span className="estado c-pendente"><Icone nome="pendente" /><span className="so-leitor">{rotuloStatus('pendente')}</span></span>
@@ -14,7 +16,7 @@ function Estado({ casa }: { casa: Casa }) {
   return <span className={`estado c-${nome}`}>
     <Icone nome={nome} />
     <span style={{ color: 'var(--cor-texto)' }}>
-      {rotuloStatus(casa.status)}
+      {rotuloResultado(casa.status, naCampanha)}
       {casa.ultimaVisitaEm !== undefined && (casa.status === 'sem_resposta' || casa.status === 'falado') && <><br /><small>{dia(casa.ultimaVisitaEm)}</small></>}
     </span>
   </span>

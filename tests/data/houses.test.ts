@@ -158,7 +158,7 @@ describe('criarCasa com contadores da quadra', () => {
 
   it('criarCasa com resultado falado grava casa e visita no mesmo lote, com resolvidas +1 e faltam inalterado', async () => {
     const c = await cenario()
-    const id = await novaCasa(c, { numero: '5', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 2 } })
+    const id = await novaCasa(c, { numero: '5', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 2, rodadaId: 'r2' } })
     const casa = (await casasDe(c.cartaoId, c.quadraId)).find((x) => x.id === id) as Casa
     expect(casa).toMatchObject({ status: 'falado', ultimoPor: 'Admin' })
     const v = await visitasDe(c.cartaoId, c.quadraId, id, (l) => l.length === 1)
@@ -169,7 +169,7 @@ describe('criarCasa com contadores da quadra', () => {
 
   it('criarCasa e excluirCasa respeitam a nova conta', async () => {
     const c = await cenario()
-    const id = await novaCasa(c, { numero: '7', resultado: { status: 'carta', usuario: admin, ciclo: 1, rodada: 1 } })
+    const id = await novaCasa(c, { numero: '7', resultado: { status: 'carta', usuario: admin, ciclo: 1, rodada: 1, rodadaId: 'r1' } })
     const v = await visitasDe(c.cartaoId, c.quadraId, id, (l) => l.length === 1)
     expect(v[0]).toMatchObject({ status: 'carta', ciclo: 1, rodada: 1 })
     expect(v[0].expiraEm).toBe(vencimentoDoRegistro(v[0].em))
@@ -189,7 +189,7 @@ describe('criarCasa com contadores da quadra', () => {
 
   it('criarCasa com resultado pendente ou sem resultado não cria visita', async () => {
     const c = await cenario()
-    const comPendente = await novaCasa(c, { numero: '8', resultado: { status: 'pendente', usuario: admin, ciclo: 1, rodada: 1 } })
+    const comPendente = await novaCasa(c, { numero: '8', resultado: { status: 'pendente', usuario: admin, ciclo: 1, rodada: 1, rodadaId: 'r1' } })
     const semResultado = await novaCasa(c, { numero: '9' })
     // as duas casas já existem; a visita, se existisse, foi gravada no mesmo lote
     expect(await visitasDe(c.cartaoId, c.quadraId, comPendente)).toEqual([])
@@ -200,7 +200,7 @@ describe('criarCasa com contadores da quadra', () => {
 
   it('criarCasa com resultado sem_resposta soma faltam', async () => {
     const c = await cenario()
-    await novaCasa(c, { numero: '6', resultado: { status: 'sem_resposta', usuario: admin, ciclo: 1, rodada: 1 } })
+    await novaCasa(c, { numero: '6', resultado: { status: 'sem_resposta', usuario: admin, ciclo: 1, rodada: 1, rodadaId: 'r1' } })
     expect(await quadraAtual(c.cartaoId, c.quadraId, (q) => q.totalCasas === 1)).toMatchObject({ totalCasas: 1, faltam: 1 })
     expect(await cartaoAtual(c.cartaoId, (x) => x.totalCasas === 1)).toMatchObject({ resolvidas: 0 })
   })
@@ -237,7 +237,7 @@ describe('excluirCasa', () => {
 
   it('excluirCasa de casa resolvida reduz resolvidas', async () => {
     const c = await cenario()
-    const id = await novaCasa(c, { numero: '1', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 1 } })
+    const id = await novaCasa(c, { numero: '1', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 1, rodadaId: 'r1' } })
     await novaCasa(c, { numero: '2' })
     const casa = (await casasDe(c.cartaoId, c.quadraId, (l) => l.find((x) => x.id === id)?.status === 'falado')).find((x) => x.id === id) as Casa
     await excluirCasa(c.cartaoId, c.quadraId, casa)
@@ -320,7 +320,7 @@ describe('registrarVisita', () => {
   }
   const registrar = async (c: { cartaoId: string; quadraId: string }, casa: Casa, novoStatus: Status, usuario = admin) => {
     const cartao = await cartaoAtual(c.cartaoId)
-    await registrarVisita({ cartao, quadraId: c.quadraId, rodada: 1, casa, novoStatus, usuario })
+    await registrarVisita({ cartao, quadraId: c.quadraId, rodada: 1, rodadaId: 'r1', casa, novoStatus, usuario })
   }
   const casaAtual = async (c: { cartaoId: string; quadraId: string }, id: string, status: Status) =>
     (await casasDe(c.cartaoId, c.quadraId, (l) => l.find((x) => x.id === id)?.status === status)).find((x) => x.id === id) as Casa
@@ -399,7 +399,7 @@ describe('registrarVisita', () => {
   it('registrarVisita grava a rodada na visita', async () => {
     const c = await comCasas(1)
     const cartao = await cartaoAtual(c.cartaoId)
-    await registrarVisita({ cartao, quadraId: c.quadraId, rodada: 3, casa: c.casas[0], novoStatus: 'falado', usuario: admin })
+    await registrarVisita({ cartao, quadraId: c.quadraId, rodada: 3, rodadaId: 'r3', casa: c.casas[0], novoStatus: 'falado', usuario: admin })
     const v = await visitasDe(c.cartaoId, c.quadraId, c.casas[0].id, (l) => l.length === 1)
     expect(v[0]).toMatchObject({ status: 'falado', rodada: 3, ciclo: 1 })
   })
@@ -436,7 +436,7 @@ describe('registrarVisita', () => {
     const c = await comCasas(2, false)
     const cartao = await cartaoAtual(c.cartaoId)
     expect(cartao.estado).toBe('fechado')
-    await expect(registrarVisita({ cartao, quadraId: c.quadraId, casa: c.casas[0], novoStatus: 'falado', rodada: 1, usuario: admin })).rejects.toThrow('Cartão fechado')
+    await expect(registrarVisita({ cartao, quadraId: c.quadraId, casa: c.casas[0], novoStatus: 'falado', rodada: 1, rodadaId: 'r1', usuario: admin })).rejects.toThrow('Cartão fechado')
     expect(await visitasDe(c.cartaoId, c.quadraId, c.casas[0].id)).toEqual([])
     expect((await casasDe(c.cartaoId, c.quadraId))[0].status).toBe('pendente')
     expect((await cartaoAtual(c.cartaoId)).resolvidas).toBe(0)
@@ -456,7 +456,7 @@ describe('marcas da casa e observação', () => {
   const marcar = (c: C, casa: Casa, marca: 'naoVisitar' | 'estudo', ligada: boolean, usuario = ana) =>
     marcarCasa({ cartaoId: c.cartaoId, quadraId: c.quadraId, casa, marca, ligada, usuario })
   const conversado = async (c: C, casa: Casa) => {
-    await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, casa, novoStatus: 'falado', usuario: admin })
+    await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, rodadaId: 'r1', casa, novoStatus: 'falado', usuario: admin })
     await cartaoAtual(c.cartaoId, (x) => x.resolvidas === 1)
     return casaQue(c, casa.id, (x) => x.status === 'falado')
   }
@@ -535,7 +535,7 @@ describe('marcas da casa e observação', () => {
       await setDoc(doc(ctx.firestore(), `cards/${c.cartaoId}/blocks/${c.quadraId}/houses/${c.casas[0].id}`), { status: 'estudo', estudoPor: 'Ana' }, { merge: true })
     })
     const legada = await casaQue(c, c.casas[0].id, (x) => !!x.estudo)
-    await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, casa: legada, novoStatus: 'falado', usuario: admin })
+    await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, rodadaId: 'r1', casa: legada, novoStatus: 'falado', usuario: admin })
     await casaQue(c, legada.id, (x) => x.status === 'falado')
     expect(await camposDaCasa(c, legada.id)).toMatchObject({ status: 'falado', estudo: true, estudoPor: 'Ana' })
   })
@@ -584,7 +584,7 @@ describe('fecharEReiniciarCartao', () => {
     let casas = await casasDe(c.cartaoId, c.quadraId, (l) => l.length === 4)
     const status: Status[] = ['falado', 'carta', 'falado', 'sem_resposta']
     for (let i = 0; i < 4; i++) {
-      await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, casa: casas[i], novoStatus: status[i], usuario: admin })
+      await registrarVisita({ cartao: await cartaoAtual(c.cartaoId), quadraId: c.quadraId, rodada: 1, rodadaId: 'r1', casa: casas[i], novoStatus: status[i], usuario: admin })
       await casasDe(c.cartaoId, c.quadraId, (l) => l.find((x) => x.id === casas[i].id)?.status === status[i])
     }
     casas = await casasDe(c.cartaoId, c.quadraId, (l) => l.every((x) => x.status !== 'pendente'))
@@ -612,7 +612,7 @@ describe('fecharEReiniciarCartao', () => {
 
   it('lança erro com rodada aberta e não grava nada', async () => {
     const c = await cenario()
-    await novaCasa(c, { numero: '1', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 1 } })
+    await novaCasa(c, { numero: '1', resultado: { status: 'falado', usuario: admin, ciclo: 1, rodada: 1, rodadaId: 'r1' } })
     await abrirRodada(c.cartaoId, await quadraAtual(c.cartaoId, c.quadraId), admin)
     const quadras = await quadrasDe(c.cartaoId, (l) => l.some((q) => !!q.rodadaAtual))
     const casas = await casasDe(c.cartaoId, c.quadraId, (l) => l.some((x) => x.status === 'falado'))
@@ -722,7 +722,7 @@ describe('quadra antiga, sem contadores', () => {
     expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
 
     const casa = (await casasDe(a.cartaoId, a.quadraId, (l) => l.length === 3)).find((x) => x.id === id) as Casa
-    await registrarVisita({ cartao: await cartaoAtual(a.cartaoId), quadraId: a.quadraId, rodada: 1, casa, novoStatus: 'falado', usuario: admin, quadraSemContadores: true })
+    await registrarVisita({ cartao: await cartaoAtual(a.cartaoId), quadraId: a.quadraId, rodada: 1, rodadaId: 'r1', casa, novoStatus: 'falado', usuario: admin, quadraSemContadores: true })
     expect((await cartaoAtual(a.cartaoId, (x) => x.resolvidas === 1)).resolvidas).toBe(1)
     expect(semContadores(await camposDaQuadra(a.cartaoId, a.quadraId))).toBe(true)
 

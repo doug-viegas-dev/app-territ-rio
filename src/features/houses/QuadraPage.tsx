@@ -7,11 +7,13 @@ import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
 import { listaDeTrabalho, podeRegistrar } from '@/domain/ciclo'
 import { podeRegistrarNaCasa } from '@/domain/rodada'
-import { rotuloStatus } from '@/domain/rotulos'
+import { resultadosDisponiveis } from '@/domain/campanha'
+import { rotuloResultado } from '@/domain/rotulos'
 import { ruasDaQuadra } from '@/domain/ruas'
 import { contaNoTotal, faltaVisitar, isResolvida } from '@/domain/status'
 import type { Casa, Status } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
+import { useCampanhaAtiva } from '@/features/campanha/CampanhaProvider'
 import BotaoFecharCartao from '@/features/cards/BotaoFecharCartao'
 import { useCartao, useQuadrasCarregadas } from '@/features/cards/useCartao'
 import { registrarVisita } from '@/firebase/houses'
@@ -23,7 +25,6 @@ import ReordenarLista from './ReordenarLista'
 import { classeStatus, rotuloCasa } from './rotuloCasa'
 import { useCasasInfo } from './useCasas'
 
-const STATUS_REGISTRAVEIS: Status[] = ['falado', 'sem_resposta', 'nao_em_casa', 'carta']
 const falta = faltaVisitar
 
 function proximaDoTrabalho(ordenadas: Casa[], atual: Casa): Casa | null {
@@ -40,6 +41,7 @@ export default function QuadraPage() {
   const { casas, semDados } = useCasasInfo(cartaoId, quadraId)
   const online = useOnline()
   const { usuario, membro } = useSessao()
+  const campanha = useCampanhaAtiva()
   const [modo, setModo] = useState<'trabalho' | 'todas'>('trabalho')
   const [focoId, setFocoId] = useState<string | null>(null)
   const [falha, setFalha] = useState<{ casa: Casa; novoStatus: Status } | null>(null)
@@ -78,11 +80,12 @@ export default function QuadraPage() {
 
   async function enviar(casa: Casa, novoStatus: Status, mover = true) {
     const rodada = quadra?.rodadaAtual?.numero
-    if (!cartao || !usuario || !quadra || rodada === undefined || !podeRegistrarNaCasa(cartao, quadra, casa)) return
+    const rodadaId = quadra?.rodadaAtual?.id
+    if (!cartao || !usuario || !quadra || rodada === undefined || rodadaId === undefined || !podeRegistrarNaCasa(cartao, quadra, casa)) return
     if (mover) setFocoId(proximaDoTrabalho(ordenadas, casa)?.id ?? casa.id)
     setFalha(null)
     try {
-      await registrarVisita({ cartao, quadraId, rodada, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra.semContadores === true })
+      await registrarVisita({ cartao, quadraId, rodada, rodadaId, campanha: campanha?.nome, casa, novoStatus, usuario: { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, quadraSemContadores: quadra.semContadores === true })
     } catch {
       setFalha({ casa, novoStatus })
     }
@@ -127,7 +130,7 @@ export default function QuadraPage() {
         <p><b>Não foi possível salvar</b>A última alteração não foi aceita. Confira o que aparece na lista e tente de novo. <button type="button" className="btn link" onClick={() => setErroEscrita(false)}>Entendi</button></p>
       </div>
       : falha && <AvisoNaoEnviado cartaoAberto={aberto} rodadaAberta={!!quadra?.rodadaAtual} onTentar={() => void enviar(falha.casa, falha.novoStatus, false)} />}
-    {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
+    {quadra && <FaixaRodada cartaoId={cartaoId} quadra={quadra} campanha={campanha?.nome} cartaoAberto={aberto} onErro={aoFalharEscrita} />}
     {!aberto && <div className="aviso faixa" role="status">
       <Icone nome="cadeado" />
       <p>
@@ -195,7 +198,7 @@ export default function QuadraPage() {
         </div>
         {foco.naoVisitar && <p className="dica" role="status" style={{ margin: '0 0 8px' }}>Pediu para não ser visitado. Desmarque nos detalhes para registrar</p>}
         <div className="grade-status">
-          {STATUS_REGISTRAVEIS.map((s) => {
+          {resultadosDisponiveis(campanha).map((s) => {
             const atual = foco.status === s
             const nome = classeStatus(s)
             return <button
@@ -207,7 +210,7 @@ export default function QuadraPage() {
               aria-disabled={podeAnotar ? undefined : true}
               onClick={() => { if (podeAnotar) void enviar(foco, s) }}
             >
-              <Icone nome={nome} /><span>{rotuloStatus(s)}</span>
+              <Icone nome={nome} /><span>{rotuloResultado(s, !!campanha)}</span>
             </button>
           })}
         </div>

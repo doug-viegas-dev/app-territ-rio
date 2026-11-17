@@ -4,7 +4,8 @@ import type { Quadra } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { abrirRodada, encerrarRodada } from '@/firebase/rodadas'
 
-type Props = { cartaoId: string; quadra: Quadra; cartaoAberto: boolean; onErro: () => void }
+/** `campanha`: nome da campanha ativa. Nela cada quadra tem uma volta só. */
+type Props = { cartaoId: string; quadra: Quadra; cartaoAberto: boolean; campanha?: string; onErro: () => void }
 
 const dataCurta = (ms: number) => new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 /** Lida a cada render: um banner aberto antes da meia-noite não pode tratar a rodada de hoje como de outro dia. */
@@ -13,7 +14,7 @@ const horaAtual = () => Date.now()
 const PAUSA_APOS_TROCA_MS = 1500
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })
 
-export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: Props) {
+export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, campanha, onErro }: Props) {
   const { usuario, membro } = useSessao()
   const atual = quadra.rodadaAtual
   const agora = horaAtual()
@@ -44,7 +45,7 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
     const marca = { rodadaId: atual?.id ?? null }
     setPendente(marca)
     acaoLocal.current = marca
-    acao(cartaoId, quadra, { uid: usuario.uid, nome: membro?.nome ?? usuario.nome })
+    acao(cartaoId, quadra, { uid: usuario.uid, nome: membro?.nome ?? usuario.nome }, campanha)
       .catch(() => {
         if (acaoLocal.current === marca) acaoLocal.current = null
         onErro()
@@ -53,7 +54,8 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
   }
 
   // Título curto numa linha; quem e quando na segunda, cortado com reticências se faltar largura.
-  const titulo = atual ? `Volta ${atual.numero}` : 'Nenhuma volta aberta'
+  const voltaFeita = !atual && !!campanha && quadra.rodadasTotal >= 1
+  const titulo = atual ? `Volta ${atual.numero}` : voltaFeita ? 'Volta feita nesta campanha' : 'Nenhuma volta aberta'
   const detalhe = atual
     ? rodadaDeOutroDia(atual, agora)
       ? `aberta em ${dataCurta(atual.em)} por ${atual.porNome}`
@@ -63,6 +65,6 @@ export default function FaixaRodada({ cartaoId, quadra, cartaoAberto, onErro }: 
   return <div className="aviso faixa volta">
     <p><b>{titulo}</b>{detalhe && <span className="detalhe">{detalhe}</span>}</p>
     {podeEncerrarRodada(quadra) && <button type="button" className="btn secundario medio auto" aria-disabled={ocupado || pausado ? true : undefined} onClick={() => executar(encerrarRodada)}>Encerrar volta</button>}
-    {podeAbrirRodada(quadra) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto && !ocupado && !pausado ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir volta</button>}
+    {podeAbrirRodada(quadra, !!campanha) && <button type="button" className="btn primario medio auto" aria-disabled={cartaoAberto && !ocupado && !pausado ? undefined : true} onClick={() => { if (cartaoAberto) executar(abrirRodada) }}>Abrir volta</button>}
   </div>
 }

@@ -25,7 +25,7 @@ describe('banco de demonstração', () => {
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const casas = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb))
     const pendente = casas.find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, rodadaId: 'r1', usuario })
     const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
     expect(depois.resolvidas).toBe(cartao.resolvidas + 1)
   })
@@ -34,7 +34,7 @@ describe('banco de demonstração', () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const pendente = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb)).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, rodadaId: 'r1', usuario })
     const depois = ler<Cartao | null>((cb) => observarCartao(cartao.id, cb)) as Cartao
     expect(depois.estado).toBe('aberto')
     expect(depois.ciclo).toBe(cartao.ciclo)
@@ -44,14 +44,14 @@ describe('banco de demonstração', () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.estado === 'fechado') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const casa = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb))[0]
-    await expect(registrarVisita({ cartao, quadraId: quadra.id, casa, novoStatus: 'falado', rodada: 1, usuario })).rejects.toThrow('Cartão fechado')
+    await expect(registrarVisita({ cartao, quadraId: quadra.id, casa, novoStatus: 'falado', rodada: 1, rodadaId: 'r1', usuario })).rejects.toThrow('Cartão fechado')
   })
 
   it('reiniciar o banco devolve os dados de exemplo', async () => {
     const cartao = ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13') as Cartao
     const [quadra] = ler((cb: (q: import('@/domain/types').Quadra[]) => void) => observarQuadras(cartao.id, cb))
     const pendente = ler<Casa[]>((cb) => observarCasas(cartao.id, quadra.id, cb)).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, usuario })
+    await registrarVisita({ cartao, quadraId: quadra.id, casa: pendente, novoStatus: 'falado', rodada: 1, rodadaId: 'r1', usuario })
     reiniciarBanco()
     expect(ler<Cartao[]>(observarCartoes).find((c) => c.numero === '13')?.estado).toBe('aberto')
   })
@@ -189,11 +189,26 @@ describe('visitas, casas e fechamento na demonstração', () => {
     return { cartao, quadras, casas }
   }
 
+  it('mudar o status na mesma volta regrava a entrada em vez de criar outra; outra volta cria nova', async () => {
+    const { cartao, quadras, casas } = cenario()
+    const q = quadras()[0]
+    const pendente = casas(q.id).find((c) => c.status === 'pendente') as Casa
+    const visitas = () => ler<Visita[]>((cb) => observarVisitas(cartao().id, q.id, pendente.id, cb))
+    const antes = visitas().length
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 3, rodadaId: 'r3', casa: pendente, novoStatus: 'sem_resposta', usuario })
+    const atual = casas(q.id).find((c) => c.id === pendente.id) as Casa
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 3, rodadaId: 'r3', casa: atual, novoStatus: 'falado', usuario })
+    expect(visitas()).toHaveLength(antes + 1)
+    expect(visitas().find((v) => v.id === 'r3')).toMatchObject({ status: 'falado', rodada: 3 })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 4, rodadaId: 'r4', casa: casas(q.id).find((c) => c.id === pendente.id) as Casa, novoStatus: 'carta', usuario })
+    expect(visitas()).toHaveLength(antes + 2)
+  })
+
   it('registrarVisita grava a rodada na visita', async () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const pendente = casas(q.id).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 3, casa: pendente, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 3, rodadaId: 'r3', casa: pendente, novoStatus: 'falado', usuario })
     const [v] = ler<Visita[]>((cb) => observarVisitas(cartao().id, q.id, pendente.id, cb))
     expect(v).toMatchObject({ status: 'falado', rodada: 3, ciclo: cartao().ciclo })
   })
@@ -202,9 +217,9 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const pendente = casas(q.id).find((c) => c.status === 'pendente') as Casa
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: pendente, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: pendente, novoStatus: 'falado', usuario })
     expect(quadras()[0].faltam).toBe(q.faltam - 1)
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: { ...pendente, status: 'falado' }, novoStatus: 'sem_resposta', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: { ...pendente, status: 'falado' }, novoStatus: 'sem_resposta', usuario })
     expect(quadras()[0].faltam).toBe(q.faltam)
   })
 
@@ -212,7 +227,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const antes = cartao()
-    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '99', resultado: { status: 'falado', usuario, ciclo: antes.ciclo, rodada: 2 } }, casas(q.id))
+    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '99', resultado: { status: 'falado', usuario, ciclo: antes.ciclo, rodada: 2, rodadaId: 'r2' } }, casas(q.id))
     expect(casas(q.id).find((c) => c.id === id)).toMatchObject({ status: 'falado', ultimoPor: 'Visitante' })
     expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, id, cb))[0]).toMatchObject({ status: 'falado', rodada: 2, ciclo: antes.ciclo })
     expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas + 1, resolvidas: antes.resolvidas + 1 })
@@ -223,7 +238,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const antes = cartao()
-    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '96', resultado: { status: 'carta', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    const id = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '96', resultado: { status: 'carta', usuario, ciclo: antes.ciclo, rodada: 1, rodadaId: 'r1' } }, casas(q.id))
     const [v] = ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, id, cb))
     expect(v).toMatchObject({ status: 'carta', rodada: 1, ciclo: antes.ciclo })
     expect(v.expiraEm).toBe(vencimentoDoRegistro(v.em))
@@ -240,7 +255,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const pendente = casas(q.id).find((c) => c.status === 'pendente' && !c.naoVisitar && !c.estudo) as Casa
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: pendente, novoStatus: 'falado', usuario, obs: 'não deve ser gravada' } as Parameters<typeof registrarVisita>[0])
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: pendente, novoStatus: 'falado', usuario, obs: 'não deve ser gravada' } as Parameters<typeof registrarVisita>[0])
     const [v] = ler<Visita[]>((cb) => observarVisitas(cartao().id, q.id, pendente.id, cb))
     expect(v.status).toBe('falado')
     expect(v.expiraEm).toBe(vencimentoDoRegistro(v.em))
@@ -253,7 +268,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const antes = cartao()
     const marcada = casas(q.id).find((c) => c.naoVisitar) as Casa
     const visitasAntes = ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, marcada.id, cb)).length
-    await expect(registrarVisita({ cartao: antes, quadraId: q.id, rodada: 1, casa: marcada, novoStatus: 'falado', usuario })).rejects.toThrow('Casa marcada como não visitar')
+    await expect(registrarVisita({ cartao: antes, quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: marcada, novoStatus: 'falado', usuario })).rejects.toThrow('Casa marcada como não visitar')
     expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, marcada.id, cb))).toHaveLength(visitasAntes)
     expect(casas(q.id).find((c) => c.id === marcada.id)?.status).toBe('pendente')
     expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas, resolvidas: antes.resolvidas })
@@ -265,9 +280,9 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const q = quadras()[1]
     const antes = cartao()
     const [c1, c2, c3] = casas(q.id).filter((c) => c.status === 'pendente')
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: c1, novoStatus: 'carta', usuario })
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: c2, novoStatus: 'falado', usuario })
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: c3, novoStatus: 'nao_em_casa', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: c1, novoStatus: 'carta', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: c2, novoStatus: 'falado', usuario })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: c3, novoStatus: 'nao_em_casa', usuario })
     expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas, resolvidas: antes.resolvidas + 2 })
     expect(quadras()[1]).toMatchObject({ totalCasas: q.totalCasas, faltam: q.faltam - 2 })
   })
@@ -333,7 +348,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
       const alvo = casas(q.id).find((c) => c.status === 'pendente' && !c.naoVisitar && !c.estudo) as Casa
       await marcar(cartao().id, q.id, alvo, 'estudo', true)
       const marcada = casas(q.id).find((c) => c.id === alvo.id) as Casa
-      await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: marcada, novoStatus: 'falado', usuario })
+      await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: marcada, novoStatus: 'falado', usuario })
       expect(casas(q.id).find((c) => c.id === alvo.id)).toMatchObject({ status: 'falado', estudo: true })
       await marcar(cartao().id, q.id, casas(q.id).find((c) => c.id === alvo.id) as Casa, 'estudo', false)
       expect(casas(q.id).find((c) => c.id === alvo.id)).toMatchObject({ status: 'falado' })
@@ -395,7 +410,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const antes = cartao()
-    const comPendente = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '95', resultado: { status: 'pendente', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    const comPendente = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '95', resultado: { status: 'pendente', usuario, ciclo: antes.ciclo, rodada: 1, rodadaId: 'r1' } }, casas(q.id))
     const semResultado = await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '94' }, casas(q.id))
     expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, comPendente, cb))).toEqual([])
     expect(ler<Visita[]>((cb) => observarVisitas(antes.id, q.id, semResultado, cb))).toEqual([])
@@ -406,7 +421,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     const { cartao, quadras, casas } = cenario()
     const q = quadras()[0]
     const antes = cartao()
-    await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '98', resultado: { status: 'sem_resposta', usuario, ciclo: antes.ciclo, rodada: 1 } }, casas(q.id))
+    await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '98', resultado: { status: 'sem_resposta', usuario, ciclo: antes.ciclo, rodada: 1, rodadaId: 'r1' } }, casas(q.id))
     expect(quadras()[0]).toMatchObject({ totalCasas: q.totalCasas + 1, faltam: q.faltam + 1 })
     expect(cartao().resolvidas).toBe(antes.resolvidas)
     await criarCasa(antes.id, q.id, { rua: 'Rua dos Ipês', numero: '97' }, casas(q.id))
@@ -483,7 +498,7 @@ describe('visitas, casas e fechamento na demonstração', () => {
     await criarCasasEmFaixa(antes.id, q.id, { rua: 'Rua dos Ipês', numeros: ['92', '94'] }, casas(q.id), op)
     expect(cartao().totalCasas).toBe(antes.totalCasas + 3)
     const nova = casas(q.id).find((c) => c.id === id) as Casa
-    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, casa: nova, novoStatus: 'falado', usuario, quadraSemContadores: true })
+    await registrarVisita({ cartao: cartao(), quadraId: q.id, rodada: 1, rodadaId: 'r1', casa: nova, novoStatus: 'falado', usuario, quadraSemContadores: true })
     expect(cartao().resolvidas).toBe(antes.resolvidas + 1)
     await excluirCasa(antes.id, q.id, casas(q.id).find((c) => c.id === id) as Casa, op)
     expect(cartao()).toMatchObject({ totalCasas: antes.totalCasas + 2, resolvidas: antes.resolvidas })

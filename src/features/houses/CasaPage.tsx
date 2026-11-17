@@ -3,9 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
-import { validarCasa } from '@/domain/casa'
+import { soDigitos, validarCasa } from '@/domain/casa'
 import { podeRegistrar } from '@/domain/ciclo'
-import { rotuloStatus } from '@/domain/rotulos'
+import { rotuloResultado } from '@/domain/rotulos'
+import { useCampanhaAtiva } from '@/features/campanha/CampanhaProvider'
 import type { Casa, Visita } from '@/domain/types'
 import { useSessao } from '@/features/auth/AuthProvider'
 import { useOnline } from '@/app/useOnline'
@@ -57,7 +58,7 @@ function FolhaEditar({ casa, onSalvar, onCancelar, onExcluir }: { casa: Casa; on
       <h2>Editar casa</h2>
       <div className="campo">
         <label htmlFor="editar-numero">Número <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>(opcional)</span></label>
-        <input id="editar-numero" className="entrada" value={numero} onChange={(e) => { setNumero(e.target.value); setErro(null) }} />
+        <input id="editar-numero" className="entrada" inputMode="numeric" pattern="[0-9]*" value={numero} onChange={(e) => { setNumero(soDigitos(e.target.value)); setErro(null) }} />
       </div>
       <div className="campo">
         <label htmlFor="editar-descricao">Descrição curta</label>
@@ -78,6 +79,7 @@ export default function CasaPage() {
   const cartao = useCartao(cartaoId)
   const quadras = useQuadrasCarregadas(cartaoId)
   const online = useOnline()
+  const naCampanha = !!useCampanhaAtiva()
   const casas = useCasas(cartaoId, quadraId)
   const visitas = useVisitas(cartaoId, quadraId, casaId)
   const { usuario, membro } = useSessao()
@@ -179,7 +181,7 @@ export default function CasaPage() {
         {aberto && <button type="button" className="btn suave medio auto" style={{ minHeight: 48, padding: '0 14px' }} aria-label="Editar número e descrição" onClick={() => setEditando(true)}><Icone nome="editar" className="ic ic-20" />Editar</button>}
         <div style={{ gridColumn: '1 / 3', marginTop: 6 }}>
           <span className={`estado c-${nome}`}>
-            <Icone nome={nome} />{rotuloStatus(casa.status)}{' '}
+            <Icone nome={nome} />{rotuloResultado(casa.status, naCampanha)}{' '}
             <small>· {casa.status === 'pendente' || casa.ultimaVisitaEm === undefined ? 'nenhuma visita ainda' : `${dia(casa.ultimaVisitaEm)}${casa.ultimoPor ? ` · ${casa.ultimoPor}` : ''}`}</small>
           </span>
         </div>

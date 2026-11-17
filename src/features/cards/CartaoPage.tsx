@@ -4,7 +4,7 @@ import Carregando from '@/app/Carregando'
 import { Icone } from '@/app/icones'
 import Topo from '@/app/Topo'
 import { useOnline } from '@/app/useOnline'
-import { quadrasParaVisitar } from '@/domain/rodada'
+import { quadrasParaVisitar, textoVoltasFeitas, voltasFeitas } from '@/domain/rodada'
 import { useSessao } from '@/features/auth/AuthProvider'
 import BotaoFecharCartao from './BotaoFecharCartao'
 import ConfirmarAbertura from './ConfirmarAbertura'
@@ -76,10 +76,11 @@ export default function CartaoPage() {
       {visiveis.map((q) => <Link key={q.id} className="linha-quadra simples" to={`/cartao/${cartao.id}/quadra/${q.id}`}>
         <div>
           <h3>{q.rotulo}</h3>
-          {(q.totalCasas > 0 || q.rodadaAtual) && <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 14px', color: 'var(--texto-suave)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 14px', color: 'var(--texto-suave)' }}>
             {q.totalCasas > 0 && <span>{Math.max(0, q.faltam)} para visitar</span>}
+            <span>{textoVoltasFeitas(voltasFeitas(q))}</span>
             {q.rodadaAtual && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}><Icone nome="historico" className="ic ic-20" />Volta aberta</span>}
-          </span>}
+          </span>
         </div>
         <Icone nome="chev" className="ic chev" />
       </Link>)}

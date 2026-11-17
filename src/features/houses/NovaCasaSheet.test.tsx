@@ -108,89 +108,92 @@ describe('NovaCasaSheet', () => {
 
   describe('O que aconteceu', () => {
     const grupo = () => screen.getByRole('radiogroup', { name: 'O que aconteceu' })
-    const revelar = (u: ReturnType<typeof userEvent.setup>) => u.click(screen.getByRole('button', { name: 'Registrar resultado agora' }))
 
-    it('começa escondido atrás de "Registrar resultado agora" e salva como Pendente', async () => {
+    it('mostra as quatro opções desde o início, nenhuma marcada, e salva sem resultado', async () => {
       const { user } = abrir({ quadra: quadraAberta })
-      expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
+      const opcoes = within(grupo()).getAllByRole('radio')
+      expect(opcoes.map((r) => r.textContent)).toEqual(['Conversado', 'Não atendeu', 'Não em casa', 'Carta'])
+      opcoes.forEach((o) => { expect(o).toHaveAttribute('aria-checked', 'false'); expect(o).not.toHaveAttribute('aria-disabled') })
       await user.type(campoNumero(), '130')
       await user.click(screen.getByRole('button', { name: 'Salvar' }))
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
     })
 
-    it('mostra as cinco opções com Pendente marcada por padrão', async () => {
+    it('escolher Falado salva a casa com resultado, ciclo, volta e id da volta', async () => {
       const { user } = abrir({ quadra: quadraAberta })
-      await revelar(user)
-      const nomes = within(grupo()).getAllByRole('radio').map((r) => r.textContent)
-      expect(nomes).toEqual(['Pendente', 'Conversado', 'Não atendeu', 'Não em casa', 'Carta'])
-      expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
-    })
-
-    it('escolher Falado salva a casa com resultado, ciclo e rodada', async () => {
-      const { user } = abrir({ quadra: quadraAberta })
-      await revelar(user)
       await user.type(campoNumero(), '130')
       await user.click(within(grupo()).getByRole('radio', { name: 'Conversado' }))
       await user.click(screen.getByRole('button', { name: 'Salvar' }))
       expect(criarCasa).toHaveBeenCalledWith('c12', 'q3', {
         rua: 'Rua das Acácias', numero: '130', descricao: '', depoisDe: undefined,
-        resultado: { status: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, ciclo: 2, rodada: 3 },
+        resultado: { status: 'falado', usuario: { uid: 'u1', nome: 'Maria S.' }, ciclo: 2, rodada: 3, rodadaId: quadraAberta.rodadaAtual?.id },
       }, [casaA, casaB], { quadraSemContadores: false })
     })
 
-    it('Pendente salva sem resultado', async () => {
+    it('tocar de novo na opção escolhida a desmarca', async () => {
       const { user } = abrir({ quadra: quadraAberta })
       await user.type(campoNumero(), '130')
+      await user.click(within(grupo()).getByRole('radio', { name: 'Carta' }))
+      await user.click(within(grupo()).getByRole('radio', { name: 'Carta' }))
       await user.click(screen.getByRole('button', { name: 'Salvar' }))
-      expect(criarCasa).toHaveBeenCalledTimes(1)
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
     })
 
-    it('sem volta aberta a linha fica desativada com o aviso e o botão Abrir volta', async () => {
+    it('sem volta aberta as opções ficam desativadas, com o aviso e o botão Abrir volta', async () => {
       const { user } = abrir()
-      await revelar(user)
       expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
-      const opcoes = within(grupo()).getAllByRole('radio')
-      opcoes.forEach((o) => expect(o).toHaveAttribute('aria-disabled', 'true'))
+      within(grupo()).getAllByRole('radio').forEach((o) => expect(o).toHaveAttribute('aria-disabled', 'true'))
       await user.click(within(grupo()).getByRole('radio', { name: 'Conversado' }))
-      expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
+      expect(within(grupo()).getByRole('radio', { name: 'Conversado' })).toHaveAttribute('aria-checked', 'false')
       await user.type(campoNumero(), '130')
       await user.click(screen.getByRole('button', { name: 'Salvar' }))
       expect(vi.mocked(criarCasa).mock.calls[0][2]).not.toHaveProperty('resultado')
       cleanup()
       const outra = abrir()
-      await revelar(outra.user)
       await outra.user.click(screen.getByRole('button', { name: 'Abrir volta' }))
-      expect(abrirRodada).toHaveBeenCalledWith('c12', quadra, usuario)
+      expect(abrirRodada).toHaveBeenCalledWith('c12', quadra, usuario, undefined)
     })
 
-    it('com o cartão fechado a linha também fica desativada', async () => {
-      const { user } = abrir({ quadra: quadraAberta, cartao: { ...cartao, estado: 'fechado' } })
-      await revelar(user)
+    it('com o cartão fechado as opções também ficam desativadas', () => {
+      abrir({ quadra: quadraAberta, cartao: { ...cartao, estado: 'fechado' } })
       expect(screen.getByText('Abra a volta para registrar o que aconteceu')).toBeInTheDocument()
       expect(within(grupo()).getByRole('radio', { name: 'Conversado' })).toHaveAttribute('aria-disabled', 'true')
     })
 
-    it('Salvar e adicionar outra mantém a rua e volta o resultado para Pendente', async () => {
+    it('Salvar e adicionar outra mantém a rua e desmarca o resultado', async () => {
       const { user } = abrir({ quadra: quadraAberta })
       await user.click(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' }))
       await user.type(campoNumero(), '112')
-      await revelar(user)
       await user.click(within(grupo()).getByRole('radio', { name: 'Carta' }))
       await user.click(screen.getByRole('button', { name: 'Salvar e adicionar outra' }))
       expect(vi.mocked(criarCasa).mock.calls[0][2].resultado?.status).toBe('carta')
       await waitFor(() => expect(campoNumero()).toHaveValue(''))
       expect(screen.getByRole('radio', { name: 'Rua Ipê Amarelo' })).toHaveAttribute('aria-checked', 'true')
-      expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
-      await revelar(user)
-      expect(within(grupo()).getByRole('radio', { name: 'Pendente' })).toHaveAttribute('aria-checked', 'true')
+      within(grupo()).getAllByRole('radio').forEach((o) => expect(o).toHaveAttribute('aria-checked', 'false'))
     })
 
     it('a aba Faixa não mostra o resultado', async () => {
       const { user } = abrir({ quadra: quadraAberta })
-      await revelar(user)
       await user.click(screen.getByRole('tab', { name: 'Faixa' }))
       expect(screen.queryByRole('radiogroup', { name: 'O que aconteceu' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Número', () => {
+    it('só aceita dígitos e abre o teclado numérico', async () => {
+      const { user } = abrir()
+      expect(campoNumero()).toHaveAttribute('inputmode', 'numeric')
+      await user.type(campoNumero(), '1a2-b3')
+      expect(campoNumero()).toHaveValue('123')
+    })
+
+    it('Enter salva e continua, e a lista mostra o que foi cadastrado agora', async () => {
+      const { user } = abrir()
+      await user.type(campoNumero(), '130{Enter}')
+      await waitFor(() => expect(campoNumero()).toHaveValue(''))
+      await user.type(campoNumero(), '132{Enter}')
+      expect(criarCasa).toHaveBeenCalledTimes(2)
+      expect(await screen.findByText('Cadastradas agora: 130, 132')).toBeInTheDocument()
     })
   })
 

@@ -6,7 +6,7 @@ import { bloqueioDaQuadra, bloqueiosDoCartao, ExclusaoBloqueada } from '@/domain
 import { renomearRuaNaLista } from '@/domain/ruas'
 import { podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, proximoNumeroRodada } from '@/domain/rodada'
 import { contribuicao, deltaContadores } from '@/domain/status'
-import type { Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
+import type { Campanha, Cartao, Casa, EventoCartao, Papel, Quadra, Rodada, Status, Visita } from '@/domain/types'
 import { MAPA_DEMO_URL } from './mapa'
 
 type Usuario = { uid: string; nome: string }
@@ -191,6 +191,8 @@ const ouvintes = new Set<() => void>()
 const mudou = () => [...ouvintes].forEach((f) => f())
 
 export function reiniciarBanco(): void {
+  campanha = null
+  copia = null
   estado = semear()
   mudou()
 }
@@ -391,13 +393,13 @@ function quadraPorId(cartaoId: string, quadraId: string): Quadra {
   return q
 }
 
-export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
+export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario, nomeCampanha?: string): Promise<void> {
   const q = quadraPorId(cartaoId, quadra.id)
-  if (!podeAbrirRodada(q)) throw new Error('A quadra já tem uma rodada aberta')
+  if (!podeAbrirRodada(q, !!nomeCampanha)) throw new Error('A quadra não pode abrir outra volta')
   const numero = proximoNumeroRodada(q)
   const id = novoId()
   const agora = Date.now()
-  ;(estado.rodadas[chaveCasas(cartaoId, q.id)] ??= []).push({ id, numero, abertaPorUid: usuario.uid, abertaPorNome: usuario.nome, abertaEm: agora })
+  ;(estado.rodadas[chaveCasas(cartaoId, q.id)] ??= []).push({ id, numero, abertaPorUid: usuario.uid, abertaPorNome: usuario.nome, abertaEm: agora, ...(nomeCampanha && { campanha: nomeCampanha }) })
   q.rodadaAtual = { id, numero, porNome: usuario.nome, em: agora }
   q.rodadasTotal = numero
   registrarEvento(cartaoId, 'rodada', 'rodada_aberta', usuario, { quadraId: q.id, quadraRotulo: q.rotulo, rodada: numero })
@@ -433,7 +435,7 @@ function exigirValida(d: { numero?: string; descricao?: string }): void {
 export async function criarCasa(
   cartaoId: string,
   quadraId: string,
-  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number } },
+  d: { rua: string; numero?: string; descricao?: string; depoisDe?: string; resultado?: { status: Status; usuario: Usuario; ciclo: number; rodada: number; rodadaId: string; campanha?: string } },
   existentes: Casa[],
   op: OpcoesQuadra = {},
 ): Promise<string> {
@@ -454,7 +456,7 @@ export async function criarCasa(
   const status: Status = r ? r.status : 'pendente'
   const agora = Date.now()
   lista.push({ id, quadraId, rua: d.rua, ...(numero && { numero }), ...(descricao && { descricao }), ordem, status, criadoEm: agora, ...(r && { ultimaVisitaEm: agora, ultimoPor: r.usuario.nome }) })
-  if (r) estado.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: novoId(), status, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada }]
+  if (r) estado.visitas[`${cartaoId}/${quadraId}/${id}`] = [{ id: r.rodadaId, status, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: r.usuario.uid, porNome: r.usuario.nome, ciclo: r.ciclo, rodada: r.rodada, ...(r.campanha && { campanha: r.campanha }) }]
   const cartao = cartaoPorId(cartaoId)
   aplicarDelta(cartao, quadraPorId(cartaoId, quadraId), deltaContadores(null, { status }), op)
   tocar(cartao)
@@ -523,7 +525,7 @@ export async function excluirCasa(cartaoId: string, quadraId: string, casa: Casa
   mudou()
 }
 
-export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
+export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rodada: number; rodadaId: string; campanha?: string; casa: Casa; novoStatus: Status; usuario: Usuario } & OpcoesQuadra): Promise<void> {
   const { quadraId, casa, novoStatus, usuario } = a
   const cartao = cartaoPorId(a.cartao.id)
   if (!podeRegistrar(cartao)) throw new Error('Cartão fechado')
@@ -532,7 +534,11 @@ export async function registrarVisita(a: { cartao: Cartao; quadraId: string; rod
   if (alvo.naoVisitar) throw new Error('Casa marcada como não visitar')
   const agora = Date.now()
   const chave = `${cartao.id}/${quadraId}/${casa.id}`
-  ;(estado.visitas[chave] ??= []).push({ id: novoId(), status: novoStatus, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada })
+  const visita: Visita = { id: a.rodadaId, status: novoStatus, em: agora, expiraEm: vencimentoDoRegistro(agora), porUid: usuario.uid, porNome: usuario.nome, ciclo: cartao.ciclo, rodada: a.rodada, ...(a.campanha && { campanha: a.campanha }) }
+  const lista = (estado.visitas[chave] ??= [])
+  const i = lista.findIndex((v) => v.id === a.rodadaId)
+  if (i >= 0) lista[i] = visita
+  else lista.push(visita)
   aplicarDelta(cartao, quadraPorId(cartao.id, quadraId), deltaContadores(alvo, { ...alvo, status: novoStatus }), a)
   Object.assign(alvo, { status: novoStatus, ultimaVisitaEm: agora, ultimoPor: usuario.nome })
   tocar(cartao)
@@ -630,4 +636,79 @@ export async function guardarArquivos(cartaoId: string, arquivos: { pdf: Blob; i
   estado.arquivos[pdfPath] = URL.createObjectURL(arquivos.pdf)
   estado.arquivos[imagemPath] = URL.createObjectURL(arquivos.imagem)
   return { pdfPath, imagemPath }
+}
+
+// ---------- campanha ----------
+
+let campanha: Campanha | null = null
+let copia: { cartoes: Cartao[]; quadras: Record<string, Quadra[]>; casas: Record<string, Casa[]> } | null = null
+
+export function observarCampanha(cb: (c: Campanha | null) => void): () => void {
+  return observar(() => (campanha ? { ...campanha, resultados: [...campanha.resultados] } : null), cb)
+}
+
+/** Deixa o território como a cópia (retomar) ou limpo (sem cópia): casas Pendentes, nenhuma volta, cartões fechados. */
+function aplicarCopia(origem: typeof copia, subirCiclo: boolean, usuario: Usuario): void {
+  for (const c of estado.cartoes) {
+    const g = origem?.cartoes.find((x) => x.id === c.id)
+    // cartão aberto que o estado novo não tem: registra o fechamento; cartão que ele tem aberto e hoje está fechado: registra a reabertura
+    if (c.estado === 'aberto' && g?.estado !== 'aberto') registrarEvento(c.id, 'fechado', 'fechamento_campanha', usuario)
+    if (c.estado !== 'aberto' && g?.estado === 'aberto') registrarEvento(c.id, 'aberto', 'retomada_campanha', usuario)
+    if (g) {
+      Object.assign(c, { estado: g.estado, ciclo: g.ciclo })
+      if (g.abertoPorNome !== undefined) c.abertoPorNome = g.abertoPorNome
+      else delete c.abertoPorNome
+      if (g.abertoEm !== undefined) c.abertoEm = g.abertoEm
+      else delete c.abertoEm
+    } else {
+      Object.assign(c, { estado: 'fechado', ciclo: c.ciclo + (subirCiclo ? 1 : 0) })
+      delete c.abertoPorNome
+      delete c.abertoEm
+    }
+    for (const q of estado.quadras[c.id] ?? []) {
+      const gq = origem?.quadras[c.id]?.find((x) => x.id === q.id)
+      const extra = { quadraId: q.id, quadraRotulo: q.rotulo }
+      const lista = estado.rodadas[chaveCasas(c.id, q.id)] ?? []
+      if (q.rodadaAtual && q.rodadaAtual.id !== gq?.rodadaAtual?.id) {
+        const r = lista.find((x) => x.id === q.rodadaAtual?.id)
+        if (r) Object.assign(r, { encerradaPorUid: usuario.uid, encerradaPorNome: usuario.nome, encerradaEm: Date.now() })
+        registrarEvento(c.id, 'rodada', 'rodada_encerrada', usuario, { ...extra, rodada: q.rodadaAtual.numero })
+      }
+      if (gq?.rodadaAtual && gq.rodadaAtual.id !== q.rodadaAtual?.id) {
+        const r = lista.find((x) => x.id === gq.rodadaAtual?.id)
+        if (r) { delete r.encerradaPorUid; delete r.encerradaPorNome; delete r.encerradaEm }
+        registrarEvento(c.id, 'rodada', 'rodada_aberta', usuario, { ...extra, rodada: gq.rodadaAtual.numero })
+      }
+      q.rodadasTotal = gq ? gq.rodadasTotal : 0
+      if (gq?.rodadaAtual) q.rodadaAtual = { ...gq.rodadaAtual }
+      else delete q.rodadaAtual
+      for (const casa of listaCasas(c.id, q.id)) {
+        const gc = origem?.casas[`${c.id}/${q.id}`]?.find((x) => x.id === casa.id)
+        casa.status = gc ? gc.status : 'pendente'
+        if (gc?.ultimaVisitaEm !== undefined) casa.ultimaVisitaEm = gc.ultimaVisitaEm
+        else delete casa.ultimaVisitaEm
+        if (gc?.ultimoPor !== undefined) casa.ultimoPor = gc.ultimoPor
+        else delete casa.ultimoPor
+      }
+      recontarQuadra(estado, c.id, q.id)
+    }
+    recontar(estado, c.id)
+  }
+}
+
+export async function iniciarCampanha(d: { nome: string; resultados: Status[]; guardar: boolean }, usuario: Usuario): Promise<void> {
+  if (campanha) throw new Error('Já existe uma campanha')
+  copia = d.guardar ? structuredClone({ cartoes: estado.cartoes, quadras: estado.quadras, casas: estado.casas }) : null
+  aplicarCopia(null, false, usuario)
+  campanha = { nome: d.nome.trim(), resultados: [...d.resultados], fase: 'ativa', guardou: d.guardar, iniciadaEm: Date.now(), iniciadaPorNome: usuario.nome }
+  mudou()
+}
+
+export async function encerrarCampanha(d: { retomar: boolean }, usuario: Usuario): Promise<void> {
+  if (!campanha) return
+  const retomar = d.retomar && campanha.guardou
+  aplicarCopia(retomar ? copia : null, !retomar, usuario)
+  campanha = null
+  copia = null
+  mudou()
 }

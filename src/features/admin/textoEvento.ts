@@ -6,6 +6,8 @@ export function textoEvento(e: Pick<EventoCartao, 'motivo' | 'porNome'> & Partia
     case 'fechamento_reinicio': return `${e.porNome} fechou e reiniciou o território`
     case 'rodada_aberta': return `${e.porNome} abriu a volta ${e.rodada} da ${e.quadraRotulo}`
     case 'rodada_encerrada': return `${e.porNome} encerrou a volta ${e.rodada} da ${e.quadraRotulo}`
+    case 'fechamento_campanha': return `${e.porNome} fechou por causa da campanha`
+    case 'retomada_campanha': return `${e.porNome} reabriu ao encerrar a campanha`
     case 'abertura': return `${e.porNome} abriu o cartão`
     case 'fechamento_manual': return `${e.porNome} fechou manualmente`
     case 'fechamento_automatico': return `Automático: ${e.porNome} registrou a última casa`

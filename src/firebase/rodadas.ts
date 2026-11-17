@@ -15,15 +15,16 @@ export function observarRodadas(cartaoId: string, quadraId: string, cb: (r: Roda
   return ouvirComCache(`cards/${cartaoId}/blocks/${quadraId}/rodadas`, q, (snap) => cb(snap.docs.map((d) => rodadaDe(d.id, d.data()))), onErro)
 }
 
-export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario): Promise<void> {
-  if (demoAtivo()) return demo.abrirRodada(cartaoId, quadra, usuario)
-  if (!podeAbrirRodada(quadra)) throw new Error('A quadra já tem uma rodada aberta')
+/** `campanha`: nome da campanha ativa. Nela cada quadra tem uma volta só e a volta leva o nome da campanha. */
+export async function abrirRodada(cartaoId: string, quadra: Quadra, usuario: Usuario, campanha?: string): Promise<void> {
+  if (demoAtivo()) return demo.abrirRodada(cartaoId, quadra, usuario, campanha)
+  if (!podeAbrirRodada(quadra, !!campanha)) throw new Error('A quadra não pode abrir outra volta')
   const numero = proximoNumeroRodada(quadra)
   const agora = paraTimestamp(Date.now())
   const quadraRef = doc(db, 'cards', cartaoId, 'blocks', quadra.id)
   const rodadaRef = doc(collection(quadraRef, 'rodadas'))
   const batch = writeBatch(db)
-  batch.set(rodadaRef, { numero, abertaPorUid: usuario.uid, abertaPorNome: usuario.nome, abertaEm: agora })
+  batch.set(rodadaRef, { numero, abertaPorUid: usuario.uid, abertaPorNome: usuario.nome, abertaEm: agora, ...(campanha && { campanha }) })
   batch.update(quadraRef, { rodadaAtual: { id: rodadaRef.id, numero, porNome: usuario.nome, em: agora.toMillis() }, rodadasTotal: numero })
   batch.set(doc(collection(db, 'cards', cartaoId, 'eventos')), {
     tipo: 'rodada', motivo: 'rodada_aberta', quadraId: quadra.id, quadraRotulo: quadra.rotulo, rodada: numero,

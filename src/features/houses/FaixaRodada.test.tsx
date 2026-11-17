@@ -48,14 +48,14 @@ describe('FaixaRodada', () => {
   it('Abrir rodada chama abrirRodada com a quadra e o usuário', async () => {
     renderFaixa(base)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Abrir volta' }))
-    expect(abrirRodada).toHaveBeenCalledWith('c12', base, usuario)
+    expect(abrirRodada).toHaveBeenCalledWith('c12', base, usuario, undefined)
   })
 
   it('Encerrar rodada chama encerrarRodada', async () => {
     const q = comRodada(hoje())
     renderFaixa(q)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Encerrar volta' }))
-    expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario)
+    expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario, undefined)
   })
 
   it('falha de gravação chama onErro', async () => {
@@ -129,7 +129,7 @@ describe('FaixaRodada', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(1) })
       expect(screen.getByRole('button', { name: 'Encerrar volta' })).not.toHaveAttribute('aria-disabled')
       await tocar('Encerrar volta')
-      expect(encerrarRodada).toHaveBeenCalledWith('c12', aberta, usuario)
+      expect(encerrarRodada).toHaveBeenCalledWith('c12', aberta, usuario, undefined)
     })
 
     it('o botão Abrir que aparece no lugar de Encerrar também ignora toques por 1500 ms', async () => {
@@ -202,6 +202,6 @@ describe('FaixaRodada', () => {
     const botao = screen.getByRole('button', { name: 'Encerrar volta' })
     expect(botao).not.toHaveAttribute('aria-disabled')
     await userEvent.setup().click(botao)
-    expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario)
+    expect(encerrarRodada).toHaveBeenCalledWith('c12', q, usuario, undefined)
   })
 })

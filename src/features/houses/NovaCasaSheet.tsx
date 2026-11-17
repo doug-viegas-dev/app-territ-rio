@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Conexao } from '@/app/Topo'
+import { useCampanhaAtiva } from '@/features/campanha/CampanhaProvider'
 import { Icone } from '@/app/icones'
-import { validarCasa } from '@/domain/casa'
-import { podeRegistrarNaQuadra } from '@/domain/rodada'
-import { rotuloStatus } from '@/domain/rotulos'
+import { resultadosDisponiveis } from '@/domain/campanha'
+import { soDigitos, validarCasa } from '@/domain/casa'
+import { podeAbrirRodada, podeRegistrarNaQuadra } from '@/domain/rodada'
+import { rotuloResultado } from '@/domain/rotulos'
 import type { Cartao, Casa, Quadra, Status } from '@/domain/types'
 import { adicionarRua } from '@/firebase/blocks'
 import { criarCasa, criarCasasEmFaixa } from '@/firebase/houses'
@@ -15,8 +17,6 @@ type Props = {
   quadra: Quadra; casas: Casa[]; cartaoId: string; cartao: Cartao; usuario: { uid: string; nome: string }
   depoisDe?: Casa; onFechar: () => void; onErro?: () => void
 }
-
-const RESULTADOS: Status[] = ['pendente', 'falado', 'sem_resposta', 'nao_em_casa', 'carta']
 
 const chave = (s: string) => s.toLocaleLowerCase('pt-BR')
 
@@ -65,6 +65,7 @@ function FolhaEscolherRua({ ruas, rua, onEscolher, onNova, onCancelar }: { ruas:
 }
 
 export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario, depoisDe, onFechar, onErro }: Props) {
+  const campanha = useCampanhaAtiva()
   const [aba, setAba] = useState<'uma' | 'faixa'>('uma')
   const [extras, setExtras] = useState<string[]>([])
   const todas = [...quadra.ruas, ...casas.map((c) => c.rua), ...extras]
@@ -77,7 +78,8 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
   const [salva, setSalva] = useState<{ rotulo: string; rua: string; depois: boolean } | null>(null)
   const [novaRua, setNovaRua] = useState(false)
   const [escolhendoRua, setEscolhendoRua] = useState(false)
-  const [mostrarResultado, setMostrarResultado] = useState(false)
+  const [recentes, setRecentes] = useState<string[]>([])
+  const campoNumero = useRef<HTMLInputElement>(null)
   const [resultado, setResultado] = useState<Status>('pendente')
   const podeResultado = podeRegistrarNaQuadra(cartao, quadra)
   const opQuadra = { quadraSemContadores: quadra.semContadores === true }
@@ -104,8 +106,9 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     setErro(null)
     const depois = depoisId
     const rodada = quadra.rodadaAtual?.numero
-    const registro = podeResultado && resultado !== 'pendente' && rodada !== undefined
-      ? { resultado: { status: resultado, usuario, ciclo: cartao.ciclo, rodada } }
+    const rodadaId = quadra.rodadaAtual?.id
+    const registro = podeResultado && resultado !== 'pendente' && rodada !== undefined && rodadaId !== undefined
+      ? { resultado: { status: resultado, usuario, ciclo: cartao.ciclo, rodada, rodadaId, ...(campanha && { campanha: campanha.nome }) } }
       : {}
     criarCasa(cartaoId, quadra.id, { rua, numero, descricao, depoisDe: depois, ...registro }, casas, opQuadra)
       .then((id) => { if (depois !== undefined) setDepoisId((atual) => (atual === depois ? id : atual)) })
@@ -115,11 +118,12 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     setNumero('')
     setDescricao('')
     setResultado('pendente')
-    setMostrarResultado(false)
+    setRecentes((r) => [...r, rotuloCasa({ numero, descricao })])
+    campoNumero.current?.focus()
   }
 
   function abrirNovaRodada() {
-    abrirRodada(cartaoId, quadra, usuario).catch(() => onErro?.())
+    abrirRodada(cartaoId, quadra, usuario, campanha?.nome).catch(() => onErro?.())
   }
 
   return <div className="tela-sobre" role="dialog" aria-label="Nova casa">
@@ -135,7 +139,8 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
     <div className="rolagem" style={{ paddingBottom: 200 }}>
       {salva && aba === 'uma' && <div className="aviso" role="status" style={{ background: 'var(--superficie)', borderColor: 'var(--st-falado)' }}>
         <Icone nome="falado" className="ic c-falado" />
-        <p><b>Casa salva</b>{salva.rotulo} entrou {salva.depois ? 'na posição escolhida' : `no fim da ${salva.rua}`}. Pode cadastrar a próxima.</p>
+        <p><b>Casa salva</b>{salva.rotulo} entrou {salva.depois ? 'na posição escolhida' : `no fim da ${salva.rua}`}. Pode cadastrar a próxima.
+          {recentes.length > 1 && <span className="detalhe">Cadastradas agora: {recentes.join(', ')}</span>}</p>
       </div>}
 
       <div className="segmento" style={{ marginBottom: 18 }} role="tablist">
@@ -159,7 +164,9 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
       {aba === 'uma' ? <>
         <div className="campo">
           <label htmlFor="casa-numero">Número <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>(opcional)</span></label>
-          <input id="casa-numero" className="entrada" placeholder="Ex.: 120" value={numero} onChange={(e) => { setNumero(e.target.value); setErro(null) }} />
+          <input id="casa-numero" ref={campoNumero} className="entrada" inputMode="numeric" pattern="[0-9]*" autoComplete="off" placeholder="Ex.: 120" value={numero}
+            onChange={(e) => { setNumero(soDigitos(e.target.value)); setErro(null) }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); salvar(false) } }} />
           {repetido && <div className="aviso" role="status" style={{ margin: '6px 0 0', background: 'var(--superficie)' }}>
             <Icone nome="info" />
             <p>Já existe um {numero.trim()} nesta rua. Pode salvar mesmo assim.</p>
@@ -170,28 +177,27 @@ export default function NovaCasaSheet({ quadra, casas, cartaoId, cartao, usuario
           <input id="casa-descricao" className="entrada" placeholder="Ex.: portão azul" value={descricao} onChange={(e) => { setDescricao(e.target.value); setErro(null) }} />
           <span className="dica">Obrigatória sem número. {depoisDe ? "Entra logo depois da casa escolhida." : "Entra no fim da rua."} Mude em “Reordenar”.</span>
         </div>
-        {!mostrarResultado && <button type="button" className="btn suave medio" style={{ marginBottom: 16 }} onClick={() => setMostrarResultado(true)}>Registrar resultado agora</button>}
-        {mostrarResultado && <div className="campo">
+        <div className="campo">
           <span className="rotulo-campo" id="resultado-rotulo">O que aconteceu</span>
           <div className="chips" role="radiogroup" aria-labelledby="resultado-rotulo">
-            {RESULTADOS.map((s) => {
+            {resultadosDisponiveis(campanha).map((s) => {
               const nome = classeStatus(s)
-              const marcado = podeResultado ? s === resultado : s === 'pendente'
+              const marcado = podeResultado && s === resultado
               return <button key={s} type="button" role="radio" aria-checked={marcado} aria-disabled={podeResultado ? undefined : true}
-                className="chip" style={{ ...(marcado && { borderColor: 'var(--cor-principal)', borderWidth: 3, fontWeight: 600 }), ...(podeResultado ? {} : { opacity: 0.6 }) }} onClick={() => { if (podeResultado) setResultado(s) }}>
-                <Icone nome={nome} className="ic ic-20" />{rotuloStatus(s)}
+                className="chip" style={{ ...(marcado && { borderColor: 'var(--cor-principal)', borderWidth: 3, fontWeight: 600 }), ...(podeResultado ? {} : { opacity: 0.6 }) }} onClick={() => { if (podeResultado) setResultado((atual) => (atual === s ? 'pendente' : s)) }}>
+                <Icone nome={nome} className="ic ic-20" />{rotuloResultado(s, !!campanha)}
               </button>
             })}
           </div>
           {!podeResultado && <div className="aviso" role="status" style={{ margin: '10px 0 0', background: 'var(--superficie)' }}>
             <Icone nome="info" />
             <p>Abra a volta para registrar o que aconteceu
-              {cartao.estado === 'aberto' && !quadra.rodadaAtual && <span className="acoes">
+              {cartao.estado === 'aberto' && podeAbrirRodada(quadra, !!campanha) && <span className="acoes">
                 <button type="button" className="btn primario medio auto" onClick={abrirNovaRodada}>Abrir volta</button>
               </span>}
             </p>
           </div>}
-        </div>}
+        </div>
         {erro && <div className="aviso erro" role="alert"><Icone nome="aviso" /><p>{erro}</p></div>}
         <div className="barra-fixa" style={{ paddingTop: 14 }}>
           <div className="pilha">

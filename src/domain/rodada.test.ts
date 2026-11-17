@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contadoresDaQuadraSuspeitos, podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaCasa, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia } from './rodada'
+import { contadoresDaQuadraSuspeitos, podeAbrirRodada, podeEncerrarRodada, podeFecharCartao, podeRegistrarNaCasa, podeRegistrarNaQuadra, proximoNumeroRodada, quadrasComRodadaAberta, quadrasParaVisitar, rodadaDeOutroDia, textoVoltasFeitas, voltasFeitas } from './rodada'
 
 const rodadaAtual = { id: 'r1', numero: 1, porNome: 'Ana', em: new Date(2026, 10, 8, 10).getTime() }
 
@@ -64,5 +64,18 @@ describe('podeRegistrarNaCasa', () => {
     expect(podeRegistrarNaCasa({ estado: 'aberto' }, { rodadaAtual }, { naoVisitar: true })).toBe(false)
     expect(podeRegistrarNaCasa({ estado: 'fechado' }, { rodadaAtual }, {})).toBe(false)
     expect(podeRegistrarNaCasa({ estado: 'aberto' }, {}, {})).toBe(false)
+  })
+})
+
+describe('voltas feitas', () => {
+  it('a volta aberta conta', () => {
+    expect(voltasFeitas({ rodadasTotal: 3 })).toBe(3)
+    expect(voltasFeitas({ rodadasTotal: 3 })).toBe(3)
+    expect(voltasFeitas({ rodadasTotal: 0 })).toBe(0)
+  })
+  it('texto em português', () => {
+    expect(textoVoltasFeitas(0)).toBe('Nenhuma volta')
+    expect(textoVoltasFeitas(1)).toBe('1 volta')
+    expect(textoVoltasFeitas(4)).toBe('4 voltas')
   })
 })
