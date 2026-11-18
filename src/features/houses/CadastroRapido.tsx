@@ -30,6 +30,8 @@ export default function CadastroRapido({ rua, quadra, casas, cartaoId, onAdicion
     setTexto('')
     setErro(null)
     campo.current?.focus()
+    // a casa nova entra na lista logo acima e empurra o campo para baixo: traz de volta para a vista, acima do teclado
+    setTimeout(() => campo.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150)
     // offline a escrita só resolve com rede: a tela não espera por ela
     criarCasa(cartaoId, quadra.id, esperada, casas, { quadraSemContadores: quadra.semContadores === true }).catch(onErro)
     onAdicionada(esperada)

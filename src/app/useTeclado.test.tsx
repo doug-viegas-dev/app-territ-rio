@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTeclado } from './useTeclado'
@@ -5,6 +6,14 @@ import { useTeclado } from './useTeclado'
 function Tela() {
   useTeclado()
   return <input aria-label="Campo" />
+}
+
+let esconder: () => void = () => {}
+function TelaComCampoRemovivel() {
+  useTeclado()
+  const [ver, setVer] = useState(true)
+  esconder = () => setVer(false)
+  return ver ? <input aria-label="Campo" /> : <p>sem campo</p>
 }
 
 type Ouvinte = () => void
@@ -80,5 +89,25 @@ describe('useTeclado', () => {
     expect(vv.total()).toBe(0)
     expect(variavel()).toBe('')
   })
-})
 
+  it('sai do estado aberto quando o teclado fecha e o campo continua focado', () => {
+    const vv = criarViewport(800)
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true })
+    render(<Tela />)
+    act(() => screen.getByLabelText('Campo').focus())
+    vv.height = 400
+    act(() => vv.emitir('resize'))
+    expect(document.documentElement.dataset.teclado).toBe('aberto')
+    vv.height = 800
+    act(() => vv.emitir('resize'))
+    expect(document.documentElement.dataset.teclado).toBeUndefined()
+  })
+
+  it('sai do estado aberto quando o campo focado é removido da tela (sem focusout)', async () => {
+    render(<TelaComCampoRemovivel />)
+    act(() => screen.getByLabelText('Campo').focus())
+    expect(document.documentElement.dataset.teclado).toBe('aberto')
+    await act(async () => { esconder() })
+    expect(document.documentElement.dataset.teclado).toBeUndefined()
+  })
+})

@@ -108,4 +108,13 @@ describe('CadastroRapido', () => {
     await user.click(adicionar())
     expect(campo()).toHaveFocus()
   })
+
+  it('rola o campo de volta para a vista depois de adicionar (a lista cresce acima dele)', async () => {
+    const rolar = vi.fn()
+    HTMLElement.prototype.scrollIntoView = rolar
+    const { user } = abrir()
+    await user.type(campo(), '232')
+    await user.click(adicionar())
+    await vi.waitFor(() => expect(rolar).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' }))
+  })
 })
