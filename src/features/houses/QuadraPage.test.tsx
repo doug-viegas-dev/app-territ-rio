@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -36,8 +36,9 @@ function preparar(casas: Casa[], opcoes: { cartao?: Cartao; papel?: 'admin' | 'p
   })
 }
 
-function renderPagina() {
-  return render(
+// As ruas começam recolhidas; por padrão os testes as expandem, para olhar o conteúdo.
+function renderPagina({ expandir = true } = {}) {
+  const r = render(
     <MemoryRouter initialEntries={['/cartao/c12/quadra/q3']}>
       <Routes>
         <Route path="/cartao/:cartaoId/quadra/:quadraId" element={<QuadraPage />} />
@@ -46,6 +47,8 @@ function renderPagina() {
       </Routes>
     </MemoryRouter>,
   )
+  if (expandir) screen.queryAllByRole('button', { expanded: false }).forEach((b) => fireEvent.click(b))
+  return r
 }
 
 describe('QuadraPage sem rede e sem cache da quadra', () => {
@@ -98,17 +101,17 @@ describe('QuadraPage', () => {
     expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(2)
   })
 
-  it('tocar no nome da rua recolhe e expande as casas e o campo de cadastro', async () => {
+  it('tocar no nome da rua expande e recolhe as casas e o campo de cadastro', async () => {
     preparar([casa({ numero: '1' })])
-    renderPagina()
-    const botoes = screen.getAllByRole('button', { expanded: true })
-    const total = screen.getAllByRole('textbox', { name: 'Número' }).length
-    await userEvent.click(botoes[0])
-    expect(botoes[0]).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(total - 1)
-    await userEvent.click(botoes[0])
-    expect(botoes[0]).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(total)
+    renderPagina({ expandir: false })
+    expect(screen.queryByRole('textbox', { name: 'Número' })).not.toBeInTheDocument()
+    const botao = screen.getAllByRole('button', { expanded: false })[0]
+    await userEvent.click(botao)
+    expect(botao).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(1)
+    await userEvent.click(botao)
+    expect(botao).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('textbox', { name: 'Número' })).not.toBeInTheDocument()
   })
 
   it('cartão fechado não mostra campo de cadastro nem Nova rua', () => {

@@ -51,8 +51,8 @@ export default function QuadraPage() {
   const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa; ruaInicial?: string } | null>(null)
   const [reordenando, setReordenando] = useState(false)
   const [erroEscrita, setErroEscrita] = useState(false)
-  const [recolhidas, setRecolhidas] = useState<string[]>([])
-  const alternarRua = (rua: string) => setRecolhidas((r) => r.includes(rua) ? r.filter((x) => x !== rua) : [...r, rua])
+  const [expandidas, setExpandidas] = useState<string[]>([])
+  const alternarRua = (rua: string) => setExpandidas((r) => r.includes(rua) ? r.filter((x) => x !== rua) : [...r, rua])
   // casa recém-cadastrada aqui: quando ela aparece na lista (também offline), vira a casa em foco
   const aguardando = useRef<{ antes: string[]; esperada: CasaEsperada } | null>(null)
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function QuadraPage() {
   const aoFalharEscrita = () => setErroEscrita(true)
   const cadastro = (rua: string) => aberto && quadra && <CadastroRapido
     rua={rua} quadra={quadra} casas={casas} cartaoId={cartaoId} onErro={aoFalharEscrita}
-    onAdicionada={(esperada) => { aguardando.current = { antes: casas.map((c) => c.id), esperada } }}
+    onAdicionada={(esperada) => { setExpandidas((e) => e.includes(rua) ? e : [...e, rua]); aguardando.current = { antes: casas.map((c) => c.id), esperada } }}
     onMaisOpcoes={(r) => setNovaCasa({ ruaInicial: r })}
   />
   const novaRua = aberto && quadra && <NovaRuaInline cartaoId={cartaoId} quadra={quadra} ruas={ruas} onErro={aoFalharEscrita} />
@@ -194,7 +194,7 @@ export default function QuadraPage() {
           const trabalho = modo === 'trabalho' && !vazia
           const lista = trabalho ? listaDeTrabalho(doRua) : doRua
           const resumo = trabalho ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
-          const recolhida = recolhidas.includes(rua)
+          const recolhida = !vazia && !expandidas.includes(rua)
           return <div key={rua}>
             <h2 className="titulo-secao">
               <button type="button" className="titulo-recolher" aria-expanded={!recolhida} onClick={() => alternarRua(rua)}>
