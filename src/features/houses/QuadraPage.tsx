@@ -194,7 +194,7 @@ export default function QuadraPage() {
           const trabalho = modo === 'trabalho' && !vazia
           const lista = trabalho ? listaDeTrabalho(doRua) : doRua
           const resumo = trabalho ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
-          const recolhida = !vazia && !expandidas.includes(rua)
+          const recolhida = !expandidas.includes(rua)
           return <div key={rua}>
             <h2 className="titulo-secao">
               <button type="button" className="titulo-recolher" aria-expanded={!recolhida} onClick={() => alternarRua(rua)}>
