@@ -254,6 +254,11 @@ textarea.entrada { padding: 12px 14px; min-height: 96px; align-items: flex-start
 .titulo-secao { font-size: 18px; font-weight: 600; margin: 24px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .rolagem > .titulo-secao:first-child { margin-top: 4px; }
 .titulo-secao small { font-size: 16px; font-weight: 400; color: var(--texto-suave); }
+.titulo-recolher { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; cursor: pointer; font: inherit; color: inherit; }
+.titulo-recolher:focus-visible { outline: 2px solid var(--cor-texto, currentColor); outline-offset: 2px; border-radius: 8px; }
+.titulo-recolher span { flex: 1; }
+.titulo-recolher .seta { flex: none; transition: transform .15s; }
+.titulo-recolher .seta.aberta { transform: rotate(90deg); }
 .titulo-secao.divisor { border-top: 0; padding-top: 0; margin-top: 30px; }
 
 .item-cartao { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px 14px; align-items: center; min-height: 80px; padding: 14px; background: var(--superficie); border-radius: 22px; margin-bottom: 12px; box-shadow: var(--sombra); }

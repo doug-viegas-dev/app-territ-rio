@@ -98,6 +98,19 @@ describe('QuadraPage', () => {
     expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(2)
   })
 
+  it('tocar no nome da rua recolhe e expande as casas e o campo de cadastro', async () => {
+    preparar([casa({ numero: '1' })])
+    renderPagina()
+    const botoes = screen.getAllByRole('button', { expanded: true })
+    const total = screen.getAllByRole('textbox', { name: 'Número' }).length
+    await userEvent.click(botoes[0])
+    expect(botoes[0]).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(total - 1)
+    await userEvent.click(botoes[0])
+    expect(botoes[0]).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('textbox', { name: 'Número' })).toHaveLength(total)
+  })
+
   it('cartão fechado não mostra campo de cadastro nem Nova rua', () => {
     preparar([casa({ numero: '1' })], { cartao: { ...cartaoAberto, estado: 'fechado' } })
     renderPagina()

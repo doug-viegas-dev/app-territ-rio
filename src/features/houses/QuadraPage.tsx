@@ -51,6 +51,8 @@ export default function QuadraPage() {
   const [novaCasa, setNovaCasa] = useState<{ depoisDe?: Casa; ruaInicial?: string } | null>(null)
   const [reordenando, setReordenando] = useState(false)
   const [erroEscrita, setErroEscrita] = useState(false)
+  const [recolhidas, setRecolhidas] = useState<string[]>([])
+  const alternarRua = (rua: string) => setRecolhidas((r) => r.includes(rua) ? r.filter((x) => x !== rua) : [...r, rua])
   // casa recém-cadastrada aqui: quando ela aparece na lista (também offline), vira a casa em foco
   const aguardando = useRef<{ antes: string[]; esperada: CasaEsperada } | null>(null)
   useEffect(() => {
@@ -192,10 +194,19 @@ export default function QuadraPage() {
           const trabalho = modo === 'trabalho' && !vazia
           const lista = trabalho ? listaDeTrabalho(doRua) : doRua
           const resumo = trabalho ? `${lista.filter(falta).length} para visitar` : doRua.length === 0 ? 'nenhuma casa' : `${doRua.length} ${doRua.length === 1 ? 'casa' : 'casas'}`
+          const recolhida = recolhidas.includes(rua)
           return <div key={rua}>
-            <h2 className="titulo-secao">{rua} <small>{resumo}</small></h2>
-            {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco?.id} onSelecionar={(x) => setFocoId(x.id)} />)}
-            {cadastro(rua)}
+            <h2 className="titulo-secao">
+              <button type="button" className="titulo-recolher" aria-expanded={!recolhida} onClick={() => alternarRua(rua)}>
+                <Icone nome="chev" className={`ic ic-20 seta${recolhida ? '' : ' aberta'}`} />
+                <span>{rua}</span>
+                <small>{resumo}</small>
+              </button>
+            </h2>
+            {!recolhida && <>
+              {lista.map((c) => <CasaLinha key={c.id} casa={c} foco={c.id === foco?.id} onSelecionar={(x) => setFocoId(x.id)} />)}
+              {cadastro(rua)}
+            </>}
           </div>
         })}
         {novaRua}
